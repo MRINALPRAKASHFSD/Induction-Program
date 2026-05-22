@@ -281,3 +281,22 @@ export const listActivityLogs = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+/* ---------------- Attendance logs ---------------- */
+
+export const listAttendance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ limit: z.number().int().min(1).max(500).default(100) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as any;
+    await ensureStaff(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("attendance")
+      .select("id, scanned_at, students(full_name, enrollment_no), events(title, day_number)")
+      .order("scanned_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });

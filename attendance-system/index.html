@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Student Attendance Management System</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- External Libraries -->
+    <!-- QRCode.js for generating QRs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- jsQR for scanning QRs -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body class="dark-theme">
+    <!-- Background elements for glassmorphism effect -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+
+    <!-- App Container -->
+    <div id="app" class="app-container">
+        
+        <!-- Registration View -->
+        <section id="view-registration" class="view hidden">
+            <div class="glass-card registration-card slide-up">
+                <h2>Welcome Student</h2>
+                <p>Please register your details once.</p>
+                <form id="registration-form">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" required placeholder="Jane Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Enrollment ID</label>
+                        <input type="text" id="reg-enrollment" required placeholder="ENR123456">
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="reg-email" required placeholder="jane@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Branch / Department</label>
+                        <input type="text" id="reg-branch" required placeholder="Computer Science">
+                    </div>
+                    <div class="form-group">
+                        <label>Semester / Year</label>
+                        <input type="text" id="reg-semester" required placeholder="Semester 3">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number (Optional)</label>
+                        <input type="tel" id="reg-phone" placeholder="+1 234 567 8900">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Register Profile</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Student Dashboard View -->
+        <section id="view-student" class="view hidden">
+            <div class="dashboard-header slide-down">
+                <div>
+                    <h1 id="student-greeting">Hello, Student!</h1>
+                    <p class="subtitle">Student Dashboard</p>
+                </div>
+                <button id="btn-edit-profile" class="btn btn-outline btn-sm">Edit Profile</button>
+            </div>
+
+            <div class="glass-card profile-card fade-in">
+                <div class="profile-details">
+                    <div class="detail-item">
+                        <span class="label">Enrollment ID</span>
+                        <strong id="display-enrollment">...</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Branch</span>
+                        <strong id="display-branch">...</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Semester</span>
+                        <strong id="display-semester">...</strong>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-open-scanner" class="btn btn-primary btn-block btn-lg pulse-hover fade-in">
+                Scan QR to Mark Attendance
+            </button>
+
+            <div class="glass-card history-card fade-in" style="margin-top: 24px;">
+                <h3>My Attendance History</h3>
+                <div class="table-responsive">
+                    <table class="table" id="student-attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Date & Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scanner View -->
+        <section id="view-scan" class="view hidden">
+            <div class="scanner-container">
+                <div class="scanner-header slide-down">
+                    <h2>Scan Attendance QR</h2>
+                    <button id="btn-close-scanner" class="btn btn-icon text-muted">&times;</button>
+                </div>
+                
+                <div class="video-wrapper fade-in">
+                    <video id="qr-video" playsinline></video>
+                    <div class="scanner-overlay">
+                        <div class="scanner-frame"></div>
+                        <div class="scanner-line"></div>
+                    </div>
+                    <canvas id="qr-canvas" class="hidden"></canvas>
+                </div>
+                
+                <div class="scanner-footer slide-up">
+                    <p>Point your camera at the session QR code</p>
+                    <div class="manual-entry">
+                        <p class="text-muted text-sm">Or enter code manually:</p>
+                        <div class="flex-row">
+                            <input type="text" id="manual-qr-input" placeholder="Paste JSON data here">
+                            <button id="btn-manual-submit" class="btn btn-outline">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Success Overlay -->
+            <div id="scan-success-overlay" class="fullscreen-overlay hidden">
+                <div class="success-content pop-in">
+                    <div class="success-icon">✓</div>
+                    <h2>Attendance Marked!</h2>
+                    <h3 id="success-student-name">Name</h3>
+                    <p id="success-subject" class="text-highlight">Subject</p>
+                    <p id="success-time" class="text-muted">Time</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Login View -->
+        <section id="view-admin-login" class="view hidden">
+            <div class="glass-card admin-login-card pop-in">
+                <h2>Admin Access</h2>
+                <p>Enter PIN to access the teacher portal.</p>
+                <form id="admin-login-form">
+                    <div class="form-group">
+                        <input type="password" id="admin-pin" placeholder="Enter PIN (1234)" required class="text-center" maxlength="4">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                    <p class="text-center mt-3"><a href="#student" class="text-link">Back to Student</a></p>
+                </form>
+            </div>
+        </section>
+
+        <!-- Admin Dashboard View -->
+        <section id="view-admin" class="view hidden">
+            <div class="admin-layout fade-in">
+                <aside class="admin-sidebar glass-card">
+                    <h2>Admin Portal</h2>
+                    <nav class="admin-nav">
+                        <button class="nav-btn active" data-tab="create-session">Create Session</button>
+                        <button class="nav-btn" data-tab="view-attendance">View Attendance</button>
+                    </nav>
+                    <button id="btn-admin-logout" class="btn btn-outline btn-block mt-auto">Logout</button>
+                </aside>
+                
+                <main class="admin-content">
+                    <!-- Tab: Create Session -->
+                    <div id="tab-create-session" class="admin-tab active">
+                        <div class="grid-2-col">
+                            <div class="glass-card">
+                                <h3>New Session</h3>
+                                <form id="create-session-form">
+                                    <div class="form-group">
+                                        <label>Subject Name</label>
+                                        <input type="text" id="session-subject" required placeholder="Data Structures">
+                                    </div>
+                                    <div class="grid-2-col-sm">
+                                        <div class="form-group">
+                                            <label>Date</label>
+                                            <input type="date" id="session-date" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Time</label>
+                                            <input type="time" id="session-time" required>
+                                        </div>
+                                    </div>
+                                    <div class="grid-2-col-sm">
+                                        <div class="form-group">
+                                            <label>Type</label>
+                                            <select id="session-type">
+                                                <option value="Lecture">Lecture</option>
+                                                <option value="Lab">Lab</option>
+                                                <option value="Tutorial">Tutorial</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Duration (mins)</label>
+                                            <input type="number" id="session-duration" value="60" required min="10">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-block">Generate QR Code</button>
+                                </form>
+                            </div>
+                            
+                            <div class="glass-card text-center qr-display-area" id="qr-display-container">
+                                <h3>Session QR Code</h3>
+                                <p class="text-muted mb-3">Create a session to display QR.</p>
+                                <div id="qrcode-box" class="qrcode-wrapper hidden"></div>
+                                <div id="live-counter" class="live-counter hidden">
+                                    <span class="counter-number">0</span>
+                                    <span class="counter-text">Students Present</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card mt-4 hidden" id="active-session-attendance">
+                            <div class="flex-between mb-3">
+                                <h3>Live Attendance</h3>
+                                <button class="btn btn-sm btn-outline" id="btn-refresh-live">Refresh</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" id="live-attendance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Enrollment ID</th>
+                                            <th>Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Live data here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: View Attendance -->
+                    <div id="tab-view-attendance" class="admin-tab hidden">
+                        <div class="glass-card mb-4 stats-grid">
+                            <div class="stat-box">
+                                <h4 class="text-muted">Total Sessions</h4>
+                                <h2 id="stat-sessions">0</h2>
+                            </div>
+                            <div class="stat-box">
+                                <h4 class="text-muted">Total Records</h4>
+                                <h2 id="stat-records">0</h2>
+                            </div>
+                            <div class="stat-box">
+                                <h4 class="text-muted">Unique Students</h4>
+                                <h2 id="stat-students">0</h2>
+                            </div>
+                        </div>
+
+                        <div class="glass-card">
+                            <div class="flex-between mb-4">
+                                <h3>All Attendance Records</h3>
+                                <button id="btn-export-csv" class="btn btn-primary btn-sm">Export CSV</button>
+                            </div>
+                            <div class="filters mb-3 flex-row gap-2">
+                                <input type="text" id="filter-subject" placeholder="Filter by Subject..." class="form-control-sm">
+                                <input type="date" id="filter-date" class="form-control-sm">
+                                <button id="btn-apply-filters" class="btn btn-outline btn-sm">Filter</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" id="all-attendance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Enrollment ID</th>
+                                            <th>Subject</th>
+                                            <th>Date</th>
+                                            <th>Marked At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </section>
+        
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/student.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

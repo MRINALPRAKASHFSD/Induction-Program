@@ -1,31 +1,24 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { localDb } from "@/lib/local-db";
 
-/** Subscribe to a table's row count, updating live via realtime postgres_changes. */
 export function useLiveCount(table: "students" | "attendance" | "club_registrations" | "events") {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      const { count: c } = await supabase.from(table).select("*", { count: "exact", head: true });
-      if (!cancelled) setCount(c ?? 0);
+    const load = () => {
+      let c = 0;
+      if (table === "students") c = localDb.getStudents().length;
+      if (table === "attendance") c = localDb.getAllAttendance().length;
+      if (table === "club_registrations") c = localDb.getClubRegistrations().length;
+      if (table === "events") c = localDb.getEvents().length;
+      setCount(c);
     };
+
     load();
 
-    const channel = supabase
-      .channel(`live-${table}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table },
-        () => load(),
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
+    const handler = () => load();
+    window.addEventListener("local-db-update", handler);
+    return () => window.removeEventListener("local-db-update", handler);
   }, [table]);
 
   return count;

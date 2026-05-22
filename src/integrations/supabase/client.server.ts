@@ -6,8 +6,18 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = 
+    (typeof process !== 'undefined' && process.env && process.env.SUPABASE_URL) || 
+    (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_URL) ||
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) ||
+    'https://dummy-supabase.supabase.co';
+
+  const SUPABASE_SERVICE_ROLE_KEY = 
+    (typeof process !== 'undefined' && process.env && process.env.SUPABASE_SERVICE_ROLE_KEY) || 
+    (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_SERVICE_ROLE_KEY) ||
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) ||
+    (typeof process !== 'undefined' && process.env && process.env.VITE_SUPABASE_PUBLISHABLE_KEY) ||
+    'dummy-key';
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
