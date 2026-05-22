@@ -178,7 +178,8 @@ export const getAnalytics = createServerFn({ method: "POST" })
 
     const byClub: Record<string, number> = {};
     (clubs ?? []).forEach((c: any) => {
-      byClub[c.club_id] = (byClub[c.club_id] ?? 0) + 1;
+      const k = String(c.club_id);
+      byClub[k] = (byClub[k] ?? 0) + 1;
     });
 
     const { data: clubRows } = await supabase.from("clubs").select("id, name");
