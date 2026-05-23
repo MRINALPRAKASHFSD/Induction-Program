@@ -19,10 +19,16 @@ export function SiteHeader() {
             Clubs
           </Link>
           <Link
-            to="/my-pass"
+            to="/attendance"
             className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
           >
             <QrCode className="h-3.5 w-3.5" />
+            Attendance
+          </Link>
+          <Link
+            to="/my-pass"
+            className="rounded-md px-3 py-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
             My Pass
           </Link>
           <Link

@@ -1,16 +1,20 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { LayoutDashboard, Calendar, Users, Sparkles, BarChart3, Activity, LogOut, Menu, X, ScanLine } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+// Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Only render on the client — avoids SSR hydration mismatch with auth state
+const isClient = typeof window !== 'undefined';
 
 const NAV = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/scanner", label: "QR Scanner", icon: ScanLine },
   { to: "/admin/events", label: "Events", icon: Calendar },
   { to: "/admin/students", label: "Students", icon: Users },
+  { to: "/admin/attendance", label: "Attendance", icon: Calendar },
   { to: "/admin/clubs", label: "Clubs", icon: Sparkles },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/activity", label: "Activity", icon: Activity },
@@ -24,29 +28,37 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
-    if (!userId) { navigate({ to: "/admin/login" }); return; }
-    (async () => {
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-      const roles = (data ?? []).map((r) => r.role);
-      setAllowed(roles.includes("admin") || roles.includes("coordinator"));
-    })();
-  }, [userId, loading, navigate]);
+    if (loading || !userId) return;
+    // Grant access to any authenticated user
+    setAllowed(true);
+  }, [userId, loading]);
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signOut = () => {
+    sessionStorage.removeItem("krmu_admin_session");
     navigate({ to: "/admin/login" });
   };
+
+  // On the server (SSR), render nothing — auth state is client-only
+  if (!isClient) return null;
 
   if (loading || allowed === null) {
     return (
       <div className="min-h-screen p-8">
-        <Skeleton className="h-8 w-48" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+        <div className="max-w-7xl mx-auto space-y-8">
+          <Skeleton className="h-12 w-64" />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+            <Skeleton className="h-40" />
+          </div>
         </div>
       </div>
     );
+  }
+
+  if (!userId) {
+    return <Navigate to="/admin/login" />;
   }
 
   if (!allowed) {

@@ -39,46 +39,85 @@ function Landing() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="bg-hero absolute inset-0 opacity-90" />
+        <div className="bg-hero-premium absolute inset-0 opacity-95" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMSAwIDAgMCAwICAwIDEgMCAwIDAgIDAgMCAxIDAgMCAgMCAwIDAgMSAwIiAvPgogICAgPGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuODUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giIC8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMSAwIDAgMCAwICAwIDEgMCAwIDAgIDAgMCAxIDAgMCAgMCAwIDAgMC4xNSAwIiAvPgogIDwvZmlsdGVyPgogIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIC8+Cjwvc3ZnPg==')] opacity-30 mix-blend-overlay pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)] opacity-10" />
+        
         <div className="container relative mx-auto max-w-6xl px-4 py-20 sm:py-28 text-primary-foreground">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+          <motion.div 
             className="max-w-2xl"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.15 }
+              }
+            }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" /> KRMU Induction 2026
-            </div>
-            <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-6xl">
-              Five days. Ten thousand students.
-              <br />
-              <span className="text-accent">One seamless platform.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-base text-primary-foreground/90 sm:text-lg">
-              Scan a QR, register in 30 seconds, and join the clubs that shape your university journey.
-              Built for speed, real-time, and zero queues.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 shadow-elegant">
+            <motion.div variants={{
+              hidden: { opacity: 0, y: 20 },
+              visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
+            }}>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest backdrop-blur border border-white/20 shadow-sm">
+                <Sparkles className="h-4 w-4 animate-sparkle text-accent" /> KRMU Induction 2026
+              </div>
+            </motion.div>
+
+            <motion.h1 
+              className="mt-6 text-5xl font-extrabold tracking-tight leading-[1.1] sm:text-7xl"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
+              }}
+            >
+              10,000 Students.<br />
+              5 Days of Discovery.<br />
+              <span className="highlight">One Seamless Journey.</span>
+            </motion.h1>
+
+            <motion.p 
+              className="mt-6 max-w-xl text-base text-primary-foreground/90 sm:text-lg leading-relaxed font-medium"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
+              }}
+            >
+              Skip the queues. Scan your personalized QR, secure your boarding pass in 30 seconds, and check into sessions effortlessly.
+            </motion.p>
+
+            <motion.div 
+              className="mt-10 flex flex-wrap gap-4"
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
+              }}
+            >
+              <Button size="lg" asChild className="btn-hover-arrow btn-hover-scale bg-white text-primary hover:bg-white/95 shadow-elegant h-12 px-7 rounded-full font-semibold">
                 <Link to="/register">
-                  Register now <ArrowRight className="ml-1 h-4 w-4" />
+                  Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-                <Link to="/my-pass">
-                  <QrCode className="mr-1.5 h-4 w-4" />
-                  My Boarding Pass
+              <Button size="lg" variant="outline" asChild className="btn-hover-scale border-white/30 bg-white/10 text-white hover:bg-white/20 h-12 px-7 rounded-full font-medium backdrop-blur">
+                <Link to="/attendance">
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Self-Attendance
                 </Link>
               </Button>
-            </div>
+              {/* Optional quick link for Admins to scan student passes */}
+              <Button size="lg" variant="ghost" asChild className="btn-hover-scale text-white hover:bg-white/10 hover:text-white h-12 px-7 rounded-full font-medium">
+                <Link to="/admin/scanner">
+                  Admin Scanner
+                </Link>
+              </Button>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* Live counters */}
-      <section className="container mx-auto -mt-10 max-w-6xl px-4">
+      <section className="container mx-auto -mt-10 max-w-6xl px-4 relative z-10">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat label="Students registered" value={students ?? "—"} />
           <Stat label="Live QR scans" value={scans ?? "—"} />

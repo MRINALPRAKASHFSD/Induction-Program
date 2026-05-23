@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { registerForClub } from "@/lib/attendance.functions";
+import { localDb, type LocalClub } from "@/lib/local-db";
 
 export const Route = createFileRoute("/clubs")({
   head: () => ({
@@ -24,28 +22,29 @@ export const Route = createFileRoute("/clubs")({
   component: ClubsPage,
 });
 
-type Club = { id: string; name: string; slug: string; description: string | null; tags: string[]; image_url: string | null };
-
 function ClubsPage() {
-  const [clubs, setClubs] = useState<Club[]>([]);
+  const [clubs, setClubs] = useState<LocalClub[]>([]);
   const [enroll, setEnroll] = useState("");
-  const [active, setActive] = useState<Club | null>(null);
+  const [active, setActive] = useState<LocalClub | null>(null);
   const [loading, setLoading] = useState(false);
-  const join = useServerFn(registerForClub);
 
   useEffect(() => {
-    supabase.from("clubs").select("*").eq("is_active", true).order("name")
-      .then(({ data }) => setClubs((data ?? []) as Club[]));
+    setClubs(localDb.getClubs().filter(c => c.is_active));
   }, []);
 
   const onJoin = async () => {
     if (!active) return;
     setLoading(true);
     try {
-      const res = await join({ data: { club_slug: active.slug, enrollment_no: enroll.trim() } });
+      // Small simulated delay for UX
+      await new Promise(r => setTimeout(r, 400));
+      
+      const res = localDb.registerForClub(enroll.trim(), active.slug);
+      
       if (!res.ok) toast.error(res.error);
-      else if (res.duplicate) toast.info(`Already in ${res.club}`);
-      else toast.success(`Joined ${res.club}!`);
+      else if (res.duplicate) toast.info(`Already in ${active.name}`);
+      else toast.success(`Joined ${active.name}!`);
+      
       setActive(null);
       setEnroll("");
     } finally {
