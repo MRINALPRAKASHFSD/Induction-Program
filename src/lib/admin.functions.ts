@@ -147,8 +147,8 @@ export const getAnalytics = createServerFn({ method: "POST" })
       ]);
 
     const { data: depts } = await supabase.from("departments").select("id, name");
-    const deptMap = new Map((depts ?? []).map((d: any) => [d.id, d.name]));
-    const eventMap = new Map((events ?? []).map((e: any) => [e.id, e]));
+    const deptMap = new Map<string, string>((depts ?? []).map((d: any) => [d.id, d.name]));
+    const eventMap = new Map<string, any>((events ?? []).map((e: any) => [e.id, e]));
 
     const byDept: Record<string, number> = {};
     (students ?? []).forEach((s: any) => {
