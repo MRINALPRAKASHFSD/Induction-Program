@@ -11,7 +11,7 @@ export const Route = createFileRoute("/admin/analytics")({
   component: AdminAnalytics,
 });
 
-const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 type Data = Awaited<ReturnType<typeof getAnalytics>>;
 
@@ -33,7 +33,7 @@ function AdminAnalytics() {
               <XAxis dataKey="name" interval={0} angle={-20} textAnchor="end" height={60} className="text-xs" />
               <YAxis allowDecimals={false} className="text-xs" />
               <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -56,7 +56,7 @@ function AdminAnalytics() {
               <XAxis type="number" allowDecimals={false} className="text-xs" />
               <YAxis dataKey="name" type="category" width={160} className="text-xs" />
               <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]} />
+              <Bar dataKey="value" fill="var(--chart-2)" radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -68,7 +68,7 @@ function AdminAnalytics() {
               <XAxis dataKey="name" className="text-xs" />
               <YAxis allowDecimals={false} className="text-xs" />
               <Tooltip />
-              <Bar dataKey="value" fill="hsl(var(--chart-4))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
@@ -80,7 +80,7 @@ function AdminAnalytics() {
               <XAxis dataKey="name" interval={0} angle={-20} textAnchor="end" height={70} className="text-xs" />
               <YAxis allowDecimals={false} className="text-xs" />
               <Tooltip />
-              <Bar dataKey="count" fill="hsl(var(--chart-3))" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="count" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
