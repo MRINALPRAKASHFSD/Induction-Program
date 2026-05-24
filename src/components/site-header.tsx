@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, QrCode } from "lucide-react";
 
 export function SiteHeader() {
   return (
@@ -12,9 +12,25 @@ export function SiteHeader() {
           <span>KRMU Induction</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
-          <Link to="/register" className="rounded-md px-3 py-2 hover:bg-muted">Register</Link>
-          <Link to="/clubs" className="rounded-md px-3 py-2 hover:bg-muted">Clubs</Link>
-          <Link to="/admin/login" className="rounded-md px-3 py-2 font-medium text-primary hover:bg-muted">Admin</Link>
+          <Link to="/register" className="rounded-md px-3 py-2 hover:bg-muted transition-colors">
+            Register
+          </Link>
+          <Link to="/clubs" className="rounded-md px-3 py-2 hover:bg-muted transition-colors">
+            Clubs
+          </Link>
+          <Link
+            to="/my-pass"
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
+          >
+            <QrCode className="h-3.5 w-3.5" />
+            My Pass
+          </Link>
+          <Link
+            to="/admin/login"
+            className="rounded-md px-3 py-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            Admin
+          </Link>
         </nav>
       </div>
     </header>

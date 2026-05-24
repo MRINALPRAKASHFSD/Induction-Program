@@ -67,7 +67,10 @@ function Landing() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="border-white/30 bg-white/10 text-white hover:bg-white/20">
-                <Link to="/clubs">Browse clubs</Link>
+                <Link to="/my-pass">
+                  <QrCode className="mr-1.5 h-4 w-4" />
+                  My Boarding Pass
+                </Link>
               </Button>
             </div>
           </motion.div>
