@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { QrCode, MapPin, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SuccessBurst } from "@/components/success-burst";
-import { recordScan } from "@/lib/attendance.functions";
+import { localDb } from "@/lib/local-db";
 
 export const Route = createFileRoute("/scan/$token")({
   head: () => ({
@@ -20,19 +19,69 @@ export const Route = createFileRoute("/scan/$token")({
   component: ScanPage,
 });
 
+type ResultType = 
+  | { ok: true; duplicate: boolean; student: { name: string }; event: { title: string; venue: string; day: number } }
+  | { ok: false; error: string };
+
 function ScanPage() {
   const { token } = Route.useParams();
   const [enroll, setEnroll] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Awaited<ReturnType<typeof recordScan>> | null>(null);
-  const scan = useServerFn(recordScan);
+  const [result, setResult] = useState<ResultType | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Simulate slight network delay
+    await new Promise(r => setTimeout(r, 400));
+    
     try {
-      const res = await scan({ data: { qr_token: token, enrollment_no: enroll.trim() } });
-      setResult(res);
+      const enrollClean = enroll.trim().toUpperCase();
+      const student = localDb.getStudent(enrollClean);
+      if (!student) {
+        setResult({ ok: false, error: "Student not registered. Please register first." });
+        return;
+      }
+      
+      const events = localDb.getEvents();
+      const event = events.find(e => e.qr_token === token || e.id === token);
+      const sessions = localDb.getSessions();
+      
+      // Match the session either by event title (if mirrored) or just the active session
+      let session = null;
+      if (event) {
+        session = sessions.find(s => s.title === event.title);
+      }
+      if (!session) {
+        session = sessions.find(s => s.id === token) || sessions.find(s => s.is_active) || sessions[0];
+      }
+      
+      if (!session) {
+        setResult({ ok: false, error: "Event not found or inactive." });
+        return;
+      }
+
+      const markRes = localDb.markAttendance(session.id, student);
+      if (markRes.ok) {
+        setResult({
+          ok: true,
+          duplicate: false,
+          student: { name: student.full_name },
+          event: { title: session.title, venue: event?.venue || "Campus Venue", day: event?.day_number || 1 },
+        });
+      } else {
+        if (markRes.message.includes("Already")) {
+          setResult({
+            ok: true,
+            duplicate: true,
+            student: { name: student.full_name },
+            event: { title: session.title, venue: event?.venue || "Campus Venue", day: event?.day_number || 1 },
+          });
+        } else {
+          setResult({ ok: false, error: markRes.message });
+        }
+      }
     } finally {
       setLoading(false);
     }
