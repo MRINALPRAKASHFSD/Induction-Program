@@ -6,7 +6,11 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig(({ command }) => ({
   plugins: [
-    tanstackStart({ server: { entry: "server" } }),
+    tanstackStart({
+      server: {
+        preset: "vercel",
+      }
+    }),
     react(),
     tailwindcss(),
     tsconfigPaths(),
