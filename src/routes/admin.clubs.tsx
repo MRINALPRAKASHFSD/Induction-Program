@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,31 +9,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { upsertClub, deleteClub } from "@/lib/admin.functions";
+import { localDb, type LocalClub } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/clubs")({
   head: () => ({ meta: [{ title: "Clubs · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminClubs,
 });
 
-type Club = {
-  id: string; name: string; slug: string; description: string | null;
-  tags: string[]; image_url: string | null; is_active: boolean;
-};
-
 function AdminClubs() {
-  const [rows, setRows] = useState<Club[] | null>(null);
+  const [rows, setRows] = useState<LocalClub[] | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
 
-  const load = async () => {
-    const { data } = await supabase.from("clubs").select("*").order("name");
-    setRows((data ?? []) as Club[]);
-    const { data: regs } = await supabase.from("club_registrations").select("club_id");
+  const load = () => {
+    const data = localDb.getClubs();
+    setRows(data);
+    const regs = localDb.getClubRegistrations();
     const c: Record<string, number> = {};
-    (regs ?? []).forEach((r: any) => { c[r.club_id] = (c[r.club_id] ?? 0) + 1; });
+    regs.forEach((r) => { c[r.club_slug] = (c[r.club_slug] ?? 0) + 1; });
     setCounts(c);
   };
+  
   useEffect(() => { load(); }, []);
 
   return (
@@ -43,23 +36,26 @@ function AdminClubs() {
       <div className="mb-4 flex justify-end"><ClubDialog onSaved={load} /></div>
 
       {!rows ? (
-        <div className="grid gap-3 sm:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2" />
       ) : rows.length === 0 ? (
         <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No clubs yet.</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {rows.map((c) => <ClubCard key={c.id} club={c} count={counts[c.id] ?? 0} onChanged={load} />)}
+          {rows.map((c) => <ClubCard key={c.id} club={c} count={counts[c.slug] ?? 0} onChanged={load} />)}
         </div>
       )}
     </AdminShell>
   );
 }
 
-function ClubCard({ club, count, onChanged }: { club: Club; count: number; onChanged: () => void }) {
-  const del = useServerFn(deleteClub);
-  const remove = async () => {
+function ClubCard({ club, count, onChanged }: { club: LocalClub; count: number; onChanged: () => void }) {
+  const remove = () => {
     if (!confirm(`Delete "${club.name}"?`)) return;
-    try { await del({ data: { id: club.id } }); onChanged(); toast.success("Deleted"); }
+    try { 
+      localDb.deleteClub(club.id); 
+      onChanged(); 
+      toast.success("Deleted"); 
+    }
     catch (e: any) { toast.error(e.message); }
   };
   return (
@@ -87,10 +83,8 @@ function ClubCard({ club, count, onChanged }: { club: Club; count: number; onCha
   );
 }
 
-function ClubDialog({ club, onSaved }: { club?: Club; onSaved: () => void }) {
+function ClubDialog({ club, onSaved }: { club?: LocalClub; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const save = useServerFn(upsertClub);
   const [form, setForm] = useState({
     name: club?.name ?? "", slug: club?.slug ?? "",
     description: club?.description ?? "",
@@ -99,10 +93,10 @@ function ClubDialog({ club, onSaved }: { club?: Club; onSaved: () => void }) {
     is_active: club?.is_active ?? true,
   });
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await save({ data: {
+      localDb.upsertClub({
         id: club?.id,
         name: form.name,
         slug: form.slug.toLowerCase(),
@@ -110,9 +104,9 @@ function ClubDialog({ club, onSaved }: { club?: Club; onSaved: () => void }) {
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         image_url: form.image_url || null,
         is_active: form.is_active,
-      }});
+      });
       toast.success(club ? "Updated" : "Created"); setOpen(false); onSaved();
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   return (
@@ -132,7 +126,7 @@ function ClubDialog({ club, onSaved }: { club?: Club; onSaved: () => void }) {
             <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
             <span className="text-sm">{form.is_active ? "Visible to students" : "Hidden"}</span>
           </div>
-          <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button></DialogFooter>
+          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,132 +1,136 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
-import { Search, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Search, Download, UserPlus } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listStudents, exportStudentsCsv } from "@/lib/admin.functions";
+import { localDb, type LocalStudent } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/students")({
   head: () => ({ meta: [{ title: "Students · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminStudents,
 });
 
-type Row = {
-  id: string; full_name: string; enrollment_no: string; email: string;
-  phone: string; course: string; year: number; department_id: string; created_at: string;
-};
-
-const PAGE = 50;
-
 function AdminStudents() {
   const [q, setQ] = useState("");
-  const [dept, setDept] = useState<string>("all");
-  const [depts, setDepts] = useState<{ id: string; name: string }[]>([]);
-  const [rows, setRows] = useState<Row[] | null>(null);
+  const [dept, setDept] = useState<string>("_all");
+  const [students, setStudents] = useState<LocalStudent[]>([]);
   const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const list = useServerFn(listStudents);
-  const exp = useServerFn(exportStudentsCsv);
 
   useEffect(() => {
-    supabase.from("departments").select("id, name").order("name").then(({ data }) => setDepts(data ?? []));
-  }, []);
+    let all = localDb.getStudents();
+    
+    if (q) {
+      const qs = q.toLowerCase();
+      all = all.filter(s => 
+        s.full_name.toLowerCase().includes(qs) || 
+        s.enrollment_no.toLowerCase().includes(qs)
+      );
+    }
 
-  const load = async (nextOffset = 0) => {
-    setBusy(true);
-    try {
-      const res = await list({ data: { q: q || undefined, department_id: dept === "all" ? null : dept, limit: PAGE, offset: nextOffset } });
-      setRows(res.rows as Row[]); setTotal(res.total); setOffset(nextOffset);
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  };
+    if (dept !== "_all") {
+      // Very basic filtering based on string match in branch
+      all = all.filter(s => s.branch.includes(dept));
+    }
 
-  useEffect(() => { load(0); /* eslint-disable-next-line */ }, []);
-  useEffect(() => {
-    const t = setTimeout(() => load(0), 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line
+    setStudents(all);
+    setTotal(all.length);
   }, [q, dept]);
 
-  const download = async () => {
-    try {
-      const { csv } = await exp({ data: undefined as any });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `krmu-students-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click(); URL.revokeObjectURL(url);
-      toast.success("CSV downloaded");
-    } catch (e: any) { toast.error(e.message); }
+  const onExport = () => {
+    const all = localDb.getStudents();
+    const header = ["enrollment_no", "full_name", "branch", "semester", "created_at"];
+    const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [
+      header.join(","),
+      ...all.map(r => [r.enrollment_no, r.full_name, r.branch, r.semester, r.created_at].map(esc).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `krmu_students_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const deptName = (id: string) => depts.find((d) => d.id === id)?.name ?? "—";
-
   return (
-    <AdminShell title="Students" subtitle={`${total.toLocaleString()} registered`}>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, enrollment, email…" className="pl-9" />
+    <AdminShell title="Students" subtitle={`Managing ${total} registered students.`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-1 items-center gap-3">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search name, enrollment..."
+              className="pl-9 bg-card"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <Select value={dept} onValueChange={setDept}>
+            <SelectTrigger className="w-[180px] bg-card">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">All Departments</SelectItem>
+              <SelectItem value="SOET">SOET</SelectItem>
+              <SelectItem value="SOMS">SOMS</SelectItem>
+              <SelectItem value="SOLS">SOLS</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={dept} onValueChange={setDept}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="All departments" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All departments</SelectItem>
-            {depts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Button onClick={download} variant="outline"><Download className="mr-1 h-4 w-4" /> CSV</Button>
-      </div>
-
-      <div className="mt-4 overflow-x-auto rounded-xl border bg-card shadow-sm">
-        {!rows ? (
-          <div className="p-4 space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
-        ) : rows.length === 0 ? (
-          <p className="p-8 text-center text-sm text-muted-foreground">No students match this filter.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Enrollment</th>
-                <th className="px-4 py-2">Email</th>
-                <th className="px-4 py-2">Course</th>
-                <th className="px-4 py-2">Year</th>
-                <th className="px-4 py-2">Department</th>
-                <th className="px-4 py-2">Registered</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t hover:bg-muted/30">
-                  <td className="px-4 py-2 font-medium">{r.full_name}</td>
-                  <td className="px-4 py-2 tabular-nums">{r.enrollment_no}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{r.email}</td>
-                  <td className="px-4 py-2">{r.course}</td>
-                  <td className="px-4 py-2">{r.year}</td>
-                  <td className="px-4 py-2">{deptName(r.department_id)}</td>
-                  <td className="px-4 py-2 text-muted-foreground">{new Date(r.created_at).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">
-          {rows && rows.length > 0 && `Showing ${offset + 1}–${offset + rows.length} of ${total}`}
-        </span>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={busy || offset === 0} onClick={() => load(Math.max(0, offset - PAGE))}>Prev</Button>
-          <Button variant="outline" size="sm" disabled={busy || offset + PAGE >= total} onClick={() => load(offset + PAGE)}>Next</Button>
+          <Button variant="outline" onClick={onExport} disabled={total === 0}>
+            <Download className="mr-2 h-4 w-4" /> Export CSV
+          </Button>
+          <Button>
+            <UserPlus className="mr-2 h-4 w-4" /> Add Student
+          </Button>
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/30">
+              <TableHead>Student</TableHead>
+              <TableHead>Enrollment No.</TableHead>
+              <TableHead>Program</TableHead>
+              <TableHead>Registered At</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                  No students found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              students.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell>
+                    <div className="font-medium">{s.full_name}</div>
+                  </TableCell>
+                  <TableCell className="font-mono text-xs uppercase">{s.enrollment_no}</TableCell>
+                  <TableCell>
+                    <div className="text-sm">{s.branch}</div>
+                    <div className="text-xs text-muted-foreground">{s.semester}</div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {new Date(s.created_at).toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </AdminShell>
   );

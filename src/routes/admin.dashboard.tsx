@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Users, QrCode, Sparkles, Calendar } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useLiveCount } from "@/hooks/use-live-count";
 import { AdminShell } from "@/components/admin-shell";
+import { localDb, type LocalStudent } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({
@@ -13,30 +13,24 @@ export const Route = createFileRoute("/admin/dashboard")({
   component: AdminDashboard,
 });
 
-type Row = { id: string; full_name: string; enrollment_no: string; created_at: string };
-
 function AdminDashboard() {
-  const [recent, setRecent] = useState<Row[]>([]);
+  const [recent, setRecent] = useState<LocalStudent[]>([]);
   const students = useLiveCount("students");
   const scans = useLiveCount("attendance");
   const clubs = useLiveCount("club_registrations");
   const events = useLiveCount("events");
 
   useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("students")
-        .select("id, full_name, enrollment_no, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      setRecent((data ?? []) as Row[]);
+    const load = () => {
+      const all = localDb.getStudents();
+      const sorted = [...all].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setRecent(sorted.slice(0, 10));
     };
     load();
-    const ch = supabase
-      .channel("recent-students")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "students" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+
+    const handler = () => load();
+    window.addEventListener("local-db-update", handler);
+    return () => window.removeEventListener("local-db-update", handler);
   }, []);
 
   return (

@@ -1,21 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { AdminShell } from "@/components/admin-shell";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listActivityLogs } from "@/lib/admin.functions";
+import { localDb, type LocalActivityLog } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/activity")({
   head: () => ({ meta: [{ title: "Activity log · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminActivity,
 });
 
-type Row = { id: string; actor_id: string | null; action: string; entity: string; entity_id: string | null; meta: any; created_at: string };
-
 function AdminActivity() {
-  const fn = useServerFn(listActivityLogs);
-  const [rows, setRows] = useState<Row[] | null>(null);
-  useEffect(() => { fn({ data: { limit: 200 } }).then((r) => setRows(r as Row[])); }, [fn]);
+  const [rows, setRows] = useState<LocalActivityLog[] | null>(null);
+
+  useEffect(() => {
+    // Simulate network delay for UX
+    const timer = setTimeout(() => {
+      setRows(localDb.getActivityLogs());
+    }, 500);
+
+    const handleUpdate = () => {
+      setRows(localDb.getActivityLogs());
+    };
+    window.addEventListener("local-db-update", handleUpdate);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("local-db-update", handleUpdate);
+    };
+  }, []);
 
   return (
     <AdminShell title="Activity log" subtitle="Recent admin and coordinator actions.">

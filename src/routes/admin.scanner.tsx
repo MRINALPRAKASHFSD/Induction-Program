@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera, ChevronDown, CheckCircle2, AlertTriangle,
@@ -9,7 +8,7 @@ import {
 import { Html5Qrcode } from "html5-qrcode";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
-import { getActiveEvents, scanMarkAttendance, type ScanResult } from "@/lib/scanner.functions";
+import { localDb } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/scanner")({
   head: () => ({
@@ -38,9 +37,6 @@ type FeedbackState =
 
 /* ─── Page ──────────────────────────────────────────────────────────────── */
 function ScannerPage() {
-  const fetchEvents = useServerFn(getActiveEvents);
-  const markAttendance = useServerFn(scanMarkAttendance);
-
   const [events, setEvents] = useState<EventRow[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [feedback, setFeedback] = useState<FeedbackState>({ status: "idle" });
@@ -66,15 +62,18 @@ function ScannerPage() {
 
   /* ─── Load active events ─────────────────────────────────────────────── */
   useEffect(() => {
-    fetchEvents({ data: {} })
-      .then((rows) => {
-        setEvents(rows as EventRow[]);
-        if (rows.length > 0) {
-          setSelectedEventId(rows[0].id);
-          selectedEventIdRef.current = rows[0].id;
-        }
-      })
-      .catch(console.error);
+    const activeSessions = localDb.getSessions().filter(s => s.is_active);
+    const rows: EventRow[] = activeSessions.map((s) => ({
+      id: s.id,
+      title: s.title,
+      day_number: 1,
+      venue: "Campus",
+    }));
+    setEvents(rows);
+    if (rows.length > 0) {
+      setSelectedEventId(rows[0].id);
+      selectedEventIdRef.current = rows[0].id;
+    }
   }, []);
 
   /* ─── Feedback auto-dismiss (1.5 s) and scanner resume ──────────────── */
@@ -129,20 +128,28 @@ function ScannerPage() {
       }
 
       try {
-        const result = await markAttendance({
-          data: { enrollment_no: enrollment, event_id: currentEventId },
-        }) as ScanResult;
-
-        if (!result.ok) {
+        const student = localDb.getStudent(enrollment);
+        if (!student) {
           buzz("error");
-          showFeedback({ status: "error", message: result.error });
-        } else if (result.duplicate) {
-          buzz("warn");
-          showFeedback({ status: "duplicate", studentName: result.studentName, eventTitle: result.eventTitle, day: result.day });
+          showFeedback({ status: "error", message: `Enrollment number "${enrollment}" is not registered. Please register first.` });
+          return;
+        }
+
+        const res = localDb.markAttendance(currentEventId, student);
+        const eventTitle = events.find(e => e.id === currentEventId)?.title || "Event";
+
+        if (!res.ok) {
+          if (res.message.toLowerCase().includes("already")) {
+            buzz("warn");
+            showFeedback({ status: "duplicate", studentName: student.full_name, eventTitle, day: 1 });
+          } else {
+            buzz("error");
+            showFeedback({ status: "error", message: res.message });
+          }
         } else {
           buzz("success");
           setTotalScans((n) => n + 1);
-          showFeedback({ status: "success", studentName: result.studentName, eventTitle: result.eventTitle, day: result.day });
+          showFeedback({ status: "success", studentName: student.full_name, eventTitle, day: 1 });
         }
       } catch (err: any) {
         buzz("error");
@@ -150,7 +157,7 @@ function ScannerPage() {
       }
     },
     // Stable: refs always fresh, no selectedEventId dep needed
-    [markAttendance, showFeedback, buzz],
+    [showFeedback, buzz, events],
   );
 
   /* ─── Keep processEnrollment ref fresh for the html5-qrcode callback ── */
@@ -159,17 +166,45 @@ function ScannerPage() {
     processEnrollmentRef.current = processEnrollment;
   }, [processEnrollment]);
 
-  /* ─── Camera scanner lifecycle ───────────────────────────────────────── */
+  const [cameras, setCameras] = useState<{id: string; label: string}[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+
+  /* ─── Fetch available cameras on mount ─────────────────────────────── */
   useEffect(() => {
-    let scanner: Html5Qrcode | null = null;
+    Html5Qrcode.getCameras()
+      .then((devices) => {
+        if (devices && devices.length > 0) {
+          setCameras(devices);
+          // Try to find a back camera
+          const backCamera = devices.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
+          setSelectedCameraId(backCamera ? backCamera.id : devices[0].id);
+        } else {
+          setFeedback({ status: "error", message: "No cameras found on this device." });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to get cameras", err);
+        setFeedback({ status: "error", message: "Failed to enumerate cameras. Check permissions." });
+      });
+  }, []);
+
+  /* ─── Camera scanner lifecycle ───────────────────────────────────────── */
+  const initLockRef = useRef(false);
+
+  useEffect(() => {
+    if (!selectedCameraId) return;
+
+    let mounted = true;
 
     const startScanner = async () => {
-      try {
-        scanner = new Html5Qrcode(SCANNER_DIV_ID);
-        scannerRef.current = scanner;
+      if (initLockRef.current || scannerRef.current) return;
+      initLockRef.current = true;
 
+      try {
+        const scanner = new Html5Qrcode(SCANNER_DIV_ID);
+        
         await scanner.start(
-          { facingMode: "environment" },
+          selectedCameraId,
           {
             fps: 15,
             qrbox: { width: 240, height: 240 },
@@ -177,16 +212,22 @@ function ScannerPage() {
             disableFlip: false,
           },
           (decoded) => {
-            // Always call via ref so we get the latest version
             processEnrollmentRef.current(decoded);
           },
-          () => {
-            // QR not detected in frame — ignore
-          },
+          () => {}
         );
-        setScannerReady(true);
-        setFeedback({ status: "scanning" });
+
+        if (mounted) {
+          scannerRef.current = scanner;
+          setScannerReady(true);
+          setFeedback({ status: "scanning" });
+        } else {
+          // If unmounted while starting, stop it immediately
+          await scanner.stop();
+          scanner.clear();
+        }
       } catch (err: any) {
+        if (!mounted) return;
         setScannerReady(false);
         setFeedback({
           status: "error",
@@ -194,22 +235,46 @@ function ScannerPage() {
             ? "Camera permission denied. Please allow camera access and refresh."
             : `Camera error: ${err?.message ?? "Unknown"}`,
         });
+      } finally {
+        initLockRef.current = false;
       }
     };
 
     startScanner();
 
     return () => {
-      if (scanner?.isScanning) {
-        scanner.stop().catch(() => {});
+      mounted = false;
+      const scanner = scannerRef.current;
+      if (scanner && scanner.isScanning) {
+        scanner.stop().then(() => {
+          scanner.clear();
+        }).catch(() => {});
       }
+      scannerRef.current = null;
       if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // start/stop only on mount/unmount
+  }, [selectedCameraId]); // restart when camera changes
 
   /* ─── Selected event display ─────────────────────────────────────────── */
   const selectedEvent = events.find((e) => e.id === selectedEventId);
+
+  const requestCameraPermission = async () => {
+    try {
+      setFeedback({ status: "idle" });
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        setCameras(devices);
+        const backCamera = devices.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('environment'));
+        setSelectedCameraId(backCamera ? backCamera.id : devices[0].id);
+      } else {
+        setFeedback({ status: "error", message: "No cameras found." });
+      }
+    } catch (err: any) {
+      setFeedback({ status: "error", message: "Permission denied or no camera found." });
+    }
+  };
 
   return (
     <AdminShell
@@ -271,6 +336,33 @@ function ScannerPage() {
           )}
         </div>
 
+        {/* Camera selector */}
+        {cameras.length > 0 && (
+          <div className="rounded-2xl border bg-card p-4 shadow-sm">
+            <label
+              htmlFor="camera-selector"
+              className="block text-sm font-semibold mb-2"
+            >
+              Select Camera
+            </label>
+            <div className="relative">
+              <select
+                id="camera-selector"
+                value={selectedCameraId}
+                onChange={(e) => setSelectedCameraId(e.target.value)}
+                className="w-full appearance-none rounded-xl border bg-muted/40 px-4 py-3 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {cameras.map((c, i) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label || `Camera ${i + 1}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            </div>
+          </div>
+        )}
+
         {/* Camera viewport + feedback overlay */}
         <div className="relative overflow-hidden rounded-3xl border bg-black shadow-elegant aspect-square max-w-sm mx-auto">
           {/* html5-qrcode mounts here */}
@@ -313,7 +405,7 @@ function ScannerPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className={`absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center ${
+                className={`absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center z-10 ${
                   feedback.status === "success"
                     ? "bg-success/90"
                     : feedback.status === "duplicate"
@@ -358,8 +450,15 @@ function ScannerPage() {
                     >
                       <XCircle className="h-16 w-16 text-white" />
                     </motion.div>
-                    <p className="text-xl font-bold text-white">Not Registered</p>
+                    <p className="text-xl font-bold text-white">
+                      {!scannerReady ? "Camera Error" : "Not Registered"}
+                    </p>
                     <p className="text-sm text-white/80 max-w-[220px]">{feedback.message}</p>
+                    {!scannerReady && (
+                      <Button onClick={requestCameraPermission} variant="secondary" className="mt-4 pointer-events-auto">
+                        Retry Camera
+                      </Button>
+                    )}
                   </>
                 )}
               </motion.div>

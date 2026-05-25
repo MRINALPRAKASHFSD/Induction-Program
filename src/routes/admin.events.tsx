@@ -1,37 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import QRCode from "qrcode";
 import { Plus, QrCode as QrIcon, Trash2, Printer, Power, PowerOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { createEvent, updateEvent, deleteEvent } from "@/lib/admin.functions";
+import { localDb, type LocalEvent } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/events")({
   head: () => ({ meta: [{ title: "Events · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminEvents,
 });
 
-type EventRow = {
-  id: string; title: string; description: string | null; day_number: number;
-  venue: string; starts_at: string; ends_at: string; qr_token: string; is_active: boolean;
-};
-
 function AdminEvents() {
-  const [rows, setRows] = useState<EventRow[] | null>(null);
-  const [qrEvent, setQrEvent] = useState<EventRow | null>(null);
+  const [rows, setRows] = useState<LocalEvent[] | null>(null);
+  const [qrEvent, setQrEvent] = useState<LocalEvent | null>(null);
 
-  const load = async () => {
-    const { data } = await supabase.from("events").select("*").order("day_number").order("starts_at");
-    setRows((data ?? []) as EventRow[]);
+  const load = () => {
+    setRows(localDb.getEvents());
   };
+  
   useEffect(() => { load(); }, []);
 
   return (
@@ -41,7 +33,7 @@ function AdminEvents() {
       </div>
 
       {!rows ? (
-        <div className="grid gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
+        <div className="grid gap-3" />
       ) : rows.length === 0 ? (
         <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No events yet. Create one to get started.</p>
       ) : (
@@ -55,16 +47,22 @@ function AdminEvents() {
   );
 }
 
-function EventCard({ row, onChanged, onOpenQr }: { row: EventRow; onChanged: () => void; onOpenQr: () => void }) {
-  const upd = useServerFn(updateEvent);
-  const del = useServerFn(deleteEvent);
-  const toggle = async () => {
-    try { await upd({ data: { id: row.id, is_active: !row.is_active } }); onChanged(); toast.success(`Event ${!row.is_active ? "activated" : "deactivated"}`); }
+function EventCard({ row, onChanged, onOpenQr }: { row: LocalEvent; onChanged: () => void; onOpenQr: () => void }) {
+  const toggle = () => {
+    try { 
+      localDb.updateEvent(row.id, { is_active: !row.is_active }); 
+      onChanged(); 
+      toast.success(`Event ${!row.is_active ? "activated" : "deactivated"}`); 
+    }
     catch (e: any) { toast.error(e.message); }
   };
-  const remove = async () => {
+  const remove = () => {
     if (!confirm(`Delete "${row.title}"? This removes related attendance.`)) return;
-    try { await del({ data: { id: row.id } }); onChanged(); toast.success("Deleted"); }
+    try { 
+      localDb.deleteEvent(row.id); 
+      onChanged(); 
+      toast.success("Deleted"); 
+    }
     catch (e: any) { toast.error(e.message); }
   };
   return (
@@ -101,19 +99,16 @@ function toLocalInput(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EventDialog({ row, onSaved }: { row?: EventRow; onSaved: () => void }) {
+function EventDialog({ row, onSaved }: { row?: LocalEvent; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const create = useServerFn(createEvent);
-  const upd = useServerFn(updateEvent);
   const [form, setForm] = useState({
     title: row?.title ?? "", description: row?.description ?? "",
     day_number: row?.day_number ?? 1, venue: row?.venue ?? "",
     starts_at: row ? toLocalInput(row.starts_at) : "", ends_at: row ? toLocalInput(row.ends_at) : "",
   });
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       const payload = {
         title: form.title, description: form.description || null,
@@ -122,11 +117,14 @@ function EventDialog({ row, onSaved }: { row?: EventRow; onSaved: () => void }) 
         ends_at: new Date(form.ends_at).toISOString(),
         is_active: true,
       };
-      if (row) await upd({ data: { id: row.id, ...payload } });
-      else await create({ data: payload });
+      if (row) {
+        localDb.updateEvent(row.id, payload);
+      } else {
+        localDb.createEvent(payload);
+      }
       toast.success(row ? "Event updated" : "Event created");
       setOpen(false); onSaved();
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   return (
@@ -148,7 +146,7 @@ function EventDialog({ row, onSaved }: { row?: EventRow; onSaved: () => void }) 
             <Field label="Ends at"><Input type="datetime-local" required value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
           </div>
           <Field label="Description"><Textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-          <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save"}</Button></DialogFooter>
+          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -159,7 +157,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div className="grid gap-1.5"><Label className="text-sm">{label}</Label>{children}</div>;
 }
 
-function QrDialog({ event, onClose }: { event: EventRow | null; onClose: () => void }) {
+function QrDialog({ event, onClose }: { event: LocalEvent | null; onClose: () => void }) {
   const [dataUrl, setDataUrl] = useState<string>("");
   const [scanUrl, setScanUrl] = useState<string>("");
 
