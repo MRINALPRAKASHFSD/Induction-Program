@@ -7,8 +7,8 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 export default defineConfig(({ command }) => ({
   plugins: [
     tanstackStart({
-      server: {
-        preset: "vercel",
+      spa: {
+        enabled: true,
       }
     }),
     react(),
