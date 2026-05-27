@@ -9,14 +9,26 @@ export type LocalStudent = {
 };
 
 // ─── Room Allocation Configuration ────────────────────────────────────────
-// Format: [Block][Floor][Room padded 2 digits] → e.g. A109, B320, C415
+// Format: [Block][Floor][Room padded 2 digits] → e.g. A101, A113, B215, C315
 export const ROOM_CONFIG = {
-  blocks: ["A", "B", "C"],
-  floors: [1, 2, 3, 4],
-  roomsPerFloor: 20, // rooms 01–20 on each floor
-} as const;
+  blocks: ["A", "B", "C"] as const,
+  floors: [1, 2, 3] as const,
+  roomsPerFloor: 15, // rooms 01–15 on each floor
+  defaultCapacity: 72, // standard max students per room
+  /**
+   * Rooms with a higher-than-default student capacity.
+   * A113, A213, A313 are large lecture halls — each holds 100 students.
+   */
+  specialRooms: { A113: 100, A213: 100, A313: 100 } as Record<string, number>,
+};
 
-/** Generate all valid room slots in allocation order. */
+/** Return the maximum student capacity for a given room number.
+ *  Special rooms (A113/A213/A313) → 100; all others → 72. */
+export function getRoomCapacity(roomNo: string): number {
+  return ROOM_CONFIG.specialRooms[roomNo] ?? ROOM_CONFIG.defaultCapacity;
+}
+
+/** Generate all valid room IDs in fill order: A101→A115, A201→A315, B101→C315. */
 export function generateAllRooms(): string[] {
   const rooms: string[] = [];
   for (const block of ROOM_CONFIG.blocks) {
@@ -28,6 +40,14 @@ export function generateAllRooms(): string[] {
   }
   return rooms;
 }
+
+/** Total student capacity across every room in all blocks. */
+export function getTotalStudentCapacity(): number {
+  return generateAllRooms().reduce((sum, r) => sum + getRoomCapacity(r), 0);
+}
+
+/** Sparse map: room number → current number of students assigned to it. */
+export type RoomOccupancy = Record<string, number>;
 
 export type LocalSession = {
   id: string;
@@ -307,85 +327,150 @@ class LocalDB {
 
   // --- Room Allocation ---
 
+  /** Read the persisted room-occupancy map from localStorage. */
+  getRoomOccupancy(): RoomOccupancy {
+    if (typeof window === "undefined") return {};
+    try {
+      const data = localStorage.getItem("krmu_room_occupancy");
+      return data ? (JSON.parse(data) as RoomOccupancy) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private setRoomOccupancy(occ: RoomOccupancy) {
+    if (typeof window === "undefined") return;
+    localStorage.setItem("krmu_room_occupancy", JSON.stringify(occ));
+    window.dispatchEvent(new Event("local-db-update"));
+  }
+
+  /**
+   * Returns a per-room summary for the occupancy grid UI.
+   * Rooms are in fill order (A101 → A115, A201 → C315).
+   */
+  getRoomSummary(): {
+    room_no: string;
+    capacity: number;
+    occupied: number;
+    available: number;
+    isSpecial: boolean;
+    fillPct: number;
+  }[] {
+    const occupancy = this.getRoomOccupancy();
+    return generateAllRooms().map((room_no) => {
+      const capacity = getRoomCapacity(room_no);
+      const occupied = Math.min(occupancy[room_no] ?? 0, capacity);
+      return {
+        room_no,
+        capacity,
+        occupied,
+        available: capacity - occupied,
+        isSpecial: room_no in ROOM_CONFIG.specialRooms,
+        fillPct: capacity > 0 ? Math.round((occupied / capacity) * 100) : 0,
+      };
+    });
+  }
+
   /**
    * Assign rooms to all students who don't have one yet.
-   * Students are sorted by registration time (FIFO — earliest first).
-   * Rooms are filled sequentially: A101 → A102 … C420.
-   * Already-allocated students are skipped (idempotent).
+   *
+   * Algorithm (v2 — shared-capacity model):
+   *   • Students sorted FIFO (earliest registration first).
+   *   • Rooms fill in order A101→A115, A201→A315, B101→C315.
+   *   • A room accepts students until its capacity is reached:
+   *       - A113, A213, A313 → max 100 students each.
+   *       - All other rooms  → max 72 students each.
+   *   • When a room is full, the pointer advances to the next room.
+   *   • Already-allocated students are skipped (idempotent top-up).
    */
-  allocateRooms(): { allocated: number; skipped: number; overflow: number } {
+  allocateRooms(): { allocated: number; skipped: number; overflow: number; roomsUsed: number } {
     const allRooms = generateAllRooms();
-    let students = this.get<LocalStudent>("krmu_local_students");
+    const students = this.get<LocalStudent>("krmu_local_students");
+    const occupancy = this.getRoomOccupancy();
 
-    // Find rooms already taken so we can skip them
-    const takenRooms = new Set(
-      students.filter(s => s.room_no && s.room_no !== "OVERFLOW").map(s => s.room_no!)
-    );
-
-    // Available pool (preserve order)
-    const availableRooms = allRooms.filter(r => !takenRooms.has(r));
-
-    // Students without a room, sorted by registration time (FIFO)
+    // Unallocated students — sort FIFO
     const unallocated = [...students]
-      .filter(s => !s.room_no)
+      .filter((s) => !s.room_no)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
+    const skipped = students.filter((s) => !!s.room_no).length;
     let allocated = 0;
     let overflow = 0;
-    let poolIdx = 0;
+    let roomIdx = 0;
+    const newRoomsUsed = new Set<string>();
+    const assignments = new Map<string, string>();
 
-    // Build a lookup map for fast updates
-    const roomAssignments = new Map<string, string>();
     for (const student of unallocated) {
-      if (poolIdx < availableRooms.length) {
-        roomAssignments.set(student.id, availableRooms[poolIdx]);
-        poolIdx++;
-        allocated++;
-      } else {
-        roomAssignments.set(student.id, "OVERFLOW");
+      // Advance past any rooms that are already at capacity
+      while (roomIdx < allRooms.length) {
+        const cap = getRoomCapacity(allRooms[roomIdx]);
+        if ((occupancy[allRooms[roomIdx]] ?? 0) < cap) break;
+        roomIdx++;
+      }
+
+      if (roomIdx >= allRooms.length) {
+        assignments.set(student.id, "OVERFLOW");
         overflow++;
+      } else {
+        const room = allRooms[roomIdx];
+        assignments.set(student.id, room);
+        occupancy[room] = (occupancy[room] ?? 0) + 1;
+        newRoomsUsed.add(room);
+        allocated++;
       }
     }
 
-    // Apply assignments
-    const skipped = students.length - unallocated.length;
-    const updated = students.map(s =>
-      roomAssignments.has(s.id) ? { ...s, room_no: roomAssignments.get(s.id)! } : s
+    // Persist updated student records and occupancy map
+    const updated = students.map((s) =>
+      assignments.has(s.id) ? { ...s, room_no: assignments.get(s.id)! } : s
     );
-
     this.set("krmu_local_students", updated);
+    this.setRoomOccupancy(occupancy);
     this.logActivity("room.allocate", "students", null, { allocated, skipped, overflow });
-    return { allocated, skipped, overflow };
+    return { allocated, skipped, overflow, roomsUsed: newRoomsUsed.size };
   }
 
-  /** Clear all room assignments from every student. */
+  /** Clear all room assignments and reset occupancy counts to zero. */
   resetRoomAllocations(): { cleared: number } {
     const students = this.get<LocalStudent>("krmu_local_students");
-    const updated = students.map(s => ({ ...s, room_no: undefined }));
+    const updated = students.map((s) => ({ ...s, room_no: undefined }));
     this.set("krmu_local_students", updated);
+    this.setRoomOccupancy({});
     this.logActivity("room.reset", "students", null, { cleared: students.length });
     return { cleared: students.length };
   }
 
-  /** Manually override a specific student's room. */
-  updateStudentRoom(enrollment_no: string, room_no: string): boolean {
+  /**
+   * Manually override a specific student's room and keep occupancy counts in sync.
+   * Decrements the old room's count; increments the new room's count.
+   */
+  updateStudentRoom(enrollment_no: string, new_room_no: string): boolean {
     const students = this.get<LocalStudent>("krmu_local_students");
+    const occupancy = this.getRoomOccupancy();
     let found = false;
-    const updated = students.map(s => {
-      if (s.enrollment_no === enrollment_no) {
-        found = true;
-        return { ...s, room_no };
+
+    const updated = students.map((s) => {
+      if (s.enrollment_no !== enrollment_no) return s;
+      found = true;
+      // Maintain occupancy counts
+      if (s.room_no && s.room_no !== "OVERFLOW") {
+        occupancy[s.room_no] = Math.max(0, (occupancy[s.room_no] ?? 1) - 1);
       }
-      return s;
+      if (new_room_no !== "OVERFLOW") {
+        occupancy[new_room_no] = (occupancy[new_room_no] ?? 0) + 1;
+      }
+      return { ...s, room_no: new_room_no };
     });
+
     if (found) {
       this.set("krmu_local_students", updated);
-      // Also update the active profile if it matches
+      this.setRoomOccupancy(occupancy);
+      // Keep the active boarding pass in sync
       const profile = this.getStudentProfile();
       if (profile && profile.enrollment_no === enrollment_no) {
-        localStorage.setItem("krmu_active_profile", JSON.stringify({ ...profile, room_no }));
+        localStorage.setItem("krmu_active_profile", JSON.stringify({ ...profile, room_no: new_room_no }));
       }
-      this.logActivity("room.update", "students", null, { enrollment_no, room_no });
+      this.logActivity("room.update", "students", null, { enrollment_no, room_no: new_room_no });
     }
     return found;
   }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { Search, Download, UserPlus, Building2, RotateCcw, Layers } from "lucide-react";
+import { Search, Download, UserPlus, Building2, RotateCcw, Layers, Eye, EyeOff } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { localDb, ROOM_CONFIG, generateAllRooms, type LocalStudent } from "@/lib/local-db";
+import { localDb, ROOM_CONFIG, getTotalStudentCapacity, type LocalStudent } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/students")({
   head: () => ({ meta: [{ title: "Students · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminStudents,
 });
 
-const TOTAL_ROOMS = ROOM_CONFIG.blocks.length * ROOM_CONFIG.floors.length * ROOM_CONFIG.roomsPerFloor;
+// Pure computation — safe to run at module level
+const TOTAL_STUDENT_CAPACITY = getTotalStudentCapacity();
+const SPECIAL_ROOM_KEYS = Object.keys(ROOM_CONFIG.specialRooms);
 
 function AdminStudents() {
   const [q, setQ] = useState("");
@@ -33,6 +35,7 @@ function AdminStudents() {
   const [students, setStudents] = useState<LocalStudent[]>([]);
   const [allStudents, setAllStudents] = useState<LocalStudent[]>([]);
   const [allocating, setAllocating] = useState(false);
+  const [showOccupancy, setShowOccupancy] = useState(false);
 
   const refresh = useCallback(() => {
     const all = localDb.getStudents();
@@ -60,11 +63,11 @@ function AdminStudents() {
     return () => window.removeEventListener("local-db-update", handler);
   }, [refresh]);
 
-  // ── Stats derived from all students ─────────────────────────────────────
-  const allocated = allStudents.filter((s) => s.room_no && s.room_no !== "OVERFLOW").length;
-  const overflow = allStudents.filter((s) => s.room_no === "OVERFLOW").length;
-  const unassigned = allStudents.filter((s) => !s.room_no).length;
-  const remaining = Math.max(0, TOTAL_ROOMS - allocated);
+  // ── Derived stats ─────────────────────────────────────────────────────────
+  const allocatedCount = allStudents.filter((s) => s.room_no && s.room_no !== "OVERFLOW").length;
+  const overflowCount = allStudents.filter((s) => s.room_no === "OVERFLOW").length;
+  const unassignedCount = allStudents.filter((s) => !s.room_no).length;
+  const slotsRemaining = Math.max(0, TOTAL_STUDENT_CAPACITY - allocatedCount);
 
   // ── Actions ──────────────────────────────────────────────────────────────
   const onAllocate = () => {
@@ -76,18 +79,21 @@ function AdminStudents() {
           toast.info("All students already have rooms assigned.");
         } else {
           const parts: string[] = [];
-          if (result.allocated > 0) parts.push(`✓ ${result.allocated} room${result.allocated !== 1 ? "s" : ""} assigned`);
-          if (result.skipped > 0) parts.push(`${result.skipped} already had rooms`);
-          if (result.overflow > 0) parts.push(`⚠ ${result.overflow} overflow (capacity exceeded)`);
+          if (result.allocated > 0)
+            parts.push(
+              `✓ ${result.allocated} students placed across ${result.roomsUsed} room${result.roomsUsed !== 1 ? "s" : ""}`
+            );
+          if (result.skipped > 0) parts.push(`${result.skipped} already assigned`);
+          if (result.overflow > 0) parts.push(`⚠ ${result.overflow} overflow (capacity full)`);
           toast.success(parts.join(" · "));
         }
         refresh();
-      } catch (err) {
+      } catch {
         toast.error("Allocation failed. Please try again.");
       } finally {
         setAllocating(false);
       }
-    }, 100); // small tick so the button shows its loading state
+    }, 100);
   };
 
   const onReset = () => {
@@ -99,7 +105,7 @@ function AdminStudents() {
   const onExport = () => {
     const all = localDb.getStudents();
     const header = ["enrollment_no", "full_name", "branch", "semester", "room_no", "created_at"];
-    const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const csv = [
       header.join(","),
       ...all.map((r) =>
@@ -120,15 +126,22 @@ function AdminStudents() {
     document.body.removeChild(link);
   };
 
+  // Load occupancy summary only when the grid is visible
+  const roomSummary = showOccupancy ? localDb.getRoomSummary() : [];
+
   return (
     <AdminShell title="Students" subtitle={`Managing ${allStudents.length} registered students.`}>
 
-      {/* ── Allocation Stats Banner ────────────────────────────────────────── */}
+      {/* ── Stats Banner ──────────────────────────────────────────────────── */}
       <div className="mb-5 grid gap-3 sm:grid-cols-4">
         <StatPill label="Total Students" value={allStudents.length} color="bg-primary/10 text-primary" />
-        <StatPill label="Rooms Assigned" value={allocated} color="bg-emerald-500/10 text-emerald-600" />
-        <StatPill label="Unassigned" value={unassigned} color="bg-amber-500/10 text-amber-600" />
-        <StatPill label="Capacity Remaining" value={remaining} color="bg-muted text-muted-foreground" />
+        <StatPill label="Students Assigned" value={allocatedCount} color="bg-emerald-500/10 text-emerald-600" />
+        <StatPill label="Unassigned" value={unassignedCount} color="bg-amber-500/10 text-amber-600" />
+        <StatPill
+          label="Slots Remaining"
+          value={slotsRemaining.toLocaleString()}
+          color="bg-muted text-muted-foreground"
+        />
       </div>
 
       {/* ── Toolbar ───────────────────────────────────────────────────────── */}
@@ -162,11 +175,13 @@ function AdminStudents() {
           <Button
             id="allocate-rooms-btn"
             onClick={onAllocate}
-            disabled={allocating || unassigned === 0}
+            disabled={allocating || unassignedCount === 0}
             className="bg-gradient-to-r from-primary to-primary/80 shadow-sm"
           >
             <Building2 className="mr-2 h-4 w-4" />
-            {allocating ? "Allocating…" : `Allocate Rooms${unassigned > 0 ? ` (${unassigned})` : ""}`}
+            {allocating
+              ? "Allocating…"
+              : `Allocate Rooms${unassignedCount > 0 ? ` (${unassignedCount})` : ""}`}
           </Button>
 
           <AlertDialog>
@@ -174,7 +189,7 @@ function AdminStudents() {
               <Button
                 id="reset-rooms-btn"
                 variant="outline"
-                disabled={allocated === 0 && overflow === 0}
+                disabled={allocatedCount === 0 && overflowCount === 0}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset Rooms
@@ -184,13 +199,17 @@ function AdminStudents() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Reset all room allocations?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will remove room assignments from all {allStudents.length} students.
-                  You can run "Allocate Rooms" again afterwards. This action cannot be undone.
+                  This will remove room assignments from all {allStudents.length} students and reset
+                  occupancy counts to zero. You can re-run "Allocate Rooms" afterwards.
+                  This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction
+                  onClick={onReset}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
                   Reset All
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -207,20 +226,102 @@ function AdminStudents() {
         </div>
       </div>
 
-      {/* ── Capacity Info ─────────────────────────────────────────────────── */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border bg-card/60 px-4 py-2.5 text-xs text-muted-foreground">
-        <Layers className="h-3.5 w-3.5 shrink-0" />
-        <span>
-          Room format: <strong className="text-foreground font-mono">[Block][Floor][Room]</strong>
-          {" "}e.g. <strong className="text-foreground font-mono">A109</strong> ·
-          Blocks: <strong className="text-foreground">{ROOM_CONFIG.blocks.join(", ")}</strong> ·
-          Floors: <strong className="text-foreground">{ROOM_CONFIG.floors.join("–")}</strong> ·
-          {" "}<strong className="text-foreground">{ROOM_CONFIG.roomsPerFloor}</strong> rooms/floor ·
-          Total capacity: <strong className="text-foreground">{TOTAL_ROOMS}</strong>
-        </span>
+      {/* ── Capacity Info Bar ─────────────────────────────────────────────── */}
+      <div className="mb-4 flex items-center justify-between rounded-lg border bg-card/60 px-4 py-2.5 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Layers className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">
+            Format:{" "}
+            <strong className="text-foreground font-mono">[Block][Floor][Room]</strong>
+            {" · "}Blocks:{" "}
+            <strong className="text-foreground">{(ROOM_CONFIG.blocks as readonly string[]).join(", ")}</strong>
+            {" · "}
+            <strong className="text-foreground">{ROOM_CONFIG.floors.length}</strong> floors ·{" "}
+            <strong className="text-foreground">{ROOM_CONFIG.roomsPerFloor}</strong> rooms/floor
+            {" · "}Standard:{" "}
+            <strong className="text-foreground">72 students</strong>
+            {" · "}Special (
+            <strong className="text-foreground font-mono">{SPECIAL_ROOM_KEYS.join(", ")}</strong>
+            ):{" "}
+            <strong className="text-foreground">100 students</strong>
+            {" · "}Total capacity:{" "}
+            <strong className="text-foreground">{TOTAL_STUDENT_CAPACITY.toLocaleString()}</strong>
+          </span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          id="toggle-occupancy-btn"
+          className="ml-4 h-7 gap-1.5 text-xs shrink-0"
+          onClick={() => setShowOccupancy((v) => !v)}
+        >
+          {showOccupancy ? (
+            <><EyeOff className="h-3 w-3" /> Hide grid</>
+          ) : (
+            <><Eye className="h-3 w-3" /> Room occupancy</>
+          )}
+        </Button>
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────────── */}
+      {/* ── Room Occupancy Grid (expandable) ─────────────────────────────── */}
+      {showOccupancy && (
+        <div className="mb-5 rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="bg-muted/30 px-5 py-3 border-b flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Room Occupancy</h3>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-muted border" /> Empty
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-emerald-500/40 border border-emerald-400/40" /> Filling
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-amber-500/40 border border-amber-400/40" /> High (≥80%)
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded bg-red-500/40 border border-red-400/40" /> Full
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block h-2.5 w-2.5 rounded ring-1 ring-primary/60 bg-primary/10" /> Special (100 cap)
+              </span>
+            </div>
+          </div>
+
+          <div className="p-5 space-y-6">
+            {(ROOM_CONFIG.blocks as readonly string[]).map((block) => (
+              <div key={block}>
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary rounded px-2 py-0.5">
+                    Block {block}
+                  </span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <div className="space-y-2.5">
+                  {(ROOM_CONFIG.floors as readonly number[]).map((floor) => {
+                    const floorRooms = roomSummary.filter((r) =>
+                      r.room_no.startsWith(block + String(floor))
+                    );
+                    return (
+                      <div key={floor} className="flex items-start gap-3">
+                        <span className="text-[10px] font-semibold text-muted-foreground w-5 pt-2.5 shrink-0 tabular-nums">
+                          F{floor}
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {floorRooms.map((room) => (
+                            <RoomCell key={room.room_no} {...room} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Student Table ─────────────────────────────────────────────────── */}
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
@@ -266,7 +367,17 @@ function AdminStudents() {
   );
 }
 
-function StatPill({ label, value, color }: { label: string; value: number; color: string }) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function StatPill({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  color: string;
+}) {
   return (
     <div className={`rounded-xl border px-4 py-3 shadow-sm ${color}`}>
       <div className="text-2xl font-bold tabular-nums">{value}</div>
@@ -295,5 +406,58 @@ function RoomBadge({ room_no }: { room_no?: string }) {
       <Building2 className="h-3 w-3" />
       {room_no}
     </span>
+  );
+}
+
+type RoomSummaryItem = {
+  room_no: string;
+  capacity: number;
+  occupied: number;
+  available: number;
+  isSpecial: boolean;
+  fillPct: number;
+};
+
+function RoomCell({ room_no, capacity, occupied, fillPct, isSpecial }: RoomSummaryItem) {
+  const isEmpty = occupied === 0;
+  const isFull = fillPct >= 100;
+  const isHigh = !isFull && fillPct >= 80;
+
+  const bgCls = isEmpty
+    ? "bg-muted/40 border-border"
+    : isFull
+    ? "bg-red-500/15 border-red-400/40"
+    : isHigh
+    ? "bg-amber-500/15 border-amber-400/40"
+    : "bg-emerald-500/10 border-emerald-400/30";
+
+  return (
+    <div
+      className={`relative rounded-lg border px-2 py-1.5 min-w-[52px] cursor-default select-none ${bgCls} ${
+        isSpecial ? "ring-1 ring-primary/50" : ""
+      }`}
+      title={`${room_no}: ${occupied}/${capacity} students (${fillPct}%)${
+        isSpecial ? " · Special capacity (100)" : ""
+      }`}
+    >
+      <div className="font-mono text-[10px] font-bold leading-tight">{room_no}</div>
+      <div className="text-[9px] text-muted-foreground leading-tight">
+        {occupied}/{capacity}
+      </div>
+      {occupied > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-lg overflow-hidden">
+          <div
+            className={
+              isFull
+                ? "h-full bg-red-500"
+                : isHigh
+                ? "h-full bg-amber-500"
+                : "h-full bg-emerald-500"
+            }
+            style={{ width: `${Math.min(fillPct, 100)}%` }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
