@@ -5,7 +5,29 @@ export type LocalStudent = {
   branch: string;
   semester: string;
   created_at: string;
+  room_no?: string; // e.g. "A109" — undefined means not yet allocated
 };
+
+// ─── Room Allocation Configuration ────────────────────────────────────────
+// Format: [Block][Floor][Room padded 2 digits] → e.g. A109, B320, C415
+export const ROOM_CONFIG = {
+  blocks: ["A", "B", "C"],
+  floors: [1, 2, 3, 4],
+  roomsPerFloor: 20, // rooms 01–20 on each floor
+} as const;
+
+/** Generate all valid room slots in allocation order. */
+export function generateAllRooms(): string[] {
+  const rooms: string[] = [];
+  for (const block of ROOM_CONFIG.blocks) {
+    for (const floor of ROOM_CONFIG.floors) {
+      for (let r = 1; r <= ROOM_CONFIG.roomsPerFloor; r++) {
+        rooms.push(`${block}${floor}${String(r).padStart(2, "0")}`);
+      }
+    }
+  }
+  return rooms;
+}
 
 export type LocalSession = {
   id: string;
@@ -281,6 +303,91 @@ class LocalDB {
     const events = this.getEvents().filter(e => e.id !== id);
     this.set("krmu_local_events", events);
     this.logActivity("event.delete", "events", id, {});
+  }
+
+  // --- Room Allocation ---
+
+  /**
+   * Assign rooms to all students who don't have one yet.
+   * Students are sorted by registration time (FIFO — earliest first).
+   * Rooms are filled sequentially: A101 → A102 … C420.
+   * Already-allocated students are skipped (idempotent).
+   */
+  allocateRooms(): { allocated: number; skipped: number; overflow: number } {
+    const allRooms = generateAllRooms();
+    let students = this.get<LocalStudent>("krmu_local_students");
+
+    // Find rooms already taken so we can skip them
+    const takenRooms = new Set(
+      students.filter(s => s.room_no && s.room_no !== "OVERFLOW").map(s => s.room_no!)
+    );
+
+    // Available pool (preserve order)
+    const availableRooms = allRooms.filter(r => !takenRooms.has(r));
+
+    // Students without a room, sorted by registration time (FIFO)
+    const unallocated = [...students]
+      .filter(s => !s.room_no)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    let allocated = 0;
+    let overflow = 0;
+    let poolIdx = 0;
+
+    // Build a lookup map for fast updates
+    const roomAssignments = new Map<string, string>();
+    for (const student of unallocated) {
+      if (poolIdx < availableRooms.length) {
+        roomAssignments.set(student.id, availableRooms[poolIdx]);
+        poolIdx++;
+        allocated++;
+      } else {
+        roomAssignments.set(student.id, "OVERFLOW");
+        overflow++;
+      }
+    }
+
+    // Apply assignments
+    const skipped = students.length - unallocated.length;
+    const updated = students.map(s =>
+      roomAssignments.has(s.id) ? { ...s, room_no: roomAssignments.get(s.id)! } : s
+    );
+
+    this.set("krmu_local_students", updated);
+    this.logActivity("room.allocate", "students", null, { allocated, skipped, overflow });
+    return { allocated, skipped, overflow };
+  }
+
+  /** Clear all room assignments from every student. */
+  resetRoomAllocations(): { cleared: number } {
+    const students = this.get<LocalStudent>("krmu_local_students");
+    const updated = students.map(s => ({ ...s, room_no: undefined }));
+    this.set("krmu_local_students", updated);
+    this.logActivity("room.reset", "students", null, { cleared: students.length });
+    return { cleared: students.length };
+  }
+
+  /** Manually override a specific student's room. */
+  updateStudentRoom(enrollment_no: string, room_no: string): boolean {
+    const students = this.get<LocalStudent>("krmu_local_students");
+    let found = false;
+    const updated = students.map(s => {
+      if (s.enrollment_no === enrollment_no) {
+        found = true;
+        return { ...s, room_no };
+      }
+      return s;
+    });
+    if (found) {
+      this.set("krmu_local_students", updated);
+      // Also update the active profile if it matches
+      const profile = this.getStudentProfile();
+      if (profile && profile.enrollment_no === enrollment_no) {
+        localStorage.setItem("krmu_active_profile", JSON.stringify({ ...profile, room_no }));
+      }
+      this.logActivity("room.update", "students", null, { enrollment_no, room_no });
+    }
+    return found;
   }
 }
 

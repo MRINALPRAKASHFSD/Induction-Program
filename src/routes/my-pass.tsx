@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "qrcode";
 import {
   QrCode, CheckCircle2, Circle, User, BookOpen, Building2,
-  ArrowLeft, RefreshCw, ChevronRight, Scan,
+  ArrowLeft, RefreshCw, ChevronRight, Scan, DoorOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -232,6 +232,22 @@ function BoardingPassCard({
             <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{student.enrollment_no}</span>
             <span className="flex items-center gap-1.5"><BookOpen className="h-3 w-3" />{student.semester}</span>
             <span className="flex items-center gap-1.5"><Building2 className="h-3 w-3" />{student.branch}</span>
+            {/* Room number chip */}
+            {!student.room_no && (
+              <span className="flex items-center gap-1.5 opacity-60">
+                <DoorOpen className="h-3 w-3" />Room: Not assigned yet
+              </span>
+            )}
+            {student.room_no === "OVERFLOW" && (
+              <span className="flex items-center gap-1.5 font-semibold text-amber-300">
+                <DoorOpen className="h-3 w-3" />Room: Contact admin
+              </span>
+            )}
+            {student.room_no && student.room_no !== "OVERFLOW" && (
+              <span className="flex items-center gap-1.5 font-bold tracking-widest">
+                <DoorOpen className="h-3 w-3" />Room:&nbsp;{student.room_no}
+              </span>
+            )}
           </div>
         </div>
 
