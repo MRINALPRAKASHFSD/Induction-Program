@@ -13,27 +13,37 @@ const studentSchema = z.object({
   year: z.number().int().min(1).max(6),
 });
 
+/**
+ * Register a new student.
+ *
+ * v2 — atomic dedup:
+ *   Instead of a pre-check SELECT (which has a race window), we go straight
+ *   to INSERT and let the database's UNIQUE constraint on (enrollment_no, email)
+ *   reject duplicates. A `23505` error code is translated into { duplicate: true }
+ *   rather than a 500. This is safe under any level of concurrency.
+ */
 export const registerStudent = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => studentSchema.parse(input))
   .handler(async ({ data }) => {
-    // Dedup by enrollment_no or email
-    const { data: existing } = await supabaseAdmin
-      .from("students")
-      .select("id, enrollment_no, email")
-      .or(`enrollment_no.eq.${data.enrollment_no},email.eq.${data.email}`)
-      .maybeSingle();
-
-    if (existing) {
-      return { ok: true as const, student_id: existing.id, duplicate: true };
-    }
-
     const { data: created, error } = await supabaseAdmin
       .from("students")
       .insert(data)
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // UNIQUE constraint violation on enrollment_no or email → treat as duplicate
+      if (error.code === "23505") {
+        const { data: existing } = await supabaseAdmin
+          .from("students")
+          .select("id")
+          .or(`enrollment_no.eq.${data.enrollment_no},email.eq.${data.email}`)
+          .maybeSingle();
+        return { ok: true as const, student_id: existing!.id, duplicate: true };
+      }
+      throw new Error(error.message);
+    }
+
     return { ok: true as const, student_id: created.id, duplicate: false };
   });
 

@@ -2,6 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+/**
+ * recordScan — v2: uses the mark_attendance() Postgres RPC.
+ *
+ * Original code made 3 sequential round-trips:
+ *   1. Fetch event by qr_token
+ *   2. Fetch student by enrollment_no
+ *   3. Insert attendance row
+ *
+ * v2 passes both values directly to the DB function which resolves them
+ * atomically and handles the unique_violation duplicate case natively.
+ */
 export const recordScan = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
@@ -12,44 +23,31 @@ export const recordScan = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { data: event } = await supabaseAdmin
-      .from("events")
-      .select("id, title, venue, day_number, is_active")
-      .eq("qr_token", data.qr_token)
-      .maybeSingle();
-    if (!event || !event.is_active) {
-      return { ok: false as const, error: "Event not found or inactive" };
+    const { data: result, error } = await supabaseAdmin.rpc("mark_attendance", {
+      p_qr_token: data.qr_token,
+      p_enrollment_no: data.enrollment_no,
+    });
+
+    if (error) throw new Error(error.message);
+
+    const r = result as {
+      ok: boolean;
+      error?: string;
+      duplicate?: boolean;
+      studentName?: string;
+      eventTitle?: string;
+      day?: number;
+    };
+
+    if (!r.ok) {
+      return { ok: false as const, error: r.error ?? "Unknown error" };
     }
 
-    const { data: student } = await supabaseAdmin
-      .from("students")
-      .select("id, full_name")
-      .eq("enrollment_no", data.enrollment_no)
-      .maybeSingle();
-    if (!student) {
-      return { ok: false as const, error: "Student not registered. Please register first." };
-    }
-
-    const { error } = await supabaseAdmin
-      .from("attendance")
-      .insert({ event_id: event.id, student_id: student.id });
-
-    if (error) {
-      if (error.code === "23505") {
-        return {
-          ok: true as const,
-          duplicate: true,
-          event: { title: event.title, venue: event.venue, day: event.day_number },
-          student: { name: student.full_name },
-        };
-      }
-      throw new Error(error.message);
-    }
     return {
       ok: true as const,
-      duplicate: false,
-      event: { title: event.title, venue: event.venue, day: event.day_number },
-      student: { name: student.full_name },
+      duplicate: r.duplicate ?? false,
+      event: { title: r.eventTitle ?? "", venue: "", day: r.day ?? 0 },
+      student: { name: r.studentName ?? "" },
     };
   });
 

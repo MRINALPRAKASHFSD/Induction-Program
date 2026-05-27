@@ -70,7 +70,13 @@ export const getStudentPass = createServerFn({ method: "POST" })
     };
   });
 
-/* ─── Scanner: mark attendance by enrollment_no + event_id ─────────────── */
+/* ─── Scanner: mark attendance via atomic Postgres RPC ─────────────────── */
+//
+// v2 — replaces 3 sequential round-trips (fetch event, fetch student, insert)
+// with a single call to mark_attendance() which does all three atomically
+// inside Postgres and handles the unique_violation duplicate case natively.
+//
+// The RPC is defined in supabase/migrations/20260527000000_performance.sql.
 
 export type ScanResult =
   | { ok: true; duplicate: false; studentName: string; eventTitle: string; day: number }
@@ -87,54 +93,20 @@ export const scanMarkAttendance = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<ScanResult> => {
-    // 1. Resolve event
+    // event_id is the UUID of the event; we fetch its qr_token to call the RPC
     const { data: event } = await supabaseAdmin
       .from("events")
-      .select("id, title, day_number, is_active")
+      .select("qr_token")
       .eq("id", data.event_id)
       .maybeSingle();
 
     if (!event) return { ok: false, error: "Event not found." };
-    if (!event.is_active) return { ok: false, error: "This event is no longer active." };
 
-    // 2. Resolve student
-    const { data: student } = await supabaseAdmin
-      .from("students")
-      .select("id, full_name")
-      .eq("enrollment_no", data.enrollment_no.trim().toUpperCase())
-      .maybeSingle();
+    const { data: result, error } = await supabaseAdmin.rpc("mark_attendance", {
+      p_qr_token: event.qr_token,
+      p_enrollment_no: data.enrollment_no,
+    });
 
-    if (!student) {
-      return {
-        ok: false,
-        error: `Enrollment number "${data.enrollment_no}" is not registered. Please register first.`,
-      };
-    }
-
-    // 3. Insert attendance record
-    const { error: insertErr } = await supabaseAdmin
-      .from("attendance")
-      .insert({ event_id: event.id, student_id: student.id });
-
-    if (insertErr) {
-      // Unique constraint = already checked in
-      if (insertErr.code === "23505") {
-        return {
-          ok: true,
-          duplicate: true,
-          studentName: student.full_name,
-          eventTitle: event.title,
-          day: event.day_number,
-        };
-      }
-      throw new Error(insertErr.message);
-    }
-
-    return {
-      ok: true,
-      duplicate: false,
-      studentName: student.full_name,
-      eventTitle: event.title,
-      day: event.day_number,
-    };
+    if (error) throw new Error(error.message);
+    return result as ScanResult;
   });

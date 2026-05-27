@@ -2,13 +2,26 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/**
+ * Role cache — avoids a DB round-trip on every admin action.
+ * Workers isolates share module-level state across requests within the same
+ * isolate instance. TTL of 60 s is safe: role changes take effect within 1 min.
+ */
+const _roleCache = new Map<string, { roles: string[]; exp: number }>();
+
 const ensureStaff = async (supabase: any, userId: string) => {
-  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  const roles = (data ?? []).map((r: any) => r.role);
-  if (!roles.includes("admin") && !roles.includes("coordinator")) {
-    throw new Error("Forbidden: staff role required");
+  const cached = _roleCache.get(userId);
+  if (cached && cached.exp > Date.now()) {
+    if (!cached.roles.includes("admin") && !cached.roles.includes("coordinator"))
+      throw new Error("Forbidden: staff role required");
+    return cached.roles;
   }
-  return roles as string[];
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+  const roles = (data ?? []).map((r: any) => r.role as string);
+  _roleCache.set(userId, { roles, exp: Date.now() + 60_000 });
+  if (!roles.includes("admin") && !roles.includes("coordinator"))
+    throw new Error("Forbidden: staff role required");
+  return roles;
 };
 
 const log = async (
@@ -132,78 +145,26 @@ export const deleteClub = createServerFn({ method: "POST" })
 
 /* ---------------- Analytics ---------------- */
 
+/**
+ * getAnalytics — v2: delegates all aggregation to Postgres via the
+ * get_analytics() RPC. Replaces 4 full-table fetches + JS aggregation
+ * with a single network call that returns pre-computed JSON.
+ * Payload: a few KB instead of potentially MBs of raw rows.
+ */
 export const getAnalytics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context as any;
     await ensureStaff(supabase, userId);
-
-    const [{ data: students }, { data: attendance }, { data: clubs }, { data: events }] =
-      await Promise.all([
-        supabase.from("students").select("id, department_id, created_at, year"),
-        supabase.from("attendance").select("event_id, scanned_at"),
-        supabase.from("club_registrations").select("club_id"),
-        supabase.from("events").select("id, title, day_number"),
-      ]);
-
-    const { data: depts } = await supabase.from("departments").select("id, name");
-    const deptMap = new Map<string, string>((depts ?? []).map((d: any) => [d.id, d.name]));
-    const eventMap = new Map<string, any>((events ?? []).map((e: any) => [e.id, e]));
-
-    const byDept: Record<string, number> = {};
-    (students ?? []).forEach((s: any) => {
-      const k = deptMap.get(s.department_id) ?? "Unknown";
-      byDept[k] = (byDept[k] ?? 0) + 1;
-    });
-
-    const byYear: Record<string, number> = {};
-    (students ?? []).forEach((s: any) => {
-      const k = `Year ${s.year}`;
-      byYear[k] = (byYear[k] ?? 0) + 1;
-    });
-
-    const byEvent: Record<string, number> = {};
-    (attendance ?? []).forEach((a: any) => {
-      const ev: any = eventMap.get(a.event_id);
-      const k = ev ? `D${ev.day_number} · ${ev.title}` : "Unknown";
-      byEvent[k] = (byEvent[k] ?? 0) + 1;
-    });
-
-    const byHour: Record<string, number> = {};
-    (attendance ?? []).forEach((a: any) => {
-      const h = new Date(a.scanned_at).getHours();
-      const k = `${h}:00`;
-      byHour[k] = (byHour[k] ?? 0) + 1;
-    });
-
-    const byClub: Record<string, number> = {};
-    (clubs ?? []).forEach((c: any) => {
-      const k = String(c.club_id);
-      byClub[k] = (byClub[k] ?? 0) + 1;
-    });
-
-    const { data: clubRows } = await supabase.from("clubs").select("id, name");
-    const clubNamed = (clubRows ?? []).map((c: any) => ({
-      name: c.name, count: byClub[c.id] ?? 0,
-    }));
-
-    const toArr = (o: Record<string, number>) =>
-      Object.entries(o).map(([name, value]) => ({ name, value }));
-
-    return {
-      totals: {
-        students: students?.length ?? 0,
-        attendance: attendance?.length ?? 0,
-        clubs: clubs?.length ?? 0,
-        events: events?.length ?? 0,
-      },
-      byDept: toArr(byDept),
-      byYear: toArr(byYear),
-      byEvent: toArr(byEvent),
-      byHour: Array.from({ length: 24 }, (_, h) => ({
-        name: `${h}:00`, value: byHour[`${h}:00`] ?? 0,
-      })),
-      byClub: clubNamed,
+    const { data, error } = await supabase.rpc("get_analytics");
+    if (error) throw new Error(error.message);
+    return data as {
+      totals: { students: number; attendance: number; clubs: number; events: number };
+      byDept:  { name: string; value: number }[];
+      byYear:  { name: string; value: number }[];
+      byEvent: { name: string; value: number }[];
+      byHour:  { name: string; value: number }[];
+      byClub:  { name: string; count: number }[];
     };
   });
 
