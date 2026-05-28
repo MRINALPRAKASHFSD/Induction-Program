@@ -14,7 +14,6 @@ const NAV = [
   { to: "/admin/scanner", label: "QR Scanner", icon: ScanLine },
   { to: "/admin/events", label: "Events", icon: Calendar },
   { to: "/admin/students", label: "Students", icon: Users },
-  { to: "/admin/attendance", label: "Attendance", icon: Calendar },
   { to: "/admin/clubs", label: "Clubs", icon: Sparkles },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/activity", label: "Activity", icon: Activity },
@@ -69,7 +68,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
           <p className="mt-2 max-w-md text-muted-foreground">
             Ask a super-admin to grant you an admin or coordinator role.
           </p>
-          <Button className="mt-6" onClick={signOut}>Sign out</Button>
+          <Button variant="liquidGlassDark" className="mt-6 rounded-full" onClick={signOut}>Sign out</Button>
         </div>
       </div>
     );
@@ -86,8 +85,8 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
             <Link to="/admin/dashboard" className="font-semibold">KRMU Admin</Link>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/">View site</Link></Button>
-            <Button onClick={signOut} variant="outline" size="sm"><LogOut className="mr-1 h-4 w-4" /> Sign out</Button>
+            <Button asChild variant="liquidGlass" size="sm" className="rounded-full"><Link to="/">View site</Link></Button>
+            <Button onClick={signOut} variant="liquidGlassDark" size="sm" className="rounded-full"><LogOut className="mr-1 h-4 w-4" /> Sign out</Button>
           </div>
         </div>
       </header>
