@@ -33,3 +33,7 @@ dist-ssr
 
 # Tooling
 .lovable
+
+# Environment variables
+.env
+.env.*
