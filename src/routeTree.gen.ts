@@ -21,7 +21,6 @@ import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
-import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 
@@ -85,11 +84,6 @@ const AdminClubsRoute = AdminClubsRouteImport.update({
   path: '/admin/clubs',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
-  id: '/admin/attendance',
-  path: '/admin/attendance',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/admin/analytics',
   path: '/admin/analytics',
@@ -109,7 +103,6 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
@@ -126,7 +119,6 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
@@ -144,7 +136,6 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/activity'
     | '/admin/analytics'
-    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
@@ -180,7 +170,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/activity'
     | '/admin/analytics'
-    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
@@ -197,7 +186,6 @@ export interface FileRouteTypes {
     | '/register'
     | '/admin/activity'
     | '/admin/analytics'
-    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
@@ -215,7 +203,6 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminAttendanceRoute: typeof AdminAttendanceRoute
   AdminClubsRoute: typeof AdminClubsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminEventsRoute: typeof AdminEventsRoute
@@ -311,13 +298,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClubsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/attendance': {
-      id: '/admin/attendance'
-      path: '/admin/attendance'
-      fullPath: '/admin/attendance'
-      preLoaderRoute: typeof AdminAttendanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/analytics': {
       id: '/admin/analytics'
       path: '/admin/analytics'
@@ -343,7 +323,6 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   AdminActivityRoute: AdminActivityRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminAttendanceRoute: AdminAttendanceRoute,
   AdminClubsRoute: AdminClubsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminEventsRoute: AdminEventsRoute,
