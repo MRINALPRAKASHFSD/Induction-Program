@@ -92,6 +92,7 @@ create table public.events (
   venue text not null,
   starts_at timestamptz not null,
   ends_at timestamptz not null,
+  department_id uuid not null references public.departments(id),
   qr_token text not null unique default encode(gen_random_bytes(12), 'hex'),
   is_active boolean not null default true,
   created_by uuid references auth.users(id),

@@ -6,6 +6,7 @@ export type LocalStudent = {
   semester: string;
   created_at: string;
   room_no?: string; // e.g. "A109" — undefined means not yet allocated
+  department_id?: string;
 };
 
 // ─── Room Allocation Configuration ────────────────────────────────────────

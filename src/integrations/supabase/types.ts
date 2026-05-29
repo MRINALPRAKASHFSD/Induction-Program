@@ -234,6 +234,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           day_number: number
+          department_id: string
           description: string | null
           ends_at: string
           id: string
@@ -247,6 +248,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_number: number
+          department_id: string
           description?: string | null
           ends_at: string
           id?: string
@@ -260,6 +262,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           day_number?: number
+          department_id?: string
           description?: string | null
           ends_at?: string
           id?: string
@@ -269,7 +272,15 @@ export type Database = {
           title?: string
           venue?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       form_responses: {
         Row: {
@@ -398,6 +409,13 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      mark_attendance: {
+        Args: {
+          p_qr_token: string
+          p_enrollment_no: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "coordinator" | "club_lead"
