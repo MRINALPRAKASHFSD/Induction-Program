@@ -44,6 +44,7 @@ const eventInput = z.object({
   venue: z.string().trim().min(1).max(160),
   starts_at: z.string().min(8),
   ends_at: z.string().min(8),
+  department_id: z.string().uuid(),
   is_active: z.boolean().default(true),
 });
 
@@ -94,6 +95,20 @@ export const deleteEvent = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await log(supabase, userId, "event.delete", "events", data.id, {});
     return { ok: true };
+  });
+
+export const listEvents = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context as any;
+    await ensureStaff(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("events")
+      .select("*, departments(name)")
+      .order("day_number", { ascending: true })
+      .order("starts_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
   });
 
 /* ---------------- Clubs ---------------- */

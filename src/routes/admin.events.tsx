@@ -9,27 +9,83 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { localDb, type LocalEvent } from "@/lib/local-db";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { listEvents, createEvent, updateEvent, deleteEvent } from "@/lib/admin.functions";
+import { getDepartments } from "@/lib/students.functions";
+import { localDb } from "@/lib/local-db";
+
+type EventRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  day_number: number;
+  venue: string;
+  starts_at: string;
+  ends_at: string;
+  qr_token: string;
+  is_active: boolean;
+  department_id: string;
+  departments?: { name: string };
+};
 
 export const Route = createFileRoute("/admin/events")({
   head: () => ({ meta: [{ title: "Events · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminEvents,
 });
 
-function AdminEvents() {
-  const [rows, setRows] = useState<LocalEvent[] | null>(null);
-  const [qrEvent, setQrEvent] = useState<LocalEvent | null>(null);
+const LOCAL_DEPARTMENTS = [
+  { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
+  { id: "soms", code: "SOMS", name: "School of Management Studies" },
+  { id: "sols", code: "SOLS", name: "School of Legal Studies" },
+  { id: "soa", code: "SOA", name: "School of Architecture" },
+  { id: "soah", code: "SOAH", name: "School of Allied Health Sciences" },
+  { id: "soe", code: "SOE", name: "School of Education" },
+  { id: "somc", code: "SOMC", name: "School of Media & Communication" },
+  { id: "sosc", code: "SOSC", name: "School of Science" },
+  { id: "sohs", code: "SOHS", name: "School of Hospitality Studies" },
+  { id: "sofa", code: "SOFA", name: "School of Fine Arts & Design" },
+];
 
-  const load = () => {
-    setRows(localDb.getEvents());
+function AdminEvents() {
+  const [rows, setRows] = useState<EventRow[] | null>(null);
+  const [qrEvent, setQrEvent] = useState<EventRow | null>(null);
+  const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([]);
+
+  const load = async () => {
+    try {
+      const data = await listEvents();
+      setRows(data as unknown as EventRow[]);
+    } catch (e: any) {
+      console.warn("Supabase listEvents failed, loading localDb events", e);
+      const localEvents = localDb.getEvents();
+      setRows(localEvents as unknown as EventRow[]);
+    }
+  };
+
+  const loadDepartments = async () => {
+    try {
+      const { departments } = await getDepartments();
+      if (departments && departments.length > 0) {
+        setDepartments(departments);
+      } else {
+        setDepartments(LOCAL_DEPARTMENTS);
+      }
+    } catch (e: any) {
+      console.warn("Failed to load departments from server, using local fallback", e);
+      setDepartments(LOCAL_DEPARTMENTS);
+    }
   };
   
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    load(); 
+    loadDepartments();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AdminShell title="Events" subtitle="Create induction sessions, toggle live status, print QR posters.">
       <div className="mb-4 flex justify-end">
-        <EventDialog onSaved={load} />
+        <EventDialog onSaved={load} departments={departments} />
       </div>
 
       {!rows ? (
@@ -38,7 +94,7 @@ function AdminEvents() {
         <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No events yet. Create one to get started.</p>
       ) : (
         <div className="grid gap-3">
-          {rows.map((r) => <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} />)}
+          {rows.map((r) => <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />)}
         </div>
       )}
 
@@ -47,24 +103,37 @@ function AdminEvents() {
   );
 }
 
-function EventCard({ row, onChanged, onOpenQr }: { row: LocalEvent; onChanged: () => void; onOpenQr: () => void }) {
-  const toggle = () => {
+function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; onChanged: () => void; onOpenQr: () => void; departments: { id: string; name: string }[] }) {
+  const toggle = async () => {
     try { 
-      localDb.updateEvent(row.id, { is_active: !row.is_active }); 
-      onChanged(); 
+      await updateEvent({ data: { id: row.id, is_active: !row.is_active } }); 
       toast.success(`Event ${!row.is_active ? "activated" : "deactivated"}`); 
+      onChanged();
     }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) {
+      console.warn("Supabase event update failed, updating locally in localDb", e);
+      localDb.updateEvent(row.id, { is_active: !row.is_active });
+      toast.success(`Event ${!row.is_active ? "activated" : "deactivated"} locally`);
+      onChanged();
+    }
   };
-  const remove = () => {
+  const remove = async () => {
     if (!confirm(`Delete "${row.title}"? This removes related attendance.`)) return;
     try { 
-      localDb.deleteEvent(row.id); 
-      onChanged(); 
+      await deleteEvent({ data: { id: row.id } }); 
       toast.success("Deleted"); 
+      onChanged();
     }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) {
+      console.warn("Supabase event delete failed, deleting locally in localDb", e);
+      localDb.deleteEvent(row.id);
+      toast.success("Deleted locally");
+      onChanged();
+    }
   };
+
+  const deptName = departments.find(d => d.id === row.department_id)?.name || "All Schools";
+
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -74,20 +143,25 @@ function EventCard({ row, onChanged, onOpenQr }: { row: LocalEvent; onChanged: (
             {row.is_active
               ? <span className="rounded-md bg-success/15 px-2 py-0.5 text-xs font-medium text-success">LIVE</span>
               : <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">paused</span>}
+            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{deptName}</span>
           </div>
           <h3 className="mt-1 truncate font-semibold">{row.title}</h3>
           <p className="text-xs text-muted-foreground">
-            {row.venue} · {new Date(row.starts_at).toLocaleString()} → {new Date(row.ends_at).toLocaleTimeString()}
+            {row.venue} &middot; {new Date(row.starts_at).toLocaleString()} &rarr; {new Date(row.ends_at).toLocaleTimeString()}
           </p>
           {row.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{row.description}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={onOpenQr}><QrIcon className="mr-1 h-4 w-4" /> QR</Button>
-          <Button size="sm" variant="outline" onClick={toggle}>
+          <Button size="sm" variant="liquidGlassWhite" className="rounded-full" onClick={onOpenQr}>
+            <QrIcon className="mr-1 h-4 w-4" /> QR
+          </Button>
+          <Button size="sm" variant="liquidGlassWhite" className="rounded-full" onClick={toggle}>
             {row.is_active ? <><PowerOff className="mr-1 h-4 w-4" /> Pause</> : <><Power className="mr-1 h-4 w-4" /> Activate</>}
           </Button>
-          <EventDialog row={row} onSaved={onChanged} />
-          <Button size="sm" variant="ghost" className="text-destructive" onClick={remove}><Trash2 className="h-4 w-4" /></Button>
+          <EventDialog row={row} onSaved={onChanged} departments={departments} />
+          <Button size="sm" variant="liquidGlass" className="text-destructive rounded-full" onClick={remove}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -99,43 +173,71 @@ function toLocalInput(iso: string) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function EventDialog({ row, onSaved }: { row?: LocalEvent; onSaved: () => void }) {
+function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: () => void; departments: { id: string; name: string }[] }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     title: row?.title ?? "", description: row?.description ?? "",
     day_number: row?.day_number ?? 1, venue: row?.venue ?? "",
     starts_at: row ? toLocalInput(row.starts_at) : "", ends_at: row ? toLocalInput(row.ends_at) : "",
+    department_id: row?.department_id ?? "",
   });
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.department_id) {
+      toast.error("Please select a school");
+      return;
+    }
+    
+    const payload = {
+      title: form.title, description: form.description || null,
+      day_number: Number(form.day_number), venue: form.venue,
+      starts_at: new Date(form.starts_at).toISOString(),
+      ends_at: new Date(form.ends_at).toISOString(),
+      department_id: form.department_id,
+      is_active: true,
+    };
+
     try {
-      const payload = {
-        title: form.title, description: form.description || null,
-        day_number: Number(form.day_number), venue: form.venue,
-        starts_at: new Date(form.starts_at).toISOString(),
-        ends_at: new Date(form.ends_at).toISOString(),
-        is_active: true,
-      };
       if (row) {
-        localDb.updateEvent(row.id, payload);
+        await updateEvent({ data: { id: row.id, ...payload } });
       } else {
-        localDb.createEvent(payload);
+        await createEvent({ data: payload });
       }
       toast.success(row ? "Event updated" : "Event created");
-      setOpen(false); onSaved();
-    } catch (e: any) { toast.error(e.message); }
+      setOpen(false); 
+      onSaved();
+    } catch (err: any) {
+      console.warn("Supabase event create/update failed, performing locally in localDb", err);
+      if (row) {
+        localDb.updateEvent(row.id, payload);
+        toast.success("Event updated locally");
+      } else {
+        localDb.createEvent(payload);
+        toast.success("Event created locally");
+      }
+      setOpen(false);
+      onSaved();
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {row ? <Button size="sm" variant="outline">Edit</Button>
-             : <Button><Plus className="mr-1 h-4 w-4" /> New event</Button>}
+        {row ? <Button size="sm" variant="liquidGlassWhite" className="rounded-full">Edit</Button>
+             : <Button variant="liquidGlassDark" className="rounded-full"><Plus className="mr-1 h-4 w-4" /> New event</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>{row ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="grid gap-3">
+          <Field label="School">
+            <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
+              <SelectContent>
+                {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
           <Field label="Title"><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Day"><Input type="number" min={1} max={10} required value={form.day_number} onChange={(e) => setForm({ ...form, day_number: Number(e.target.value) })} /></Field>
@@ -146,7 +248,7 @@ function EventDialog({ row, onSaved }: { row?: LocalEvent; onSaved: () => void }
             <Field label="Ends at"><Input type="datetime-local" required value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
           </div>
           <Field label="Description"><Textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
+          <DialogFooter><Button type="submit" variant="liquidGlassDark" className="rounded-full">Save</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
@@ -157,7 +259,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div className="grid gap-1.5"><Label className="text-sm">{label}</Label>{children}</div>;
 }
 
-function QrDialog({ event, onClose }: { event: LocalEvent | null; onClose: () => void }) {
+function QrDialog({ event, onClose }: { event: EventRow | null; onClose: () => void }) {
   const [dataUrl, setDataUrl] = useState<string>("");
   const [scanUrl, setScanUrl] = useState<string>("");
 
@@ -172,11 +274,11 @@ function QrDialog({ event, onClose }: { event: LocalEvent | null; onClose: () =>
     if (!event) return;
     const w = window.open("", "_blank", "width=800,height=900");
     if (!w) return;
-    w.document.write(`<!doctype html><html><head><title>${event.title} · QR</title>
+    w.document.write(`<!doctype html><html><head><title>${event.title} &middot; QR</title>
       <style>body{font-family:system-ui;text-align:center;padding:40px}h1{margin:0 0 8px}p{color:#555;margin:4px 0}img{margin:24px 0;width:380px;height:380px}</style>
       </head><body>
       <h1>${event.title}</h1>
-      <p>Day ${event.day_number} · ${event.venue}</p>
+      <p>Day ${event.day_number} &middot; ${event.venue}</p>
       <p>${new Date(event.starts_at).toLocaleString()}</p>
       <img src="${dataUrl}" />
       <p><b>Scan to mark attendance</b></p>
@@ -192,8 +294,8 @@ function QrDialog({ event, onClose }: { event: LocalEvent | null; onClose: () =>
         {dataUrl && <img src={dataUrl} alt="QR" className="mx-auto h-72 w-72" />}
         <p className="break-all text-center text-xs text-muted-foreground">{scanUrl}</p>
         <DialogFooter>
-          <Button variant="outline" onClick={() => navigator.clipboard.writeText(scanUrl).then(() => toast.success("Link copied"))}>Copy link</Button>
-          <Button onClick={printIt}><Printer className="mr-1 h-4 w-4" /> Print poster</Button>
+          <Button variant="liquidGlassWhite" className="rounded-full" onClick={() => navigator.clipboard.writeText(scanUrl).then(() => toast.success("Link copied"))}>Copy link</Button>
+          <Button variant="liquidGlassDark" className="rounded-full" onClick={printIt}><Printer className="mr-1 h-4 w-4" /> Print poster</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -176,7 +176,8 @@ function AdminStudents() {
             id="allocate-rooms-btn"
             onClick={onAllocate}
             disabled={allocating || unassignedCount === 0}
-            className="bg-gradient-to-r from-primary to-primary/80 shadow-sm"
+            variant="liquidGlassDark"
+            className="rounded-full shadow-sm"
           >
             <Building2 className="mr-2 h-4 w-4" />
             {allocating
@@ -188,7 +189,8 @@ function AdminStudents() {
             <AlertDialogTrigger asChild>
               <Button
                 id="reset-rooms-btn"
-                variant="outline"
+                variant="liquidGlassWhite"
+                className="rounded-full"
                 disabled={allocatedCount === 0 && overflowCount === 0}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
@@ -216,11 +218,11 @@ function AdminStudents() {
             </AlertDialogContent>
           </AlertDialog>
 
-          <Button variant="outline" onClick={onExport} disabled={allStudents.length === 0}>
+          <Button variant="liquidGlassWhite" className="rounded-full" onClick={onExport} disabled={allStudents.length === 0}>
             <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
 
-          <Button variant="outline" disabled>
+          <Button variant="liquidGlassWhite" className="rounded-full" disabled>
             <UserPlus className="mr-2 h-4 w-4" /> Add Student
           </Button>
         </div>
@@ -249,10 +251,10 @@ function AdminStudents() {
           </span>
         </div>
         <Button
-          variant="ghost"
+          variant="liquidGlassWhite"
           size="sm"
           id="toggle-occupancy-btn"
-          className="ml-4 h-7 gap-1.5 text-xs shrink-0"
+          className="ml-4 h-7 gap-1.5 text-xs shrink-0 rounded-full"
           onClick={() => setShowOccupancy((v) => !v)}
         >
           {showOccupancy ? (
