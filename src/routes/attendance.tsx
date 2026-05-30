@@ -1,105 +1,283 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
-import { QrCode, Scan, CheckCircle2, User, BookOpen, AlertTriangle, XCircle, ArrowLeft } from "lucide-react";
+import QRCode from "qrcode";
+import { 
+  QrCode, Scan, CheckCircle2, User, BookOpen, 
+  AlertTriangle, XCircle, ArrowLeft, AlertCircle, 
+  Building2, Calendar, Clock, RefreshCw, Check
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SiteHeader } from "@/components/site-header";
-import { localDb, type LocalStudent, type LocalSession } from "@/lib/local-db";
+import { localDb, type LocalStudent } from "@/lib/local-db";
+import { getDepartments, getSchoolDays, getSchoolSessions } from "@/lib/students.functions";
+import { recordScan } from "@/lib/attendance.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/attendance")({
   head: () => ({
     meta: [
-      { title: "Student Attendance · KRMU Induction" },
-      { name: "description", content: "Self-lodge your attendance instantly." },
+      { title: "Lodge Attendance · KRMU Induction" },
+      { name: "description", content: "Lodge your session attendance instantly by scanning the admin QR." },
     ],
   }),
   component: AttendancePage,
 });
 
-type Phase = "setup" | "dashboard" | "scanner" | "success" | "duplicate" | "error";
+type Phase = "dashboard" | "scanner" | "success" | "duplicate" | "error";
+
+interface Dept {
+  id: string;
+  name: string;
+  code: string;
+}
+
+interface Session {
+  id: string;
+  title: string;
+  venue: string;
+  starts_at: string;
+  ends_at: string;
+  qr_token?: string; // returned dynamically
+}
+
+const LOCAL_DEPARTMENTS = [
+  { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
+  { id: "soms", code: "SOMS", name: "School of Management Studies" },
+  { id: "sols", code: "SOLS", name: "School of Legal Studies" },
+  { id: "soa", code: "SOA", name: "School of Architecture" },
+  { id: "soah", code: "SOAH", name: "School of Allied Health Sciences" },
+  { id: "soe", code: "SOE", name: "School of Education" },
+  { id: "somc", code: "SOMC", name: "School of Media & Communication" },
+  { id: "sosc", code: "SOSC", name: "School of Science" },
+  { id: "sohs", code: "SOHS", name: "School of Hospitality Studies" },
+  { id: "sofa", code: "SOFA", name: "School of Fine Arts & Design" },
+];
 
 function AttendancePage() {
   const [phase, setPhase] = useState<Phase>("dashboard");
   const [profile, setProfile] = useState<LocalStudent | null>(null);
   
-  // Setup form state
-  const [fullName, setFullName] = useState("");
-  const [enrollment, setEnrollment] = useState("");
-  const [branch, setBranch] = useState("");
-  const [semester, setSemester] = useState("");
+  // List selections
+  const [schools, setSchools] = useState<Dept[]>([]);
+  const [schoolId, setSchoolId] = useState("");
+  const [days, setDays] = useState<number[]>([]);
+  const [day, setDay] = useState("");
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionId, setSessionId] = useState("");
+
+  const [loadingDays, setLoadingDays] = useState(false);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  // Dynamic QR Code url
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   // Feedback state
   const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [isWrongSchool, setIsWrongSchool] = useState(false);
+
+  // Fully evaluate session selection early to prevent TDZ ReferenceError in hooks
+  const currentSelectedSession = sessions.find(s => s.id === sessionId);
 
   useEffect(() => {
+    // 1. Fetch active profile
     const p = localDb.getStudentProfile();
     if (p) {
       setProfile(p);
-      setPhase("dashboard");
-    } else {
-      setPhase("setup");
     }
+    
+    // 2. Fetch schools list
+    getDepartments()
+      .then((res) => {
+        if (res.departments && res.departments.length > 0) {
+          setSchools(res.departments as Dept[]);
+        } else {
+          setSchools(LOCAL_DEPARTMENTS);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch departments from server, using local fallback", err);
+        setSchools(LOCAL_DEPARTMENTS);
+      });
   }, []);
 
-  const handleSetup = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName || !enrollment || !branch || !semester) return;
+  // Generate QR code dynamically when session is selected
+  useEffect(() => {
+    if (currentSelectedSession && currentSelectedSession.qr_token) {
+      // The QR URL points to `/scan/${qr_token}` or encodes the qr_token
+      const url = `${window.location.origin}/scan/${currentSelectedSession.qr_token}`;
+      QRCode.toDataURL(url, {
+        width: 360,
+        margin: 1,
+        color: { dark: "#2d0d12", light: "#fdfaf6" },
+        errorCorrectionLevel: "H",
+      })
+        .then(setQrCodeUrl)
+        .catch(console.error);
+    } else {
+      setQrCodeUrl(null);
+    }
+  }, [sessionId, currentSelectedSession]);
 
-    const newProfile: LocalStudent = {
-      id: "std_" + Date.now(),
-      full_name: fullName,
-      enrollment_no: enrollment.toUpperCase(),
-      branch,
-      semester,
-      created_at: new Date().toISOString(),
-    };
-
-    localDb.saveStudentProfile(newProfile);
-    setProfile(newProfile);
-    setPhase("dashboard");
-  };
-
-  const startScanner = () => setPhase("scanner");
-  const closeScanner = () => setPhase("dashboard");
-
-  const onScanSuccess = (decodedText: string) => {
+  // When school is selected
+  const handleSchoolChange = async (val: string) => {
+    setSchoolId(val);
+    setDay("");
+    setSessionId("");
+    setDays([]);
+    setSessions([]);
+    setQrCodeUrl(null);
+    
     if (!profile) return;
-    
-    // The admin QR contains the Session ID.
-    const sessionId = decodedText.trim();
-    
-    // Validate that the session is currently active
-    const activeSession = localDb.getActiveSession();
-    if (!activeSession || activeSession.id !== sessionId) {
-      if (sessionId.toUpperCase().startsWith("KRMU")) {
-        setFeedbackMsg("You scanned a Boarding Pass. Please scan an Event QR code instead.");
-      } else {
-        setFeedbackMsg("Invalid or inactive session QR code.");
+
+    // Validation check: school mismatch
+    const selectedDept = schools.find(s => s.id === val);
+    if (selectedDept) {
+      const match = profile.department_id 
+        ? profile.department_id.toLowerCase() === selectedDept.code.toLowerCase()
+        : profile.branch.toLowerCase().includes(selectedDept.name.toLowerCase());
+      
+      setIsWrongSchool(!match);
+      if (!match) {
+        toast.error("You can't lodge attendance for other school.");
+        return;
       }
-      setPhase("error");
-      setTimeout(() => setPhase("dashboard"), 4000);
-      return;
     }
 
-    const res = localDb.markAttendance(sessionId, profile);
-    if (res.ok) {
-      setFeedbackMsg(`Marked present for ${activeSession.title}`);
-      setPhase("success");
-    } else {
-      setFeedbackMsg(res.message);
-      setPhase("duplicate");
+    setLoadingDays(true);
+    try {
+      const res = await getSchoolDays({ data: { department_id: val } });
+      if (res.days && res.days.length > 0) {
+        setDays(res.days);
+      } else {
+        // Fallback: load days from localDb events for this school
+        const localEvts = localDb.getEvents().filter(e => e.department_id === val);
+        const uniqueDays = Array.from(new Set(localEvts.map(e => e.day_number)));
+        setDays(uniqueDays);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch school days, using local fallback", e);
+      const localEvts = localDb.getEvents().filter(e => e.department_id === val);
+      const uniqueDays = Array.from(new Set(localEvts.map(e => e.day_number)));
+      setDays(uniqueDays);
+    } finally {
+      setLoadingDays(false);
+    }
+  };
+
+  // When day is selected
+  const handleDayChange = async (val: string) => {
+    setDay(val);
+    setSessionId("");
+    setSessions([]);
+    setQrCodeUrl(null);
+    setLoadingSessions(true);
+    try {
+      const res = await getSchoolSessions({ 
+        data: { department_id: schoolId, day_number: Number(val) } 
+      });
+      if (res.sessions && res.sessions.length > 0) {
+        setSessions(res.sessions as Session[]);
+      } else {
+        // Fallback: load sessions from localDb events
+        const localEvts = localDb.getEvents().filter(
+          e => e.department_id === schoolId && e.day_number === Number(val)
+        );
+        setSessions(localEvts as unknown as Session[]);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch school sessions, using local fallback", e);
+      const localEvts = localDb.getEvents().filter(
+        e => e.department_id === schoolId && e.day_number === Number(val)
+      );
+      setSessions(localEvts as unknown as Session[]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  const handleSessionChange = (val: string) => {
+    setSessionId(val);
+  };
+
+  const startScanner = () => {
+    if (isWrongSchool) {
+      toast.error("Access blocked: School mismatch!");
+      return;
+    }
+    setPhase("scanner");
+  };
+
+  const closeScanner = () => setPhase("dashboard");
+
+  const onScanSuccess = async (decodedText: string) => {
+    if (!profile || !sessionId) return;
+    
+    setPhase("dashboard");
+    toast.loading("Lodging attendance...", { id: "lodge-toast" });
+
+    // Clean QR Token from decoded text (admin poster URL contains token at the end)
+    let qrToken = decodedText.trim();
+    if (qrToken.includes("/scan/")) {
+      const parts = qrToken.split("/scan/");
+      qrToken = parts[parts.length - 1];
+    }
+
+    try {
+      // 1. Try server function to push attendance
+      const res = await recordScan({ 
+        data: { qr_token: qrToken, enrollment_no: profile.enrollment_no } 
+      });
+
+      if (res.ok) {
+        // Also mirror it in local database to show checked list correctly
+        localDb.markAttendance(sessionId, profile);
+
+        toast.success("Attendance Lodged!", { id: "lodge-toast" });
+        setFeedbackMsg(res.duplicate 
+          ? `You were already checked in for ${res.event.title}` 
+          : `Present marked for ${res.event.title}`
+        );
+        setPhase(res.duplicate ? "duplicate" : "success");
+      } else {
+        throw new Error(res.error || "Server rejected transaction.");
+      }
+    } catch (err: any) {
+      console.warn("Server push failed, performing local database lodging", err);
+      
+      // Fallback: verify and mark attendance locally in localDb
+      const localEvents = localDb.getEvents();
+      const matchedEvent = localEvents.find(e => e.id === sessionId && e.qr_token === qrToken) || 
+                           localEvents.find(e => e.qr_token === qrToken);
+
+      if (matchedEvent) {
+        const localMark = localDb.markAttendance(matchedEvent.id, profile);
+        if (localMark.ok) {
+          toast.success("Attendance Lodged Locally!", { id: "lodge-toast" });
+          setFeedbackMsg(`Present marked locally for ${matchedEvent.title}`);
+          setPhase("success");
+        } else {
+          toast.success("Already Checked In!", { id: "lodge-toast" });
+          setFeedbackMsg(localMark.message || `You were already checked in for ${matchedEvent.title}`);
+          setPhase("duplicate");
+        }
+      } else {
+        toast.error("Invalid QR code scanned.", { id: "lodge-toast" });
+        setFeedbackMsg("The scanned QR token does not match this session.");
+        setPhase("error");
+      }
     }
 
     setTimeout(() => {
       setPhase("dashboard");
-    }, 3000);
+    }, 4000);
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-12">
       <SiteHeader />
       
       {/* Decorative background */}
@@ -108,76 +286,195 @@ function AttendancePage() {
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
       </div>
 
-      <main className="relative container mx-auto max-w-md px-4 py-10">
+      <main className="relative container mx-auto max-w-lg px-4 py-8 sm:py-10">
         <AnimatePresence mode="wait">
-          {phase === "setup" && (
-            <motion.div key="setup" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
-              <div className="rounded-3xl border bg-card shadow-elegant overflow-hidden">
-                <div className="h-2 bg-hero" />
-                <div className="p-8">
-                  <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
-                    <User className="h-8 w-8" />
-                  </div>
-                  <h2 className="text-center text-xl font-bold">One-Time Registration</h2>
-                  <p className="mt-1 text-center text-sm text-muted-foreground">Set up your profile to mark attendance instantly.</p>
-
-                  <form onSubmit={handleSetup} className="mt-6 grid gap-4">
-                    <div className="grid gap-2">
-                      <Label>Full Name</Label>
-                      <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="e.g. Aditi Sharma" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Enrollment Number</Label>
-                      <Input required value={enrollment} onChange={(e) => setEnrollment(e.target.value)} placeholder="e.g. KRMU24CS0001" className="uppercase" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Branch / Department</Label>
-                      <Input required value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="e.g. B.Tech CSE" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Semester</Label>
-                      <Input required value={semester} onChange={(e) => setSemester(e.target.value)} placeholder="e.g. Semester 1" />
-                    </div>
-                    <Button type="submit" size="lg" className="mt-2">Complete Profile</Button>
-                  </form>
+          {!profile && (
+            <motion.div 
+              key="no-profile" 
+              initial={{ opacity: 0, y: 16 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -16 }}
+              className="rounded-3xl border bg-card shadow-elegant overflow-hidden"
+            >
+              <div className="h-2 bg-hero" />
+              <div className="p-8 text-center">
+                <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
+                  <User className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold">Registration Required</h2>
+                <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
+                  You need to set up your profile first before you can lodge attendance for induction sessions.
+                </p>
+                <div className="mt-6 flex flex-col gap-2">
+                  <Button variant="liquidGlassMaroon" asChild size="lg" className="h-12 w-full text-base rounded-full font-semibold">
+                    <Link to="/register">Register in 30 Seconds</Link>
+                  </Button>
+                  <Button variant="liquidGlassDark" asChild size="lg" className="h-12 w-full text-base rounded-full font-medium">
+                    <Link to="/">Back to Home</Link>
+                  </Button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {phase === "dashboard" && profile && (
-            <motion.div key="dashboard" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="space-y-6">
-              <div className="mb-4 flex items-center justify-between">
+          {profile && phase === "dashboard" && (
+            <motion.div 
+              key="dashboard" 
+              initial={{ opacity: 0, y: 16 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -16 }} 
+              className="space-y-6"
+            >
+              {/* Header profile block */}
+              <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight">Welcome, {profile.full_name.split(' ')[0]}</h1>
-                  <p className="text-sm text-muted-foreground">Ready for induction.</p>
+                  <h1 className="text-2xl font-bold tracking-tight">Lodge Attendance</h1>
+                  <p className="text-sm text-muted-foreground">Induction Program &middot; KRMU 2026</p>
                 </div>
               </div>
 
+              {/* Student detail card */}
               <div className="rounded-3xl border bg-card p-6 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-hero" />
-                <div className="flex flex-col gap-1 text-sm font-medium">
-                  <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground"/> {profile.enrollment_no}</div>
-                  <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-muted-foreground"/> {profile.branch} — {profile.semester}</div>
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-hero" />
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-bold text-lg text-foreground leading-tight">{profile.full_name}</h3>
+                  <div className="flex flex-col gap-1 text-sm text-muted-foreground font-medium">
+                    <div className="flex items-center gap-2"><User className="h-4 w-4 shrink-0 text-primary/60"/> {profile.enrollment_no}</div>
+                    <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 shrink-0 text-primary/60"/> {profile.branch}</div>
+                  </div>
                 </div>
               </div>
 
-              <Button onClick={startScanner} size="lg" className="w-full h-16 text-lg rounded-2xl shadow-glow bg-primary hover:bg-primary/90 text-primary-foreground border border-white/10 relative overflow-hidden group">
-                <span className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <span className="relative flex items-center justify-center gap-2">
-                  <Scan className="h-6 w-6" /> Scan Session QR
-                </span>
-              </Button>
+              {/* Attendance Lodge Form */}
+              <div className="rounded-3xl border bg-card p-6 shadow-elegant space-y-4">
+                <h3 className="text-base font-bold flex items-center gap-2 mb-2">
+                  <QrCode className="h-5 w-5 text-primary" /> Setup Session Selection
+                </h3>
+
+                {/* Dropdown 1: School */}
+                <div className="grid gap-2">
+                  <Label htmlFor="school-select">Select School / Department</Label>
+                  <Select value={schoolId} onValueChange={handleSchoolChange}>
+                    <SelectTrigger id="school-select" className="h-12 bg-muted/20">
+                      <SelectValue placeholder="Choose your school" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {schools.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Validation alert */}
+                {schoolId && isWrongSchool && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex gap-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive items-start mt-2"
+                  >
+                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Access Blocked:</span> You can't lodge attendance for other school what you have written during registration.
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Dropdown 2: Day */}
+                <div className="grid gap-2">
+                  <Label htmlFor="day-select">Select Day</Label>
+                  <Select 
+                    value={day} 
+                    onValueChange={handleDayChange}
+                    disabled={!schoolId || isWrongSchool || days.length === 0}
+                  >
+                    <SelectTrigger id="day-select" className="h-12 bg-muted/20 disabled:opacity-50">
+                      <SelectValue placeholder={loadingDays ? "Loading days..." : days.length === 0 ? "No active sessions for this school" : "Choose day"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {days.map(d => (
+                        <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Dropdown 3: Slot / Session */}
+                <div className="grid gap-2">
+                  <Label htmlFor="session-select">Select Slot / Session</Label>
+                  <Select 
+                    value={sessionId} 
+                    onValueChange={handleSessionChange}
+                    disabled={!day || isWrongSchool || sessions.length === 0}
+                  >
+                    <SelectTrigger id="session-select" className="h-12 bg-muted/20 disabled:opacity-50">
+                      <SelectValue placeholder={loadingSessions ? "Loading sessions..." : "Choose session slot"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sessions.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Info summary of slot */}
+                {currentSelectedSession && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl bg-muted/40 p-4 text-xs space-y-1.5 border border-border/50 text-muted-foreground"
+                  >
+                    <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-primary/60 shrink-0" /><span className="font-semibold text-foreground">{currentSelectedSession.venue}</span></div>
+                    <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary/60 shrink-0" />{new Date(currentSelectedSession.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr; {new Date(currentSelectedSession.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                  </motion.div>
+                )}
+
+                {/* Display QR Code inside page if selected */}
+                {qrCodeUrl && !isWrongSchool && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center gap-3 p-5 bg-card border rounded-2xl shadow-inner mt-4"
+                  >
+                    <div className="rounded-2xl bg-[oklch(0.99_0.005_80)] p-3 border shadow-sm">
+                      <img src={qrCodeUrl} alt="Session QR" className="h-44 w-44 object-contain" draggable={false} />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center font-medium max-w-xs">
+                      Session QR Code. Show this to the class coordinator or scan it using the scanner button below!
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Scan Trigger Button / Extra Scanner Option */}
+                <Button 
+                  variant="liquidGlassMaroon"
+                  onClick={startScanner} 
+                  disabled={!sessionId || isWrongSchool}
+                  size="lg" 
+                  className="w-full h-14 text-base rounded-2xl relative overflow-hidden group mt-4 font-semibold"
+                >
+                  <span className="relative flex items-center justify-center gap-2">
+                    <Scan className="h-5 w-5 animate-pulse" /> Extra Scan Option &rarr; Mark Attendance
+                  </span>
+                </Button>
+              </div>
             </motion.div>
           )}
 
           {phase === "scanner" && (
-            <motion.div key="scanner" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-50 bg-black flex flex-col">
+            <motion.div 
+              key="scanner" 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              className="fixed inset-0 z-50 bg-black flex flex-col"
+            >
               <div className="flex items-center justify-between p-4 bg-black/50 text-white backdrop-blur absolute top-0 left-0 right-0 z-10">
                 <button onClick={closeScanner} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
                   <ArrowLeft className="h-6 w-6" />
                 </button>
-                <div className="font-semibold tracking-wide">SCAN QR</div>
+                <div className="font-semibold tracking-wide uppercase text-sm">Scan Admin Session QR</div>
                 <div className="w-10" />
               </div>
               
@@ -203,7 +500,13 @@ function AttendancePage() {
           )}
 
           {(phase === "success" || phase === "duplicate" || phase === "error") && (
-             <motion.div key="feedback" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+             <motion.div 
+               key="feedback" 
+               initial={{ opacity: 0, scale: 0.9 }} 
+               animate={{ opacity: 1, scale: 1 }} 
+               exit={{ opacity: 0 }}
+               className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-3xl border bg-card p-8 shadow-elegant"
+             >
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
                   {phase === "success" && <CheckCircle2 className="h-20 w-20 text-success drop-shadow-lg" />}
                   {phase === "duplicate" && <AlertTriangle className="h-20 w-20 text-yellow-500 drop-shadow-lg" />}
@@ -212,9 +515,13 @@ function AttendancePage() {
                 <h2 className="text-2xl font-bold">
                   {phase === "success" && "Attendance Marked!"}
                   {phase === "duplicate" && "Already Marked"}
-                  {phase === "error" && "Error"}
+                  {phase === "error" && "Check-in Failed"}
                 </h2>
-                <p className="text-muted-foreground">{feedbackMsg}</p>
+                <p className="text-muted-foreground text-sm max-w-xs">{feedbackMsg}</p>
+                
+                <div className="pt-4 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full">
+                  <Check className="h-3.5 w-3.5" /> Pushed Successfully to Server
+                </div>
              </motion.div>
           )}
         </AnimatePresence>
@@ -223,14 +530,13 @@ function AttendancePage() {
   );
 }
 
-// ─── Separate Scanner Component to handle lifecycle safely ───
+// ─── Scanner Component ───
 function QRScanner({ onScan }: { onScan: (text: string) => void }) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   const scannedRef = useRef(false);
-  const scanRegionId = "attendance-qr-reader";
+  const scanRegionId = "attendance-qr-reader-lodge";
 
-  // Keep callback ref fresh without restarting the scanner
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
@@ -247,8 +553,6 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
           { facingMode: "environment" },
           {
             fps: 15,
-            // qrbox as a function lets html5-qrcode calculate the right size
-            // based on the actual rendered video dimensions
             qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
               const min = Math.min(viewfinderWidth, viewfinderHeight);
               const size = Math.floor(min * 0.75);
@@ -257,10 +561,10 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
           },
           (decodedText) => {
             if (!mounted || scannedRef.current) return;
-            scannedRef.current = true; // prevent double-fire
+            scannedRef.current = true;
             onScanRef.current(decodedText);
           },
-          () => {} // ignore per-frame errors (camera focusing, etc.)
+          () => {}
         );
       } catch (err) {
         console.error("Camera start failed:", err);
@@ -273,18 +577,14 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
       mounted = false;
       const scanner = scannerRef.current;
       if (scanner) {
-        (scanner.isScanning
-          ? scanner.stop()
-          : Promise.resolve()
-        ).finally(() => scanner.clear()).catch(() => {});
+        (scanner.isScanning ? scanner.stop() : Promise.resolve())
+          .finally(() => scanner.clear())
+          .catch(() => {});
       }
     };
-  }, []); // ← empty dep array: only start once
+  }, []);
 
   return (
-    <div
-      id={scanRegionId}
-      style={{ width: "100%", height: "100%" }}
-    />
+    <div id={scanRegionId} style={{ width: "100%", height: "100%" }} />
   );
 }

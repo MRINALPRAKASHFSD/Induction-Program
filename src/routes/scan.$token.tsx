@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SuccessBurst } from "@/components/success-burst";
-import { localDb } from "@/lib/local-db";
+import { recordScan } from "@/lib/attendance.functions";
 
 export const Route = createFileRoute("/scan/$token")({
   head: () => ({
@@ -38,50 +38,29 @@ function ScanPage() {
     
     try {
       const enrollClean = enroll.trim().toUpperCase();
-      const student = localDb.getStudent(enrollClean);
-      if (!student) {
-        setResult({ ok: false, error: "Student not registered. Please register first." });
-        return;
-      }
       
-      const events = localDb.getEvents();
-      const event = events.find(e => e.qr_token === token || e.id === token);
-      const sessions = localDb.getSessions();
-      
-      // Match the session either by event title (if mirrored) or just the active session
-      let session = null;
-      if (event) {
-        session = sessions.find(s => s.title === event.title);
-      }
-      if (!session) {
-        session = sessions.find(s => s.id === token) || sessions.find(s => s.is_active) || sessions[0];
-      }
-      
-      if (!session) {
-        setResult({ ok: false, error: "Event not found or inactive." });
-        return;
-      }
+      const markRes = (await recordScan({ data: { qr_token: token, enrollment_no: enrollClean } })) as {
+        ok: boolean;
+        message?: string;
+        duplicate?: boolean;
+        studentName?: string;
+        eventTitle?: string;
+        day?: number;
+        error?: string;
+      };
 
-      const markRes = localDb.markAttendance(session.id, student);
       if (markRes.ok) {
         setResult({
           ok: true,
-          duplicate: false,
-          student: { name: student.full_name },
-          event: { title: session.title, venue: event?.venue || "Campus Venue", day: event?.day_number || 1 },
+          duplicate: !!markRes.duplicate,
+          student: { name: markRes.studentName || enrollClean },
+          event: { title: markRes.eventTitle || "Event", venue: "Campus Venue", day: markRes.day || 1 },
         });
       } else {
-        if (markRes.message.includes("Already")) {
-          setResult({
-            ok: true,
-            duplicate: true,
-            student: { name: student.full_name },
-            event: { title: session.title, venue: event?.venue || "Campus Venue", day: event?.day_number || 1 },
-          });
-        } else {
-          setResult({ ok: false, error: markRes.message });
-        }
+        setResult({ ok: false, error: markRes.error || markRes.message || "Attendance failed" });
       }
+    } catch (err: any) {
+      setResult({ ok: false, error: err.message || "Network error. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -99,7 +78,7 @@ function ScanPage() {
             <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Day {result.event.day} of induction</div>
             <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {result.event.venue}</div>
           </div>
-          <Button asChild size="lg" className="mt-6 bg-white text-primary hover:bg-white/90">
+          <Button asChild variant="liquidGlassWhite" size="lg" className="mt-6 rounded-full font-semibold text-primary">
             <Link to="/">Done</Link>
           </Button>
         </div>
@@ -128,7 +107,7 @@ function ScanPage() {
               className="h-12 text-base"
             />
           </div>
-          <Button type="submit" size="lg" disabled={loading || enroll.length < 3} className="h-12 text-base">
+          <Button type="submit" variant="liquidGlassDark" size="lg" disabled={loading || enroll.length < 3} className="h-12 text-base rounded-full font-semibold">
             {loading ? "Checking in…" : "Check in"}
           </Button>
           {result && !result.ok && (
