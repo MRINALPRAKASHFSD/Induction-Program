@@ -77,7 +77,7 @@ function ClubsPage() {
               </div>
               <Dialog open={active?.id === c.id} onOpenChange={(o) => !o && setActive(null)}>
                 <DialogTrigger asChild>
-                  <Button className="mt-4 w-full" onClick={() => setActive(c)}>Join</Button>
+                  <Button variant="liquidGlassMaroon" className="mt-4 w-full rounded-full font-semibold" onClick={() => setActive(c)}>Join</Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -90,7 +90,7 @@ function ClubsPage() {
                       onChange={(e) => setEnroll(e.target.value.toUpperCase())}
                       placeholder="KRMU24CS0001"
                     />
-                    <Button onClick={onJoin} disabled={loading || enroll.length < 3} size="lg">
+                    <Button variant="liquidGlassMaroon" onClick={onJoin} disabled={loading || enroll.length < 3} size="lg" className="rounded-full font-semibold">
                       {loading ? "Joining…" : "Confirm join"}
                     </Button>
                   </div>

@@ -76,7 +76,7 @@ function ClubCard({ club, count, onChanged }: { club: LocalClub; count: number; 
         </div>
         <div className="flex flex-col gap-2">
           <ClubDialog club={club} onSaved={onChanged} />
-          <Button size="sm" variant="ghost" className="text-destructive" onClick={remove}><Trash2 className="h-4 w-4" /></Button>
+          <Button size="sm" variant="liquidGlass" className="text-destructive rounded-full" onClick={remove}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
     </div>
@@ -112,7 +112,7 @@ function ClubDialog({ club, onSaved }: { club?: LocalClub; onSaved: () => void }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {club ? <Button size="sm" variant="outline">Edit</Button> : <Button><Plus className="mr-1 h-4 w-4" /> New club</Button>}
+        {club ? <Button size="sm" variant="liquidGlassWhite" className="rounded-full">Edit</Button> : <Button variant="liquidGlassDark" className="rounded-full"><Plus className="mr-1 h-4 w-4" /> New club</Button>}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>{club ? "Edit club" : "New club"}</DialogTitle></DialogHeader>
@@ -126,7 +126,7 @@ function ClubDialog({ club, onSaved }: { club?: LocalClub; onSaved: () => void }
             <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
             <span className="text-sm">{form.is_active ? "Visible to students" : "Hidden"}</span>
           </div>
-          <DialogFooter><Button type="submit">Save</Button></DialogFooter>
+          <DialogFooter><Button type="submit" variant="liquidGlassDark" className="rounded-full">Save</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
