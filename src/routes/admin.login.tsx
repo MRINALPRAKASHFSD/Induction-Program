@@ -136,9 +136,10 @@ function AdminLogin() {
 
             <Button
               type="submit"
+              variant="liquidGlassDark"
               size="lg"
               disabled={busy || !password}
-              className="h-11 mt-1"
+              className="h-11 mt-1 rounded-full font-semibold"
             >
               {busy ? (
                 <span className="flex items-center gap-2">

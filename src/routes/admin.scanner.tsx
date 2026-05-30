@@ -8,7 +8,8 @@ import {
 import { Html5Qrcode } from "html5-qrcode";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
-import { localDb } from "@/lib/local-db";
+import { listEvents } from "@/lib/admin.functions";
+import { recordScan } from "@/lib/attendance.functions";
 
 export const Route = createFileRoute("/admin/scanner")({
   head: () => ({
@@ -26,6 +27,8 @@ type EventRow = {
   title: string;
   day_number: number;
   venue: string;
+  qr_token: string;
+  is_active: boolean;
 };
 
 type FeedbackState =
@@ -62,18 +65,25 @@ function ScannerPage() {
 
   /* ─── Load active events ─────────────────────────────────────────────── */
   useEffect(() => {
-    const activeSessions = localDb.getSessions().filter(s => s.is_active);
-    const rows: EventRow[] = activeSessions.map((s) => ({
-      id: s.id,
-      title: s.title,
-      day_number: 1,
-      venue: "Campus",
-    }));
-    setEvents(rows);
-    if (rows.length > 0) {
-      setSelectedEventId(rows[0].id);
-      selectedEventIdRef.current = rows[0].id;
-    }
+    let mounted = true;
+    listEvents().then((data: any) => {
+      if (!mounted) return;
+      const activeSessions = data.filter((s: any) => s.is_active);
+      const rows: EventRow[] = activeSessions.map((s: any) => ({
+        id: s.id,
+        title: s.title,
+        day_number: s.day_number,
+        venue: s.venue,
+        qr_token: s.qr_token,
+        is_active: s.is_active,
+      }));
+      setEvents(rows);
+      if (rows.length > 0) {
+        setSelectedEventId(rows[0].id);
+        selectedEventIdRef.current = rows[0].id;
+      }
+    }).catch(console.error);
+    return () => { mounted = false; };
   }, []);
 
   /* ─── Feedback auto-dismiss (1.5 s) and scanner resume ──────────────── */
@@ -118,45 +128,78 @@ function ScannerPage() {
       if (processingRef.current) return;
       processingRef.current = true;
 
-      const enrollment = raw.trim().toUpperCase();
+      let enrollment = "";
+      let qrSessionId = "";
+      let qrToken = "";
+
+      try {
+        const payload = JSON.parse(raw);
+        enrollment = payload.enrollment_no;
+        qrSessionId = payload.session_id;
+        qrToken = payload.qr_token;
+      } catch (e) {
+        // Fallback for old simple enrollment QR codes
+        enrollment = raw.trim().toUpperCase();
+      }
+
+      if (!enrollment) {
+        showFeedback({ status: "error", message: "Invalid QR code format." });
+        buzz("error");
+        return;
+      }
+
       // Read from ref so this callback always uses the latest selected event
-      const currentEventId = selectedEventIdRef.current;
+      // However, if the QR code specifies a session, use that instead.
+      const currentEventId = qrSessionId || selectedEventIdRef.current;
       if (!currentEventId) {
         showFeedback({ status: "error", message: "No event selected. Pick an event first." });
         buzz("error");
         return;
       }
 
-      try {
-        const student = localDb.getStudent(enrollment);
-        if (!student) {
-          buzz("error");
-          showFeedback({ status: "error", message: `Enrollment number "${enrollment}" is not registered. Please register first.` });
-          return;
-        }
+      // If the QR didn't provide a token, get it from our selected event list
+      if (!qrToken) {
+        const event = events.find(e => e.id === currentEventId);
+        if (event) qrToken = event.qr_token;
+      }
 
-        const res = localDb.markAttendance(currentEventId, student);
-        const eventTitle = events.find(e => e.id === currentEventId)?.title || "Event";
+      if (!qrToken) {
+        showFeedback({ status: "error", message: "Could not determine QR token for event." });
+        buzz("error");
+        return;
+      }
+
+      try {
+        const res = (await recordScan({ data: { qr_token: qrToken, enrollment_no: enrollment } })) as {
+          ok: boolean;
+          message?: string;
+          duplicate?: boolean;
+          studentName?: string;
+          eventTitle?: string;
+          day?: number;
+          error?: string;
+        };
+        const eventTitle = res.eventTitle || events.find(e => e.id === currentEventId)?.title || "Event";
 
         if (!res.ok) {
-          if (res.message.toLowerCase().includes("already")) {
+          if (res.duplicate) {
             buzz("warn");
-            showFeedback({ status: "duplicate", studentName: student.full_name, eventTitle, day: 1 });
+            showFeedback({ status: "duplicate", studentName: res.studentName || enrollment, eventTitle, day: res.day || 1 });
           } else {
             buzz("error");
-            showFeedback({ status: "error", message: res.message });
+            showFeedback({ status: "error", message: res.error || res.message || "Attendance failed" });
           }
         } else {
           buzz("success");
           setTotalScans((n) => n + 1);
-          showFeedback({ status: "success", studentName: student.full_name, eventTitle, day: 1 });
+          showFeedback({ status: "success", studentName: res.studentName || enrollment, eventTitle, day: res.day || 1 });
         }
       } catch (err: any) {
         buzz("error");
         showFeedback({ status: "error", message: err?.message ?? "Network error. Please try again." });
       }
     },
-    // Stable: refs always fresh, no selectedEventId dep needed
+    // Stable: refs always fresh
     [showFeedback, buzz, events],
   );
 
@@ -455,7 +498,7 @@ function ScannerPage() {
                     </p>
                     <p className="text-sm text-white/80 max-w-[220px]">{feedback.message}</p>
                     {!scannerReady && (
-                      <Button onClick={requestCameraPermission} variant="secondary" className="mt-4 pointer-events-auto">
+                      <Button onClick={requestCameraPermission} variant="liquidGlassWhite" className="mt-4 pointer-events-auto rounded-full">
                         Retry Camera
                       </Button>
                     )}
@@ -548,7 +591,7 @@ function ManualEntryFallback({
               disabled={disabled}
               className="flex-1 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-mono uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             />
-            <Button type="submit" size="sm" disabled={disabled || value.trim().length < 3}>
+            <Button type="submit" variant="liquidGlassDark" size="sm" className="rounded-full" disabled={disabled || value.trim().length < 3}>
               Mark
             </Button>
           </motion.form>
