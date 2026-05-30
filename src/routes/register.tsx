@@ -81,6 +81,7 @@ function RegisterPage() {
       branch: `${form.branch} · ${deptName}`,
       semester: `Year ${form.year} · ${form.course}`,
       created_at: new Date().toISOString(),
+      department_id: form.department_id,
     };
 
     const existing = localDb.getStudentProfile();
@@ -109,8 +110,8 @@ function RegisterPage() {
             subtitle={`Enrollment ${done} is registered. Head to Attendance to scan the session QR.`}
           />
           <div className="mt-6 grid gap-2">
-            <Button asChild size="lg"><Link to="/attendance">Go to Attendance</Link></Button>
-            <Button asChild variant="outline" size="lg"><Link to="/">Back to home</Link></Button>
+            <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold"><Link to="/attendance">Go to Attendance</Link></Button>
+            <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium"><Link to="/">Back to home</Link></Button>
           </div>
         </main>
       </div>
@@ -181,7 +182,7 @@ function RegisterPage() {
             </Field>
           </div>
 
-          <Button type="submit" size="lg" disabled={submitting} className="mt-2 h-12 text-base">
+          <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting} className="mt-2 h-12 text-base rounded-full font-semibold">
             {submitting ? "Registering…" : "Complete Registration"}
           </Button>
           <p className="text-center text-xs text-muted-foreground">

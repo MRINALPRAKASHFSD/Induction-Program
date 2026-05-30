@@ -84,7 +84,7 @@ function Landing() {
                 visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
               }}
             >
-              Skip the queues. Scan your personalized QR, secure your boarding pass in 30 seconds, and check into sessions effortlessly.
+              Skip the queues. Register in 30 seconds, select your session slot, scan the admin QR code, and lodge your attendance instantly.
             </motion.p>
 
             <motion.div 
@@ -94,21 +94,15 @@ function Landing() {
                 visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
               }}
             >
-              <Button size="lg" asChild className="btn-hover-arrow btn-hover-scale bg-white text-primary hover:bg-white/95 shadow-elegant h-12 px-7 rounded-full font-semibold">
+              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold">
                 <Link to="/register">
                   Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="btn-hover-scale border-white/30 bg-white/10 text-white hover:bg-white/20 h-12 px-7 rounded-full font-medium backdrop-blur">
+              <Button variant="liquidGlass" size="lg" asChild className="h-12 px-7 rounded-full font-medium">
                 <Link to="/attendance">
                   <QrCode className="mr-2 h-4 w-4" />
-                  Self-Attendance
-                </Link>
-              </Button>
-              {/* Optional quick link for Admins to scan student passes */}
-              <Button size="lg" variant="ghost" asChild className="btn-hover-scale text-white hover:bg-white/10 hover:text-white h-12 px-7 rounded-full font-medium">
-                <Link to="/admin/scanner">
-                  Admin Scanner
+                  Lodge Attendance
                 </Link>
               </Button>
             </motion.div>
@@ -151,7 +145,7 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t bg-muted/30 py-8">
+      <footer className="panel-liquid-glass py-8">
         <div className="container mx-auto max-w-6xl px-4 text-sm text-muted-foreground flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4" /> K.R. Mangalam University · Induction 2026
