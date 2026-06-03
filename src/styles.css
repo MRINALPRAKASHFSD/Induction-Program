@@ -494,38 +494,34 @@
   border-radius: 50%;
   filter: blur(90px);
   pointer-events: none;
-  will-change: transform, border-radius;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
 }
 .orb-1 {
   width: 800px; height: 800px;
   background: radial-gradient(circle, rgba(200, 60, 20, 0.35) 0%, transparent 70%);
   top: -250px; right: -150px;
-  animation: orb-drift-1 20s ease-in-out infinite, orb-morph 14s ease-in-out infinite;
+  animation: orb-drift-1 20s ease-in-out infinite;
 }
 .orb-2 {
   width: 700px; height: 700px;
   background: radial-gradient(circle, rgba(160, 40, 15, 0.3) 0%, transparent 70%);
   bottom: -200px; left: -150px;
-  animation: orb-drift-2 25s ease-in-out infinite, orb-morph 17s ease-in-out 4s infinite;
+  animation: orb-drift-2 25s ease-in-out infinite;
 }
 .orb-3 {
   width: 900px; height: 900px;
   background: radial-gradient(circle, rgba(255, 170, 80, 0.45) 0%, transparent 70%);
   top: 15%; right: -25%;
-  animation: orb-drift-3 22s ease-in-out infinite, orb-morph 12s ease-in-out 2s infinite;
+  animation: orb-drift-3 22s ease-in-out infinite;
 }
 .orb-4 {
   width: 600px; height: 600px;
   background: radial-gradient(circle, rgba(240, 110, 40, 0.35) 0%, transparent 70%);
   bottom: 10%; right: 15%;
-  animation: orb-drift-4 18s ease-in-out infinite, orb-morph 15s ease-in-out 5s infinite;
-}
-
-@keyframes orb-morph {
-  0%,100% { border-radius: 50%; }
-  25%     { border-radius: 56% 44% 62% 38% / 48% 54% 46% 52%; }
-  50%     { border-radius: 40% 60% 46% 54% / 57% 43% 60% 40%; }
-  75%     { border-radius: 62% 38% 44% 56% / 40% 62% 48% 52%; }
+  animation: orb-drift-4 18s ease-in-out infinite;
 }
 @keyframes orb-drift-1 {
   0%,100% { transform: translate3d(0,0,0) scale(1); }
