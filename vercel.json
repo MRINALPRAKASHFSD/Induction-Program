@@ -23,7 +23,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/_shell.html"
+      "destination": "/index.html"
     }
   ]
 }
