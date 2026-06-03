@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { QrCode, Users, Calendar, Sparkles, ArrowRight, Activity } from "lucide-react";
+import { QrCode, Users, Calendar, ArrowRight, Activity } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { useLiveCount } from "@/hooks/use-live-count";
@@ -19,14 +19,6 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="rounded-xl border bg-card-soft p-4 text-center shadow-sm">
-      <div className="text-2xl font-semibold tabular-nums">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
-    </div>
-  );
-}
 
 function Landing() {
   const students = useLiveCount("students");
@@ -38,61 +30,85 @@ function Landing() {
       <SiteHeader />
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="bg-hero-premium absolute inset-0 opacity-95" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMSAwIDAgMCAwICAwIDEgMCAwIDAgIDAgMCAxIDAgMCAgMCAwIDAgMSAwIiAvPgogICAgPGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuODUiIG51bU9jdGF2ZXM9IjMiIHN0aXRjaFRpbGVzPSJzdGl0Y2giIC8+CiAgICA8ZmVDb2xvck1hdHJpeCB0eXBlPSJtYXRyaXgiIHZhbHVlcz0iMSAwIDAgMCAwICAwIDEgMCAwIDAgIDAgMCAxIDAgMCAgMCAwIDAgMC4xNSAwIiAvPgogIDwvZmlsdGVyPgogIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIC8+Cjwvc3ZnPg==')] opacity-30 mix-blend-overlay pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)] opacity-10" />
-        
-        <div className="container relative mx-auto max-w-6xl px-4 py-20 sm:py-28 text-primary-foreground">
-          <motion.div 
-            className="max-w-2xl"
+      <section className="relative overflow-hidden min-h-[92svh] flex items-center">
+        {/* Gradient base */}
+        <div className="bg-hero-premium absolute inset-0" />
+
+        {/* Rotating rings */}
+        <div className="hero-ring hero-ring-1" />
+        <div className="hero-ring hero-ring-2" />
+        <div className="hero-ring hero-ring-3" />
+
+        {/* Floating orbs */}
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+
+        {/* Floating particles */}
+        <div className="hero-particle hp1" /><div className="hero-particle hp2" />
+        <div className="hero-particle hp3" /><div className="hero-particle hp4" />
+        <div className="hero-particle hp5" /><div className="hero-particle hp6" />
+        <div className="hero-particle hp7" /><div className="hero-particle hp8" />
+        <div className="hero-particle hp9" /><div className="hero-particle hp10" />
+
+        {/* Subtle noise texture */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIgLz4KICAgIDxmZUNvbG9yTWF0cml4IHR5cGU9Im1hdHJpeCIgdmFsdWVzPSIxIDAgMCAwIDAgIDAgMSAwIDAgMCAgMCAwIDEgMCAwICAwIDAgMCAwLjA4IDAiIC8+ICAKICA8L2ZpbHRlcj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiAvPgo8L3N2Zz4=')] opacity-40 mix-blend-multiply pointer-events-none" />
+
+        <div className="container relative mx-auto max-w-6xl px-4 py-24 sm:py-32">
+          <motion.div
+            className="max-w-3xl"
             initial="hidden"
             animate="visible"
             variants={{
               hidden: { opacity: 0 },
-              visible: {
-                opacity: 1,
-                transition: { staggerChildren: 0.15 }
-              }
+              visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
             }}
           >
-            <motion.div variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
-            }}>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest backdrop-blur border border-white/20 shadow-sm">
-                <Sparkles className="h-4 w-4 animate-sparkle text-accent" /> KRMU Induction 2026
-              </div>
+            {/* Eyebrow */}
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.7 } } }}
+            >
+              <span className="aarambh-year">K.R. Mangalam University · Student Induction</span>
             </motion.div>
 
-            <motion.h1 
-              className="mt-6 text-5xl font-extrabold tracking-tight leading-[1.1] sm:text-7xl"
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
-              }}
+            {/* Wordmark with shimmer */}
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 1.1 } } }}
+              className="mt-5"
             >
-              10,000 Students.<br />
-              5 Days of Discovery.<br />
-              <span className="highlight">One Seamless Journey.</span>
-            </motion.h1>
+              <div className="aarambh-wordmark-wrap">
+                <h1 className="aarambh-wordmark text-[3rem] sm:text-[4.8rem] lg:text-[6.2rem]">
+                  Aarambh
+                </h1>
+              </div>
+              <p className="aarambh-year mt-2.5 tracking-[0.32em]">2 0 2 6</p>
+            </motion.div>
 
-            <motion.p 
-              className="mt-6 max-w-xl text-base text-primary-foreground/90 sm:text-lg leading-relaxed font-medium"
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
-              }}
+            {/* Divider */}
+            <motion.div
+              variants={{ hidden: { opacity: 0, scaleX: 0 }, visible: { opacity: 1, scaleX: 1, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9 } } }}
+              style={{ transformOrigin: "left" }}
             >
-              Skip the queues. Register in 30 seconds, select your session slot, scan the admin QR code, and lodge your attendance instantly.
-            </motion.p>
+              <div className="hero-divider" />
+            </motion.div>
 
-            <motion.div 
-              className="mt-10 flex flex-wrap gap-4"
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.8 } }
-              }}
+            {/* Tagline */}
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9 } } }}
+            >
+              <p className="text-[#2c1208] text-xl sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
+                Your beginning.{" "}
+                <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
+              </p>
+              <p className="mt-3.5 text-[#7a4020]/70 text-sm sm:text-base font-normal max-w-xs leading-relaxed">
+                Scan in. Stand out. Belong.
+              </p>
+            </motion.div>
+
+            {/* CTA buttons */}
+            <motion.div
+              className="mt-10 flex flex-wrap gap-3"
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.85 } } }}
             >
               <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold">
                 <Link to="/register">
@@ -106,19 +122,29 @@ function Landing() {
                 </Link>
               </Button>
             </motion.div>
+
+            {/* Glass stat strip */}
+            <motion.div
+              className="mt-12 glass-card-hero px-6 py-4 inline-flex flex-wrap gap-x-8 gap-y-3"
+              variants={{ hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9, delay: 0.15 } } }}
+            >
+              {[
+                { value: students ?? "—", label: "Registered" },
+                { value: scans ?? "—",   label: "QR Scans"   },
+                { value: clubs ?? "—",   label: "Club Joins" },
+                { value: "5",            label: "Days"       },
+              ].map((s) => (
+                <div key={s.label} className="text-center min-w-[56px]">
+                  <div className="text-[#2c1208] font-bold text-xl tabular-nums leading-none">{s.value}</div>
+                  <div className="text-[#8a4a22]/60 text-[0.65rem] uppercase tracking-widest mt-1.5">{s.label}</div>
+                </div>
+              ))}
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* Live counters */}
-      <section className="container mx-auto -mt-10 max-w-6xl px-4 relative z-10">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Students registered" value={students ?? "—"} />
-          <Stat label="Live QR scans" value={scans ?? "—"} />
-          <Stat label="Club joins" value={clubs ?? "—"} />
-          <Stat label="Days of induction" value={5} />
-        </div>
-      </section>
+
 
       {/* Features */}
       <section className="container mx-auto max-w-6xl px-4 py-16">
