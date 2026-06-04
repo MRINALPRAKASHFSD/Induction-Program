@@ -25,7 +25,12 @@ type ResultType =
 
 function ScanPage() {
   const { token } = Route.useParams();
-  const [enroll, setEnroll] = useState("");
+  const [enroll, setEnroll] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("enroll") || "";
+    }
+    return "";
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResultType | null>(null);
 

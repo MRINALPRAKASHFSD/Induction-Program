@@ -133,13 +133,24 @@ function ScannerPage() {
       let qrToken = "";
 
       try {
-        const payload = JSON.parse(raw);
-        enrollment = payload.enrollment_no;
-        qrSessionId = payload.session_id;
-        qrToken = payload.qr_token;
+        if (raw.includes("/scan/")) {
+          const urlObj = new URL(raw);
+          const parts = urlObj.pathname.split("/scan/");
+          if (parts.length > 1) {
+            qrToken = parts[1].split("/")[0];
+            enrollment = urlObj.searchParams.get("enroll") || "";
+          }
+        } else {
+          const payload = JSON.parse(raw);
+          enrollment = payload.enrollment_no;
+          qrSessionId = payload.session_id;
+          qrToken = payload.qr_token;
+        }
       } catch (e) {
-        // Fallback for old simple enrollment QR codes
-        enrollment = raw.trim().toUpperCase();
+        if (!enrollment) {
+          // Fallback for old simple enrollment QR codes
+          enrollment = raw.trim().toUpperCase();
+        }
       }
 
       if (!enrollment) {

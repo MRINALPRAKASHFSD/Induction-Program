@@ -109,9 +109,9 @@ function AttendancePage() {
 
   // Generate QR code dynamically when session is selected
   useEffect(() => {
-    if (currentSelectedSession && currentSelectedSession.qr_token) {
+    if (currentSelectedSession && currentSelectedSession.qr_token && profile) {
       // The QR URL points to `/scan/${qr_token}` or encodes the qr_token
-      const url = `${window.location.origin}/scan/${currentSelectedSession.qr_token}`;
+      const url = `${window.location.origin}/scan/${currentSelectedSession.qr_token}?enroll=${encodeURIComponent(profile.enrollment_no)}`;
       QRCode.toDataURL(url, {
         width: 360,
         margin: 1,
