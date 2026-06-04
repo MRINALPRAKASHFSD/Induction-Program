@@ -257,18 +257,14 @@ function ScannerPage() {
       try {
         const scanner = new Html5Qrcode(SCANNER_DIV_ID, {
           verbose: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          useBarCodeDetectorIfSupported: true
         });
         
         await scanner.start(
           selectedCameraId,
           {
-            fps: 15,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const minDim = Math.min(viewfinderWidth, viewfinderHeight);
-              const size = Math.max(150, Math.min(Math.floor(minDim * 0.7), 350));
-              return { width: size, height: size };
-            },
+            fps: 10,
             disableFlip: true,
           },
           (decoded) => {

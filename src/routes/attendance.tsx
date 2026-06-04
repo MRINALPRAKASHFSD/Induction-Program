@@ -562,23 +562,12 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
       try {
         const scanner = new Html5Qrcode(scanRegionId, { 
           verbose: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+          useBarCodeDetectorIfSupported: true
         });
 
-        // Use a dynamic qrbox that scales with the viewport —
-        // this guarantees the scan region maps correctly to the actual
-        // camera frame regardless of device resolution.
-        const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
-          const minDimension = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minDimension * 0.7);
-          // Clamp between 150 and 350
-          const clamped = Math.max(150, Math.min(size, 350));
-          return { width: clamped, height: clamped };
-        };
-
         const scanConfig = {
-          fps: 15,
-          qrbox: qrboxFunction,
+          fps: 10,
           disableFlip: true,
         };
 
