@@ -230,9 +230,19 @@ function AttendancePage() {
 
     // Clean QR Token from decoded text (admin poster URL contains token at the end)
     let qrToken = decodedText.trim();
-    if (qrToken.includes("/scan/")) {
-      const parts = qrToken.split("/scan/");
-      qrToken = parts[parts.length - 1];
+    try {
+      if (qrToken.includes("/scan/")) {
+        const urlObj = new URL(qrToken);
+        const parts = urlObj.pathname.split("/scan/");
+        if (parts.length > 1) {
+          qrToken = parts[1].split("/")[0];
+        }
+      }
+    } catch (e) {
+      if (qrToken.includes("/scan/")) {
+        const parts = qrToken.split("/scan/");
+        qrToken = parts[parts.length - 1].split("?")[0];
+      }
     }
 
     try {
