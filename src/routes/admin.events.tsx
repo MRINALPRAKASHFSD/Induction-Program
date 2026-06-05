@@ -221,8 +221,7 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
       onSaved();
     } catch (err: any) {
       console.warn("Firebase event create/update failed", err);
-      toast.error("Failed to save event");
-      setOpen(false);
+      toast.error(`Failed to save event: ${err.message || err.toString()}`);
     }
   };
 

@@ -30,11 +30,11 @@ const eventInput = z.object({
 });
 
 export const createEvent = async ({ data }: { data: any }) => {
-  const parsed = eventInput.parse(data);
   const eventsRef = collection(db, "events");
   // auto-generate ID
   const newEventRef = doc(eventsRef);
-  const eventData = { ...parsed, id: newEventRef.id, created_at: new Date().toISOString() };
+  const qr_token = "krmu-" + Math.random().toString(36).substring(2, 10);
+  const eventData = { ...data, qr_token, id: newEventRef.id, created_at: new Date().toISOString() };
   await setDoc(newEventRef, eventData);
   return eventData;
 };
@@ -144,81 +144,31 @@ export const registerForClub = async ({ data }: { data: any }) => {
 /* ---------------- Analytics ---------------- */
 
 export const getAnalytics = async () => {
-  const studentsSnap = await getDocs(collection(db, "students"));
-  const students = studentsSnap.docs.map(d => d.data() as any);
-  
-  const attendanceSnap = await getDocs(collection(db, "attendance"));
-  const attendance = attendanceSnap.docs.map(d => d.data() as any);
+  const [studentsSnap, attendanceSnap, clubsSnap, eventsSnap] = await Promise.all([
+    getCountFromServer(collection(db, "students")),
+    getCountFromServer(collection(db, "attendance")),
+    getCountFromServer(collection(db, "club_registrations")),
+    getDocs(collection(db, "events"))
+  ]);
 
-  const clubsSnap = await getDocs(collection(db, "club_registrations"));
-  const clubs = clubsSnap.docs.map(d => d.data() as any);
+  const studentsCount = studentsSnap.data().count;
+  const attendanceCount = attendanceSnap.data().count;
+  const clubsCount = clubsSnap.data().count;
 
-  const eventsSnap = await getDocs(collection(db, "events"));
   const events = eventsSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-
-  const byDept: Record<string, number> = {};
-  students.forEach((s) => {
-    const parts = s.branch?.split(" · ") || [];
-    const k = parts.length > 1 ? parts[1] : "Unknown";
-    byDept[k] = (byDept[k] ?? 0) + 1;
-  });
-
-  const byYear: Record<string, number> = {};
-  students.forEach((s) => {
-    const parts = s.semester?.split(" · ") || [];
-    const k = parts.length > 0 ? parts[0] : "Unknown";
-    byYear[k] = (byYear[k] ?? 0) + 1;
-  });
-
-  const eventMap = new Map<string, any>(events.map((e) => [e.id, e]));
-  const byEvent: Record<string, number> = {};
-  attendance.forEach((a) => {
-    const ev = eventMap.get(a.event_id);
-    const k = ev ? ev.title : "Unknown";
-    byEvent[k] = (byEvent[k] ?? 0) + 1;
-  });
-
-  const byHour: Record<string, number> = {};
-  attendance.forEach((a) => {
-    const h = new Date(a.scanned_at).getHours();
-    const k = `${h}:00`;
-    byHour[k] = (byHour[k] ?? 0) + 1;
-  });
-
-  const byClub: Record<string, number> = {};
-  // Assuming club_registrations have club_id
-  // We need club names too, let's fetch clubs
-  const clubRefSnap = await getDocs(collection(db, "clubs"));
-  const clubMap = new Map<string, any>(clubRefSnap.docs.map((c) => [c.id, c.data()]));
-  
-  clubs.forEach((c) => {
-    const club = clubMap.get(c.club_id);
-    const k = club ? String(club.slug) : "Unknown";
-    byClub[k] = (byClub[k] ?? 0) + 1;
-  });
-
-  const toArr = (o: Record<string, number>) =>
-    Object.entries(o).map(([name, value]) => ({ name, value }));
-
-  const byClubNamed = Object.entries(byClub).map(([slug, count]) => {
-    const name = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    return { name, count };
-  });
 
   return {
     totals: { 
-      students: students.length, 
-      attendance: attendance.length, 
-      clubs: clubs.length, 
+      students: studentsCount, 
+      attendance: attendanceCount, 
+      clubs: clubsCount, 
       events: events.length 
     },
-    byDept: toArr(byDept),
-    byYear: toArr(byYear),
-    byEvent: toArr(byEvent),
-    byHour: Array.from({ length: 24 }, (_, h) => ({
-      name: `${h}:00`, value: byHour[`${h}:00`] ?? 0,
-    })),
-    byClub: byClubNamed,
+    byDept: [],
+    byYear: [],
+    byEvent: [],
+    byHour: [],
+    byClub: [],
   };
 };
 
