@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { AdminShell } from "@/components/admin-shell";
 import { Skeleton } from "@/components/ui/skeleton";
-import { localDb } from "@/lib/local-db";
+import { getAnalytics } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/analytics")({
   head: () => ({ meta: [{ title: "Analytics · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
@@ -25,77 +25,19 @@ function AdminAnalytics() {
   const [data, setData] = useState<Data | null>(null);
 
   useEffect(() => {
-    // Simulate slight network delay for feel
-    const timer = setTimeout(() => {
-      const students = localDb.getStudents();
-      const attendance = localDb.getAllAttendance();
-      const clubs = localDb.getClubRegistrations();
-      const events = localDb.getSessions();
-
-      const byDept: Record<string, number> = {};
-      students.forEach((s) => {
-        // Extract department from branch string if possible, or use a default
-        // The branch string format is "Branch Name · Department Name"
-        const parts = s.branch.split(" · ");
-        const k = parts.length > 1 ? parts[1] : "Unknown";
-        byDept[k] = (byDept[k] ?? 0) + 1;
-      });
-
-      const byYear: Record<string, number> = {};
-      students.forEach((s) => {
-        // Extract year from semester string
-        const parts = s.semester.split(" · ");
-        const k = parts.length > 0 ? parts[0] : "Unknown";
-        byYear[k] = (byYear[k] ?? 0) + 1;
-      });
-
-      const eventMap = new Map<string, any>(events.map((e) => [e.id, e]));
-      const byEvent: Record<string, number> = {};
-      attendance.forEach((a) => {
-        const ev = eventMap.get(a.session_id);
-        const k = ev ? ev.title : "Unknown";
-        byEvent[k] = (byEvent[k] ?? 0) + 1;
-      });
-
-      const byHour: Record<string, number> = {};
-      attendance.forEach((a) => {
-        const h = new Date(a.scanned_at).getHours();
-        const k = `${h}:00`;
-        byHour[k] = (byHour[k] ?? 0) + 1;
-      });
-
-      const byClub: Record<string, number> = {};
-      clubs.forEach((c) => {
-        const k = String(c.club_slug);
-        byClub[k] = (byClub[k] ?? 0) + 1;
-      });
-
-      const toArr = (o: Record<string, number>) =>
-        Object.entries(o).map(([name, value]) => ({ name, value }));
-
-      const byClubNamed = Object.entries(byClub).map(([slug, count]) => {
-        // We could look up club name, but we just use slug capitalized
-        const name = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-        return { name, count };
-      });
-
-      setData({
-        totals: {
-          students: students.length,
-          attendance: attendance.length,
-          clubs: clubs.length,
-          events: events.length,
-        },
-        byDept: toArr(byDept),
-        byYear: toArr(byYear),
-        byEvent: toArr(byEvent),
-        byHour: Array.from({ length: 24 }, (_, h) => ({
-          name: `${h}:00`, value: byHour[`${h}:00`] ?? 0,
-        })),
-        byClub: byClubNamed,
-      });
-    }, 400);
-    return () => clearTimeout(timer);
+    let active = true;
+    const fetchStats = async () => {
+      try {
+        const stats = await getAnalytics();
+        if (active) {
+          setData(stats);
+        }
+      } catch (e) {
+        console.error("Failed to fetch analytics", e);
+      }
+    };
+    fetchStats();
+    return () => { active = false; };
   }, []);
 
   if (!data) return <AdminShell title="Analytics"><div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64" />)}</div></AdminShell>;

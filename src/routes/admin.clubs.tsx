@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { localDb, type LocalClub } from "@/lib/local-db";
+import { listClubs, listClubRegistrations, deleteClub, upsertClub } from "@/lib/admin.functions";
+import type { LocalClub } from "@/lib/local-db"; // Keep type or redefine locally
 
 export const Route = createFileRoute("/admin/clubs")({
   head: () => ({ meta: [{ title: "Clubs · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
@@ -20,13 +21,18 @@ function AdminClubs() {
   const [rows, setRows] = useState<LocalClub[] | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
 
-  const load = () => {
-    const data = localDb.getClubs();
-    setRows(data);
-    const regs = localDb.getClubRegistrations();
-    const c: Record<string, number> = {};
-    regs.forEach((r) => { c[r.club_slug] = (c[r.club_slug] ?? 0) + 1; });
-    setCounts(c);
+  const load = async () => {
+    try {
+      const data = await listClubs();
+      setRows(data as unknown as LocalClub[]);
+      const regs = await listClubRegistrations();
+      const c: Record<string, number> = {};
+      regs.forEach((r: any) => { c[r.club_slug] = (c[r.club_slug] ?? 0) + 1; });
+      setCounts(c);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load clubs");
+    }
   };
   
   useEffect(() => { load(); }, []);
@@ -49,10 +55,10 @@ function AdminClubs() {
 }
 
 function ClubCard({ club, count, onChanged }: { club: LocalClub; count: number; onChanged: () => void }) {
-  const remove = () => {
+  const remove = async () => {
     if (!confirm(`Delete "${club.name}"?`)) return;
     try { 
-      localDb.deleteClub(club.id); 
+      await deleteClub({ data: { id: club.id } }); 
       onChanged(); 
       toast.success("Deleted"); 
     }
@@ -93,17 +99,19 @@ function ClubDialog({ club, onSaved }: { club?: LocalClub; onSaved: () => void }
     is_active: club?.is_active ?? true,
   });
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      localDb.upsertClub({
-        id: club?.id,
-        name: form.name,
-        slug: form.slug.toLowerCase(),
-        description: form.description || null,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        image_url: form.image_url || null,
-        is_active: form.is_active,
+      await upsertClub({
+        data: {
+          id: club?.id,
+          name: form.name,
+          slug: form.slug.toLowerCase(),
+          description: form.description || null,
+          tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+          image_url: form.image_url || null,
+          is_active: form.is_active,
+        }
       });
       toast.success(club ? "Updated" : "Created"); setOpen(false); onSaved();
     } catch (e: any) { toast.error(e.message); }

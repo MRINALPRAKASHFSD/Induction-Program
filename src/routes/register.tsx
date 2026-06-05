@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { localDb } from "@/lib/local-db";
+import { registerStudent } from "@/lib/students.functions";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -64,7 +65,7 @@ function RegisterPage() {
   const branches = BRANCHES_BY_DEPT[form.department_id] ?? [];
   const deptName = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.full_name || !form.enrollment_no || !form.email || !form.department_id || !form.branch || !form.course) {
       toast.error("Please fill all required fields.");
@@ -73,29 +74,42 @@ function RegisterPage() {
 
     setSubmitting(true);
 
-    // We'll unconditionally save to ensure they exist in krmu_local_students
     const profile = {
-      id: "std_" + Date.now(),
       full_name: form.full_name,
       enrollment_no: form.enrollment_no.toUpperCase(),
-      branch: `${form.branch} · ${deptName}`,
-      semester: `Year ${form.year} · ${form.course}`,
-      created_at: new Date().toISOString(),
+      email: form.email,
+      phone: form.phone,
       department_id: form.department_id,
+      branch_id: form.branch, // Map branch to branch_id for schema compat
+      course: form.course,
+      year: parseInt(form.year),
     };
 
-    const existing = localDb.getStudentProfile();
-    if (existing && existing.enrollment_no === form.enrollment_no.toUpperCase()) {
-      // Still save to make sure krmu_local_students has it!
-      localDb.saveStudentProfile(profile);
-      toast.info("You're already registered — welcome back!");
-      setDone(form.enrollment_no.toUpperCase());
+    const res = await registerStudent({ data: profile });
+
+    if (!res.ok) {
+      toast.error("Failed to register.");
       setSubmitting(false);
       return;
     }
 
-    localDb.saveStudentProfile(profile);
-    toast.success("Registered successfully!");
+    if (res.duplicate) {
+      toast.info("You're already registered — welcome back!");
+    } else {
+      toast.success("Registered successfully!");
+    }
+
+    // Save to local profile so boarding pass works on this device
+    localDb.saveStudentProfile({
+      id: res.student_id,
+      full_name: profile.full_name,
+      enrollment_no: profile.enrollment_no,
+      branch: `${form.branch} · ${deptName}`,
+      semester: `Year ${form.year} · ${form.course}`,
+      created_at: new Date().toISOString(),
+      department_id: form.department_id,
+    });
+
     setDone(profile.enrollment_no);
     setSubmitting(false);
   };

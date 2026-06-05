@@ -152,24 +152,13 @@ function AttendancePage() {
 
     setLoadingDays(true);
     try {
-      const res = (await Promise.race([
-        getSchoolDays({ data: { department_id: val } }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-      ])) as any;
+      const res = await getSchoolDays({ data: { department_id: val } }) as any;
       
       if (res.days && res.days.length > 0) {
         setDays(res.days);
-      } else {
-        // Fallback: load days from localDb events for this school
-        const localEvts = localDb.getEvents().filter(e => e.department_id === val);
-        const uniqueDays = Array.from(new Set(localEvts.map(e => e.day_number)));
-        setDays(uniqueDays);
       }
     } catch (e) {
-      console.warn("Failed to fetch school days, using local fallback", e);
-      const localEvts = localDb.getEvents().filter(e => e.department_id === val);
-      const uniqueDays = Array.from(new Set(localEvts.map(e => e.day_number)));
-      setDays(uniqueDays);
+      console.warn("Failed to fetch school days", e);
     } finally {
       setLoadingDays(false);
     }
@@ -183,26 +172,13 @@ function AttendancePage() {
     setQrCodeUrl(null);
     setLoadingSessions(true);
     try {
-      const res = (await Promise.race([
-        getSchoolSessions({ data: { department_id: schoolId, day_number: Number(val) } }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-      ])) as any;
+      const res = await getSchoolSessions({ data: { department_id: schoolId, day_number: Number(val) } }) as any;
       
       if (res.sessions && res.sessions.length > 0) {
         setSessions(res.sessions as Session[]);
-      } else {
-        // Fallback: load sessions from localDb events
-        const localEvts = localDb.getEvents().filter(
-          e => e.department_id === schoolId && e.day_number === Number(val)
-        );
-        setSessions(localEvts as unknown as Session[]);
       }
     } catch (e) {
-      console.warn("Failed to fetch school sessions, using local fallback", e);
-      const localEvts = localDb.getEvents().filter(
-        e => e.department_id === schoolId && e.day_number === Number(val)
-      );
-      setSessions(localEvts as unknown as Session[]);
+      console.warn("Failed to fetch school sessions", e);
     } finally {
       setLoadingSessions(false);
     }
@@ -265,29 +241,10 @@ function AttendancePage() {
         throw new Error(res.error || "Server rejected transaction.");
       }
     } catch (err: any) {
-      console.warn("Server push failed, performing local database lodging", err);
-      
-      // Fallback: verify and mark attendance locally in localDb
-      const localEvents = localDb.getEvents();
-      const matchedEvent = localEvents.find(e => e.id === sessionId && e.qr_token === qrToken) || 
-                           localEvents.find(e => e.qr_token === qrToken);
-
-      if (matchedEvent) {
-        const localMark = localDb.markAttendance(matchedEvent.id, profile);
-        if (localMark.ok) {
-          toast.success("Attendance Lodged Locally!", { id: "lodge-toast" });
-          setFeedbackMsg(`Present marked locally for ${matchedEvent.title}`);
-          setPhase("success");
-        } else {
-          toast.success("Already Checked In!", { id: "lodge-toast" });
-          setFeedbackMsg(localMark.message || `You were already checked in for ${matchedEvent.title}`);
-          setPhase("duplicate");
-        }
-      } else {
-        toast.error("Invalid QR code scanned.", { id: "lodge-toast" });
-        setFeedbackMsg("The scanned QR token does not match this session.");
-        setPhase("error");
-      }
+      console.warn("Server push failed", err);
+      toast.error(err.message || "Invalid QR code or network error.", { id: "lodge-toast" });
+      setFeedbackMsg(err.message || "The scanned QR token does not match this session or the session is inactive.");
+      setPhase("error");
     }
 
     setTimeout(() => {

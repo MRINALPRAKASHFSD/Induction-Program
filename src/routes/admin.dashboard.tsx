@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { Users, QrCode, Sparkles, Calendar } from "lucide-react";
 import { useLiveCount } from "@/hooks/use-live-count";
 import { AdminShell } from "@/components/admin-shell";
-import { localDb, type LocalStudent } from "@/lib/local-db";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 export const Route = createFileRoute("/admin/dashboard")({
   head: () => ({
@@ -14,23 +15,22 @@ export const Route = createFileRoute("/admin/dashboard")({
 });
 
 function AdminDashboard() {
-  const [recent, setRecent] = useState<LocalStudent[]>([]);
+  const [recent, setRecent] = useState<any[]>([]);
   const students = useLiveCount("students");
   const scans = useLiveCount("attendance");
   const clubs = useLiveCount("club_registrations");
   const events = useLiveCount("events");
 
   useEffect(() => {
-    const load = () => {
-      const all = localDb.getStudents();
-      const sorted = [...all].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setRecent(sorted.slice(0, 10));
-    };
-    load();
+    const studentsRef = collection(db, "students");
+    const q = query(studentsRef, orderBy("created_at", "desc"), limit(10));
+    
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const sorted = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRecent(sorted);
+    });
 
-    const handler = () => load();
-    window.addEventListener("local-db-update", handler);
-    return () => window.removeEventListener("local-db-update", handler);
+    return () => unsubscribe();
   }, []);
 
   return (

@@ -18,7 +18,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { localDb, ROOM_CONFIG, getTotalStudentCapacity, type LocalStudent } from "@/lib/local-db";
+import { localDb, ROOM_CONFIG, getTotalStudentCapacity, getRoomCapacity, generateAllRooms, type LocalStudent } from "@/lib/local-db";
+import { listStudents, updateStudentsBatch } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/students")({
   head: () => ({ meta: [{ title: "Students · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
@@ -37,30 +38,32 @@ function AdminStudents() {
   const [allocating, setAllocating] = useState(false);
   const [showOccupancy, setShowOccupancy] = useState(false);
 
-  const refresh = useCallback(() => {
-    const all = localDb.getStudents();
-    setAllStudents(all);
+  const refresh = useCallback(async () => {
+    try {
+      const res = await listStudents({ data: {} });
+      const all = res.rows as unknown as LocalStudent[];
+      setAllStudents(all);
 
-    let filtered = all;
-    if (q) {
-      const qs = q.toLowerCase();
-      filtered = filtered.filter(
-        (s) =>
-          s.full_name.toLowerCase().includes(qs) ||
-          s.enrollment_no.toLowerCase().includes(qs)
-      );
+      let filtered = all;
+      if (q) {
+        const qs = q.toLowerCase();
+        filtered = filtered.filter(
+          (s) =>
+            s.full_name?.toLowerCase().includes(qs) ||
+            s.enrollment_no?.toLowerCase().includes(qs)
+        );
+      }
+      if (dept !== "_all") {
+        filtered = filtered.filter((s) => s.branch?.includes(dept));
+      }
+      setStudents(filtered);
+    } catch (e) {
+      console.warn("Failed to fetch students from Firebase", e);
     }
-    if (dept !== "_all") {
-      filtered = filtered.filter((s) => s.branch.includes(dept));
-    }
-    setStudents(filtered);
   }, [q, dept]);
 
   useEffect(() => {
     refresh();
-    const handler = () => refresh();
-    window.addEventListener("local-db-update", handler);
-    return () => window.removeEventListener("local-db-update", handler);
   }, [refresh]);
 
   // ── Derived stats ─────────────────────────────────────────────────────────
@@ -72,9 +75,54 @@ function AdminStudents() {
   // ── Actions ──────────────────────────────────────────────────────────────
   const onAllocate = () => {
     setAllocating(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        const result = localDb.allocateRooms();
+        const allRooms = generateAllRooms();
+        
+        // Count occupancies
+        const occupancy: Record<string, number> = {};
+        allStudents.forEach(s => {
+          if (s.room_no && s.room_no !== "OVERFLOW") {
+            occupancy[s.room_no] = (occupancy[s.room_no] || 0) + 1;
+          }
+        });
+
+        const unallocated = allStudents
+          .filter(s => !s.room_no)
+          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        const skipped = allStudents.filter((s) => !!s.room_no).length;
+        let allocated = 0;
+        let overflow = 0;
+        let roomIdx = 0;
+        const newRoomsUsed = new Set<string>();
+        const updates: { id: string, patch: any }[] = [];
+
+        for (const student of unallocated) {
+          while (roomIdx < allRooms.length) {
+            const cap = getRoomCapacity(allRooms[roomIdx]);
+            if ((occupancy[allRooms[roomIdx]] ?? 0) < cap) break;
+            roomIdx++;
+          }
+
+          if (roomIdx >= allRooms.length) {
+            updates.push({ id: student.id, patch: { room_no: "OVERFLOW" } });
+            overflow++;
+          } else {
+            const room = allRooms[roomIdx];
+            updates.push({ id: student.id, patch: { room_no: room } });
+            occupancy[room] = (occupancy[room] ?? 0) + 1;
+            newRoomsUsed.add(room);
+            allocated++;
+          }
+        }
+
+        if (updates.length > 0) {
+          await updateStudentsBatch({ data: { updates } });
+        }
+
+        const result = { allocated, skipped, overflow, roomsUsed: newRoomsUsed.size };
+
         if (result.allocated === 0 && result.overflow === 0) {
           toast.info("All students already have rooms assigned.");
         } else {
@@ -88,7 +136,8 @@ function AdminStudents() {
           toast.success(parts.join(" · "));
         }
         refresh();
-      } catch {
+      } catch (e: any) {
+        console.error("Allocation error", e);
         toast.error("Allocation failed. Please try again.");
       } finally {
         setAllocating(false);
@@ -96,19 +145,30 @@ function AdminStudents() {
     }, 100);
   };
 
-  const onReset = () => {
-    const result = localDb.resetRoomAllocations();
-    toast.info(`Room allocations cleared for ${result.cleared} student${result.cleared !== 1 ? "s" : ""}.`);
-    refresh();
+  const onReset = async () => {
+    try {
+      const updates = allStudents
+        .filter(s => s.room_no)
+        .map(s => ({ id: s.id, patch: { room_no: null } }));
+      
+      if (updates.length > 0) {
+        await updateStudentsBatch({ data: { updates } });
+      }
+      
+      toast.info(`Room allocations cleared for ${updates.length} student${updates.length !== 1 ? "s" : ""}.`);
+      refresh();
+    } catch (e) {
+      console.error("Failed to reset rooms", e);
+      toast.error("Failed to reset room allocations.");
+    }
   };
 
   const onExport = () => {
-    const all = localDb.getStudents();
     const header = ["enrollment_no", "full_name", "branch", "semester", "room_no", "created_at"];
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const csv = [
       header.join(","),
-      ...all.map((r) =>
+      ...allStudents.map((r) =>
         [r.enrollment_no, r.full_name, r.branch, r.semester, r.room_no ?? "", r.created_at]
           .map(esc)
           .join(",")
@@ -126,8 +186,30 @@ function AdminStudents() {
     document.body.removeChild(link);
   };
 
+  const getRoomSummary = () => {
+    const occupancy: Record<string, number> = {};
+    allStudents.forEach(s => {
+      if (s.room_no && s.room_no !== "OVERFLOW") {
+        occupancy[s.room_no] = (occupancy[s.room_no] || 0) + 1;
+      }
+    });
+
+    return generateAllRooms().map((room_no) => {
+      const capacity = getRoomCapacity(room_no);
+      const occupied = Math.min(occupancy[room_no] ?? 0, capacity);
+      return {
+        room_no,
+        capacity,
+        occupied,
+        available: capacity - occupied,
+        isSpecial: room_no in ROOM_CONFIG.specialRooms,
+        fillPct: capacity > 0 ? Math.round((occupied / capacity) * 100) : 0,
+      };
+    });
+  };
+
   // Load occupancy summary only when the grid is visible
-  const roomSummary = showOccupancy ? localDb.getRoomSummary() : [];
+  const roomSummary = showOccupancy ? getRoomSummary() : [];
 
   return (
     <AdminShell title="Students" subtitle={`Managing ${allStudents.length} registered students.`}>

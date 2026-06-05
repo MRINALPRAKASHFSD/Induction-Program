@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin-shell";
 import { Skeleton } from "@/components/ui/skeleton";
-import { localDb, type LocalActivityLog } from "@/lib/local-db";
+import { listActivityLogs } from "@/lib/admin.functions";
+import type { LocalActivityLog } from "@/lib/local-db";
 
 export const Route = createFileRoute("/admin/activity")({
   head: () => ({ meta: [{ title: "Activity log · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
@@ -13,20 +14,17 @@ function AdminActivity() {
   const [rows, setRows] = useState<LocalActivityLog[] | null>(null);
 
   useEffect(() => {
-    // Simulate network delay for UX
-    const timer = setTimeout(() => {
-      setRows(localDb.getActivityLogs());
-    }, 500);
-
-    const handleUpdate = () => {
-      setRows(localDb.getActivityLogs());
+    let active = true;
+    const load = async () => {
+      try {
+        const data = await listActivityLogs({ data: {} });
+        if (active) setRows(data as unknown as LocalActivityLog[]);
+      } catch (e) {
+        console.error("Failed to load activity logs", e);
+      }
     };
-    window.addEventListener("local-db-update", handleUpdate);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("local-db-update", handleUpdate);
-    };
+    load();
+    return () => { active = false; };
   }, []);
 
   return (

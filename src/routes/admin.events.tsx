@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listEvents, createEvent, updateEvent, deleteEvent } from "@/lib/admin.functions";
 import { getDepartments } from "@/lib/students.functions";
-import { localDb } from "@/lib/local-db";
 
 type EventRow = {
   id: string;
@@ -53,23 +52,11 @@ function AdminEvents() {
 
   const load = async () => {
     try {
-      const fbData = (await Promise.race([
-        listEvents(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-      ])) as any;
-      const localEvents = localDb.getEvents();
-      const merged = [...fbData];
-      for (const le of localEvents) {
-        if (!merged.find(m => m.id === le.id)) {
-          merged.push(le);
-        }
-      }
-      merged.sort((a: any, b: any) => a.day_number - b.day_number || new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
-      setRows(merged as unknown as EventRow[]);
+      const fbData = await listEvents() as any;
+      setRows(fbData as unknown as EventRow[]);
     } catch (e: any) {
-      console.warn("Firebase listEvents failed, loading localDb events", e);
-      const localEvents = localDb.getEvents();
-      setRows(localEvents as unknown as EventRow[]);
+      console.warn("Firebase listEvents failed", e);
+      setRows([]);
     }
   };
 
@@ -125,10 +112,8 @@ function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; o
       onChanged();
     }
     catch (e: any) {
-      console.warn("Supabase event update failed, updating locally in localDb", e);
-      localDb.updateEvent(row.id, { is_active: !row.is_active });
-      toast.success(`Event ${!row.is_active ? "activated" : "deactivated"} locally`);
-      onChanged();
+      console.warn("Supabase event update failed", e);
+      toast.error("Failed to update event");
     }
   };
   const remove = async () => {
@@ -139,10 +124,8 @@ function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; o
       onChanged();
     }
     catch (e: any) {
-      console.warn("Supabase event delete failed, deleting locally in localDb", e);
-      localDb.deleteEvent(row.id);
-      toast.success("Deleted locally");
-      onChanged();
+      console.warn("Supabase event delete failed", e);
+      toast.error("Failed to delete event");
     }
   };
 
@@ -227,29 +210,19 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
     };
 
     try {
-      const fbTask = row 
-        ? updateEvent({ data: { id: row.id, ...payload } })
-        : createEvent({ data: payload });
-        
-      await Promise.race([
-        fbTask,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase timeout")), 2500))
-      ]);
+      if (row) {
+        await updateEvent({ data: { id: row.id, ...payload } });
+      } else {
+        await createEvent({ data: payload });
+      }
       
       toast.success(row ? "Event updated" : "Event created");
       setOpen(false); 
       onSaved();
     } catch (err: any) {
-      console.warn("Supabase event create/update failed, performing locally in localDb", err);
-      if (row) {
-        localDb.updateEvent(row.id, payload);
-        toast.success("Event updated locally");
-      } else {
-        localDb.createEvent(payload);
-        toast.success("Event created locally");
-      }
+      console.warn("Firebase event create/update failed", err);
+      toast.error("Failed to save event");
       setOpen(false);
-      onSaved();
     }
   };
 

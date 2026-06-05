@@ -1,24 +1,19 @@
 import { useEffect, useState } from "react";
-import { localDb } from "@/lib/local-db";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 export function useLiveCount(table: "students" | "attendance" | "club_registrations" | "events") {
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
-    const load = () => {
-      let c = 0;
-      if (table === "students") c = localDb.getStudents().length;
-      if (table === "attendance") c = localDb.getAllAttendance().length;
-      if (table === "club_registrations") c = localDb.getClubRegistrations().length;
-      if (table === "events") c = localDb.getEvents().length;
-      setCount(c);
-    };
+    const tableRef = collection(db, table);
+    const unsubscribe = onSnapshot(tableRef, (snap) => {
+      setCount(snap.size);
+    }, (error) => {
+      console.error(`Error fetching live count for ${table}:`, error);
+    });
 
-    load();
-
-    const handler = () => load();
-    window.addEventListener("local-db-update", handler);
-    return () => window.removeEventListener("local-db-update", handler);
+    return () => unsubscribe();
   }, [table]);
 
   return count;

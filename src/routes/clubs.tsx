@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { localDb, type LocalClub } from "@/lib/local-db";
+import { listClubs, registerForClub } from "@/lib/admin.functions";
+import type { LocalClub } from "@/lib/local-db";
 
 export const Route = createFileRoute("/clubs")({
   head: () => ({
@@ -29,7 +30,9 @@ function ClubsPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setClubs(localDb.getClubs().filter(c => c.is_active));
+    listClubs().then(data => {
+      setClubs((data as unknown as LocalClub[]).filter(c => c.is_active));
+    });
   }, []);
 
   const onJoin = async () => {
@@ -39,14 +42,15 @@ function ClubsPage() {
       // Small simulated delay for UX
       await new Promise(r => setTimeout(r, 400));
       
-      const res = localDb.registerForClub(enroll.trim(), active.slug);
+      const res = await registerForClub({ data: { enrollment_no: enroll.trim(), slug: active.slug } });
       
-      if (!res.ok) toast.error(res.error);
-      else if (res.duplicate) toast.info(`Already in ${active.name}`);
+      if (res.duplicate) toast.info(`Already in ${active.name}`);
       else toast.success(`Joined ${active.name}!`);
       
       setActive(null);
       setEnroll("");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to join club");
     } finally {
       setLoading(false);
     }
