@@ -53,10 +53,21 @@ function AdminEvents() {
 
   const load = async () => {
     try {
-      const data = await listEvents();
-      setRows(data as unknown as EventRow[]);
+      const fbData = (await Promise.race([
+        listEvents(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+      ])) as any;
+      const localEvents = localDb.getEvents();
+      const merged = [...fbData];
+      for (const le of localEvents) {
+        if (!merged.find(m => m.id === le.id)) {
+          merged.push(le);
+        }
+      }
+      merged.sort((a: any, b: any) => a.day_number - b.day_number || new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+      setRows(merged as unknown as EventRow[]);
     } catch (e: any) {
-      console.warn("Supabase listEvents failed, loading localDb events", e);
+      console.warn("Firebase listEvents failed, loading localDb events", e);
       const localEvents = localDb.getEvents();
       setRows(localEvents as unknown as EventRow[]);
     }
@@ -64,7 +75,10 @@ function AdminEvents() {
 
   const loadDepartments = async () => {
     try {
-      const { departments } = await getDepartments();
+      const { departments } = (await Promise.race([
+        getDepartments(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+      ])) as any;
       if (departments && departments.length > 0) {
         setDepartments(departments);
       } else {
@@ -189,21 +203,39 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
       return;
     }
     
+    if (!form.starts_at || !form.ends_at) {
+      toast.error("Please provide valid start and end times");
+      return;
+    }
+    
+    let starts_at_iso, ends_at_iso;
+    try {
+      starts_at_iso = new Date(form.starts_at).toISOString();
+      ends_at_iso = new Date(form.ends_at).toISOString();
+    } catch (e) {
+      toast.error("Invalid date format provided");
+      return;
+    }
+
     const payload = {
       title: form.title, description: form.description || null,
       day_number: Number(form.day_number), venue: form.venue,
-      starts_at: new Date(form.starts_at).toISOString(),
-      ends_at: new Date(form.ends_at).toISOString(),
+      starts_at: starts_at_iso,
+      ends_at: ends_at_iso,
       department_id: form.department_id,
       is_active: true,
     };
 
     try {
-      if (row) {
-        await updateEvent({ data: { id: row.id, ...payload } });
-      } else {
-        await createEvent({ data: payload });
-      }
+      const fbTask = row 
+        ? updateEvent({ data: { id: row.id, ...payload } })
+        : createEvent({ data: payload });
+        
+      await Promise.race([
+        fbTask,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase timeout")), 2500))
+      ]);
+      
       toast.success(row ? "Event updated" : "Event created");
       setOpen(false); 
       onSaved();
@@ -231,7 +263,7 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
         <DialogHeader><DialogTitle>{row ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="grid gap-3">
           <Field label="School">
-            <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
+            <Select value={form.department_id || undefined} onValueChange={(v) => setForm({ ...form, department_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
               <SelectContent>
                 {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}

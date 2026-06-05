@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import QRCode from "qrcode";
 import { 
   QrCode, Scan, CheckCircle2, User, BookOpen, 
@@ -90,8 +90,11 @@ function AttendancePage() {
     }
     
     // 2. Fetch schools list
-    getDepartments()
-      .then((res) => {
+    Promise.race([
+      getDepartments(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+    ])
+      .then((res: any) => {
         if (res.departments && res.departments.length > 0) {
           setSchools(res.departments as Dept[]);
         } else {
@@ -149,7 +152,11 @@ function AttendancePage() {
 
     setLoadingDays(true);
     try {
-      const res = await getSchoolDays({ data: { department_id: val } });
+      const res = (await Promise.race([
+        getSchoolDays({ data: { department_id: val } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+      ])) as any;
+      
       if (res.days && res.days.length > 0) {
         setDays(res.days);
       } else {
@@ -176,9 +183,11 @@ function AttendancePage() {
     setQrCodeUrl(null);
     setLoadingSessions(true);
     try {
-      const res = await getSchoolSessions({ 
-        data: { department_id: schoolId, day_number: Number(val) } 
-      });
+      const res = (await Promise.race([
+        getSchoolSessions({ data: { department_id: schoolId, day_number: Number(val) } }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
+      ])) as any;
+      
       if (res.sessions && res.sessions.length > 0) {
         setSessions(res.sessions as Session[]);
       } else {
@@ -535,6 +544,7 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   const scannedRef = useRef(false);
+  const initLockRef = useRef(false);
   const scanRegionId = "attendance-qr-reader-lodge";
 
   useEffect(() => {
@@ -545,29 +555,59 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
     let mounted = true;
 
     const init = async () => {
-      try {
-        const scanner = new Html5Qrcode(scanRegionId, { verbose: false });
-        scannerRef.current = scanner;
+      // Prevent double-init from React StrictMode / fast remounts
+      if (initLockRef.current) return;
+      initLockRef.current = true;
 
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 15,
-            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const min = Math.min(viewfinderWidth, viewfinderHeight);
-              const size = Math.floor(min * 0.75);
-              return { width: size, height: size };
-            },
-          },
-          (decodedText) => {
-            if (!mounted || scannedRef.current) return;
-            scannedRef.current = true;
-            onScanRef.current(decodedText);
-          },
-          () => {}
-        );
+      try {
+        const scanner = new Html5Qrcode(scanRegionId, { 
+          verbose: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        });
+
+        // Use a dynamic qrbox that scales with the viewport —
+        // this guarantees the scan region maps correctly to the actual
+        // camera frame regardless of device resolution.
+        const qrboxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+          const minDimension = Math.min(viewfinderWidth, viewfinderHeight);
+          const size = Math.floor(minDimension * 0.7);
+          // Clamp between 150 and 350
+          const clamped = Math.max(150, Math.min(size, 350));
+          return { width: clamped, height: clamped };
+        };
+
+        const scanConfig = {
+          fps: 15,
+          qrbox: qrboxFunction,
+          disableFlip: true,
+        };
+
+        const successCb = (decodedText: string) => {
+          if (!mounted || scannedRef.current) return;
+          scannedRef.current = true;
+          onScanRef.current(decodedText);
+        };
+
+        const errorCb = () => {};
+
+        // Try rear camera first (phones), fall back to front camera (laptops/desktops)
+        try {
+          await scanner.start({ facingMode: "environment" }, scanConfig, successCb, errorCb);
+        } catch {
+          console.warn("Rear camera unavailable, falling back to front camera");
+          await scanner.start({ facingMode: "user" }, { ...scanConfig, disableFlip: false }, successCb, errorCb);
+        }
+
+        if (mounted) {
+          scannerRef.current = scanner;
+        } else {
+          await scanner.stop().catch(() => {});
+          scanner.clear();
+        }
       } catch (err) {
         console.error("Camera start failed:", err);
+      } finally {
+        initLockRef.current = false;
       }
     };
 
@@ -576,6 +616,7 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
     return () => {
       mounted = false;
       const scanner = scannerRef.current;
+      scannerRef.current = null;
       if (scanner) {
         (scanner.isScanning ? scanner.stop() : Promise.resolve())
           .finally(() => scanner.clear())
@@ -585,6 +626,8 @@ function QRScanner({ onScan }: { onScan: (text: string) => void }) {
   }, []);
 
   return (
-    <div id={scanRegionId} style={{ width: "100%", height: "100%" }} />
+    <div className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center">
+      <div id={scanRegionId} className="w-full h-full" />
+    </div>
   );
 }

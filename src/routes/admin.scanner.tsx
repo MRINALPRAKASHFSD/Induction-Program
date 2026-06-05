@@ -5,7 +5,7 @@ import {
   Camera, ChevronDown, CheckCircle2, AlertTriangle,
   XCircle, Scan, Zap, Wifi, WifiOff,
 } from "lucide-react";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { listEvents } from "@/lib/admin.functions";
@@ -244,15 +244,21 @@ function ScannerPage() {
       initLockRef.current = true;
 
       try {
-        const scanner = new Html5Qrcode(SCANNER_DIV_ID);
+        const scanner = new Html5Qrcode(SCANNER_DIV_ID, {
+          verbose: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        });
         
         await scanner.start(
           selectedCameraId,
           {
             fps: 15,
-            qrbox: { width: 240, height: 240 },
-            aspectRatio: 1.0,
-            disableFlip: false,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const minDim = Math.min(viewfinderWidth, viewfinderHeight);
+              const size = Math.max(150, Math.min(Math.floor(minDim * 0.7), 350));
+              return { width: size, height: size };
+            },
+            disableFlip: true,
           },
           (decoded) => {
             processEnrollmentRef.current(decoded);
@@ -407,9 +413,9 @@ function ScannerPage() {
         )}
 
         {/* Camera viewport + feedback overlay */}
-        <div className="relative overflow-hidden rounded-3xl border bg-black shadow-elegant aspect-square max-w-sm mx-auto">
+        <div className="relative overflow-hidden rounded-3xl border bg-black shadow-elegant aspect-square max-w-sm mx-auto flex items-center justify-center">
           {/* html5-qrcode mounts here */}
-          <div id={SCANNER_DIV_ID} className="h-full w-full" />
+          <div id={SCANNER_DIV_ID} className="w-full" />
 
           {/* Scan-frame corners */}
           {scannerReady && (

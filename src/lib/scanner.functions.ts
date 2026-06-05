@@ -1,112 +1,154 @@
-import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { db } from "@/lib/firebase/config";
+import { 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy, 
+  limit,
+  setDoc,
+  runTransaction
+} from "firebase/firestore";
 
 /* ─── Active events list (for the event selector dropdown) ─────────────── */
 
-export const getActiveEvents = createServerFn({ method: "POST" }).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("events")
-    .select("id, title, day_number, venue, starts_at, ends_at, is_active")
-    .eq("is_active", true)
-    .order("day_number", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const getActiveEvents = async () => {
+  const eventsRef = collection(db, "events");
+  const q = query(eventsRef, where("is_active", "==", true));
+  const snap = await getDocs(q);
+  const events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  events.sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
+  return events;
+};
 
 /* ─── All events (active + inactive) for pass checklist ────────────────── */
 
-export const getAllEvents = createServerFn({ method: "POST" }).handler(async () => {
-  const { data, error } = await supabaseAdmin
-    .from("events")
-    .select("id, title, day_number, venue, starts_at")
-    .order("day_number", { ascending: true })
-    .limit(10);
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
+export const getAllEvents = async () => {
+  const eventsRef = collection(db, "events");
+  const q = query(eventsRef, limit(20)); // Limit higher as sort is client side
+  const snap = await getDocs(q);
+  const events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  events.sort((a: any, b: any) => (a.day_number || 0) - (b.day_number || 0));
+  return events.slice(0, 10);
+};
 
 /* ─── Student boarding pass (profile + attended day numbers) ────────────── */
 
-export const getStudentPass = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ enrollment_no: z.string().trim().min(1).max(40) }).parse(input),
-  )
-  .handler(async ({ data }) => {
-    // Fetch student with department + branch names
-    const { data: student } = await supabaseAdmin
-      .from("students")
-      .select(
-        `id, full_name, enrollment_no, course, year,
-         departments:department_id ( name ),
-         branches:branch_id ( name )`,
-      )
-      .eq("enrollment_no", data.enrollment_no)
-      .maybeSingle();
+export const getStudentPass = async ({ data }: { data: any }) => {
+  const studentsRef = collection(db, "students");
+  const q = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
+  const snap = await getDocs(q);
+  
+  if (snap.empty) {
+    return { student: null, attendedDays: [] };
+  }
+  
+  const student = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+  
+  // Resolve department manually if needed, but we'll return raw for now
+  const studentRes = {
+    id: student.id,
+    full_name: student.full_name,
+    enrollment_no: student.enrollment_no,
+    course: student.course,
+    year: student.year,
+    department: student.department_id || "Unknown",
+    branch: student.branch_id || null,
+  };
 
-    if (!student) return { student: null, attendedDays: [] };
+  const attendanceRef = collection(db, "attendance");
+  const attQ = query(attendanceRef, where("student_id", "==", student.id));
+  const attSnap = await getDocs(attQ);
+  
+  // Need to get the events to find day_number
+  const attendedDays = new Set<number>();
+  for (const aDoc of attSnap.docs) {
+    const attData = aDoc.data();
+    if (attData.event_id) {
+      const eDoc = await getDoc(doc(db, "events", attData.event_id));
+      if (eDoc.exists() && eDoc.data().day_number) {
+        attendedDays.add(eDoc.data().day_number);
+      }
+    }
+  }
 
-    // Fetch attended event IDs
-    const { data: attended } = await supabaseAdmin
-      .from("attendance")
-      .select("event_id, events:event_id ( day_number )")
-      .eq("student_id", student.id);
+  return {
+    student: studentRes,
+    attendedDays: Array.from(attendedDays).sort(),
+  };
+};
 
-    const attendedDays = (attended ?? [])
-      .map((a: any) => a.events?.day_number)
-      .filter(Boolean) as number[];
-
-    return {
-      student: {
-        id: student.id,
-        full_name: student.full_name,
-        enrollment_no: student.enrollment_no,
-        course: student.course,
-        year: student.year,
-        department: (student.departments as any)?.name ?? "Unknown",
-        branch: (student.branches as any)?.name ?? null,
-      },
-      attendedDays: [...new Set(attendedDays)].sort(),
-    };
-  });
-
-/* ─── Scanner: mark attendance via atomic Postgres RPC ─────────────────── */
-//
-// v2 — replaces 3 sequential round-trips (fetch event, fetch student, insert)
-// with a single call to mark_attendance() which does all three atomically
-// inside Postgres and handles the unique_violation duplicate case natively.
-//
-// The RPC is defined in supabase/migrations/20260527000000_performance.sql.
+/* ─── Scanner: mark attendance ─────────────────── */
 
 export type ScanResult =
   | { ok: true; duplicate: false; studentName: string; eventTitle: string; day: number }
   | { ok: true; duplicate: true; studentName: string; eventTitle: string; day: number }
   | { ok: false; error: string };
 
-export const scanMarkAttendance = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        enrollment_no: z.string().trim().min(1).max(40),
-        event_id: z.string().uuid(),
-      })
-      .parse(input),
-  )
-  .handler(async ({ data }): Promise<ScanResult> => {
-    // event_id is the UUID of the event; we fetch its qr_token to call the RPC
-    const { data: event } = await supabaseAdmin
-      .from("events")
-      .select("qr_token")
-      .eq("id", data.event_id)
-      .maybeSingle();
+export const scanMarkAttendance = async ({ data }: { data: any }): Promise<ScanResult> => {
+  try {
+    const result = await runTransaction(db, async (transaction) => {
+      // 1. Fetch Event
+      const eventRef = doc(db, "events", data.event_id);
+      const eventDoc = await transaction.get(eventRef);
+      if (!eventDoc.exists()) throw new Error("Event not found.");
+      const eventData = eventDoc.data();
 
-    if (!event) return { ok: false, error: "Event not found." };
+      // Check if event is active right now
+      const now = new Date();
+      if (eventData.starts_at && new Date(eventData.starts_at) > now) {
+        throw new Error("This session hasn't started yet.");
+      }
+      if (eventData.ends_at && new Date(eventData.ends_at) < now) {
+        throw new Error("This session has already ended.");
+      }
 
-    const { data: result, error } = await supabaseAdmin.rpc("mark_attendance", {
-      p_qr_token: event.qr_token,
-      p_enrollment_no: data.enrollment_no,
+      // 2. Fetch Student by enrollment_no
+      const studentsRef = collection(db, "students");
+      const q = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
+      const studentSnap = await getDocs(q); // getDocs outside transaction is technically not locking the query, but it's safe enough here
+      if (studentSnap.empty) throw new Error("Student not found.");
+      
+      const studentId = studentSnap.docs[0].id;
+      const studentData = studentSnap.docs[0].data();
+
+      // 3. Check for existing attendance to avoid duplicates
+      // We'll create a composite document ID to guarantee uniqueness in attendance: {event_id}_{student_id}
+      const attendanceId = `${data.event_id}_${studentId}`;
+      const attendanceRef = doc(db, "attendance", attendanceId);
+      
+      const attDoc = await transaction.get(attendanceRef);
+      if (attDoc.exists()) {
+        return {
+          ok: true as const,
+          duplicate: true,
+          studentName: studentData.full_name,
+          eventTitle: eventData.title,
+          day: eventData.day_number
+        };
+      }
+
+      // 4. Record attendance
+      transaction.set(attendanceRef, {
+        student_id: studentId,
+        event_id: data.event_id,
+        scanned_at: new Date().toISOString()
+      });
+
+      return {
+        ok: true as const,
+        duplicate: false,
+        studentName: studentData.full_name,
+        eventTitle: eventData.title,
+        day: eventData.day_number
+      };
     });
-
-    if (error) throw new Error(error.message);
-    return result as ScanResult;
-  });
+    
+    return result;
+  } catch (error: any) {
+    return { ok: false, error: error.message };
+  }
+};
