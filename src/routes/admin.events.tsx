@@ -181,6 +181,17 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!form.title.trim()) {
+      toast.error("Please provide a title");
+      return;
+    }
+    
+    if (!form.venue.trim()) {
+      toast.error("Please provide a venue");
+      return;
+    }
+
     if (!form.department_id) {
       toast.error("Please select a school");
       return;
@@ -242,14 +253,14 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Title"><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
+          <Field label="Title"><Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Day"><Input type="number" min={1} max={10} required value={form.day_number} onChange={(e) => setForm({ ...form, day_number: Number(e.target.value) })} /></Field>
-            <Field label="Venue"><Input required value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} /></Field>
+            <Field label="Day"><Input type="number" min={1} max={10} value={form.day_number} onChange={(e) => setForm({ ...form, day_number: Number(e.target.value) })} /></Field>
+            <Field label="Venue"><Input value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Starts at"><Input type="datetime-local" required value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} /></Field>
-            <Field label="Ends at"><Input type="datetime-local" required value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
+            <Field label="Starts at"><Input type="datetime-local" value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} /></Field>
+            <Field label="Ends at"><Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
           </div>
           <Field label="Description"><Textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
           <DialogFooter><Button type="submit" variant="liquidGlassDark" className="rounded-full">Save</Button></DialogFooter>
