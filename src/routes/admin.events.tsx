@@ -202,12 +202,25 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
       return;
     }
     
+    const parseDate = (dStr: string) => {
+      let d = new Date(dStr);
+      if (isNaN(d.getTime())) {
+        d = new Date(dStr.replace(" , ", " "));
+      }
+      if (isNaN(d.getTime())) {
+        throw new Error("Invalid date");
+      }
+      return d.toISOString();
+    };
+
     let starts_at_iso, ends_at_iso;
     try {
-      starts_at_iso = new Date(form.starts_at).toISOString();
-      ends_at_iso = new Date(form.ends_at).toISOString();
+      starts_at_iso = parseDate(form.starts_at);
+      ends_at_iso = parseDate(form.ends_at);
     } catch (e) {
-      toast.error("Invalid date format provided");
+      const msg = `Invalid date format provided. Please use YYYY-MM-DD HH:MM.`;
+      toast.error(msg);
+      alert(msg);
       return;
     }
 
@@ -232,7 +245,9 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
       onSaved();
     } catch (err: any) {
       console.warn("Firebase event create/update failed", err);
-      toast.error(`Failed to save event: ${err.message || err.toString()}`);
+      const msg = `Failed to save event: ${err.message || err.toString()}`;
+      toast.error(msg);
+      alert(msg);
     }
   };
 
@@ -244,7 +259,7 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle>{row ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
-        <form onSubmit={submit} className="grid gap-3">
+        <div className="flex flex-col gap-4">
           <Field label="School">
             <Select value={form.department_id || undefined} onValueChange={(v) => setForm({ ...form, department_id: v })}>
               <SelectTrigger><SelectValue placeholder="Select School" /></SelectTrigger>
@@ -263,8 +278,8 @@ function EventDialog({ row, onSaved, departments }: { row?: EventRow; onSaved: (
             <Field label="Ends at"><Input type="datetime-local" value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></Field>
           </div>
           <Field label="Description"><Textarea rows={3} value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-          <DialogFooter><Button type="submit" variant="liquidGlassDark" className="rounded-full">Save</Button></DialogFooter>
-        </form>
+          <DialogFooter><Button type="button" onClick={submit} variant="liquidGlassDark" className="rounded-full">Save</Button></DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
