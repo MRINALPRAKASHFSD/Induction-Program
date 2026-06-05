@@ -39,3 +39,4 @@ dist-ssr
 .env.*
 *.orig
 test.patch
+.vercel
