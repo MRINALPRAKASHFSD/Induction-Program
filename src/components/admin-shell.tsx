@@ -1,6 +1,6 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, Calendar, Users, Sparkles, BarChart3, Activity, LogOut, Menu, X, ScanLine, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, Sparkles, BarChart3, Activity, LogOut, Menu, X, ScanLine, ShieldCheck, Bell } from "lucide-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { auth } from "@/lib/firebase/config";
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/admin/events", label: "Events", icon: Calendar },
   { to: "/admin/students", label: "Students", icon: Users },
   { to: "/admin/clubs", label: "Clubs", icon: Sparkles },
+  { to: "/admin/announcements", label: "Announcements", icon: Bell },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/activity", label: "Activity", icon: Activity },
 ] as const;

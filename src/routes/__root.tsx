@@ -105,6 +105,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <noscript>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui", color: "#5a1a25" }}>
+            <p>JavaScript is required to run this application. Please enable JavaScript in your browser settings.</p>
+          </div>
+        </noscript>
         <Scripts />
       </body>
     </html>

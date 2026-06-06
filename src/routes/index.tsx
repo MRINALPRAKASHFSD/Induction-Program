@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 import { useState, useEffect } from "react";
+import { localDb } from "@/lib/local-db";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -80,22 +81,22 @@ function Landing() {
   });
 
   useEffect(() => {
-    let cancelled = false;
-    async function fetchStats() {
-      try {
-        const res = await fetch('/api/live-impact');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setStats(data);
-      } catch (err) {
-        console.error('Failed to fetch live stats', err);
-      }
+    function computeStats() {
+      const students = localDb.getStudents().length;
+      const attendance = localDb.getAllAttendance().length;
+      const clubs = localDb.getClubRegistrations().length;
+      setStats({ students, attendance, clubs });
     }
-    
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
+
+    computeStats();
+    // Re-compute when localStorage changes (e.g. admin scans someone)
+    const handler = () => computeStats();
+    window.addEventListener("local-db-update", handler);
+    window.addEventListener("storage", handler);
+    const interval = setInterval(computeStats, 15000);
     return () => {
-      cancelled = true;
+      window.removeEventListener("local-db-update", handler);
+      window.removeEventListener("storage", handler);
       clearInterval(interval);
     };
   }, []);

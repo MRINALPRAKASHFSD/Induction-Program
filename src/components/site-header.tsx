@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
@@ -12,7 +12,12 @@ export function SiteHeader() {
           </span>
           <span>KRMU Induction</span>
         </Link>
-        <nav className="flex items-center">
+        <nav className="flex items-center gap-3">
+          <Button asChild variant="ghost" size="icon" className="rounded-full text-foreground/80 hover:text-foreground">
+            <Link to="/announcements">
+              <Bell className="h-5 w-5" />
+            </Link>
+          </Button>
           <Button asChild variant="liquidGlassDark" className="h-9 px-5 rounded-full font-medium text-xs">
             <Link to="/admin/login">
               Admin Panel
