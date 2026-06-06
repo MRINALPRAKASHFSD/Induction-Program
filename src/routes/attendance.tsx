@@ -140,7 +140,7 @@ function AttendancePage() {
     const selectedDept = schools.find(s => s.id === val);
     if (selectedDept) {
       const match = profile.department_id 
-        ? profile.department_id.toLowerCase() === selectedDept.code.toLowerCase()
+        ? (profile.department_id === selectedDept.id || profile.department_id.toLowerCase() === selectedDept.code?.toLowerCase())
         : profile.branch.toLowerCase().includes(selectedDept.name.toLowerCase());
       
       setIsWrongSchool(!match);
