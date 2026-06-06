@@ -157,8 +157,9 @@ function AttendancePage() {
       if (res.days && res.days.length > 0) {
         setDays(res.days);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Failed to fetch school days", e);
+      toast.error(`Failed to fetch days: ${e.message}`);
     } finally {
       setLoadingDays(false);
     }
@@ -177,8 +178,9 @@ function AttendancePage() {
       if (res.sessions && res.sessions.length > 0) {
         setSessions(res.sessions as Session[]);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Failed to fetch school sessions", e);
+      toast.error(`Failed to fetch sessions: ${e.message}`);
     } finally {
       setLoadingSessions(false);
     }

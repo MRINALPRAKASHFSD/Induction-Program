@@ -65,25 +65,18 @@ export const getDepartments = async () => {
 
 export const getSchoolDays = async ({ data }: { data: any }) => {
   const eventsRef = collection(db, "events");
-  const q = query(
-    eventsRef, 
-    where("department_id", "==", data.department_id)
-  );
-  const snap = await getDocs(q);
-  const activeEvents = snap.docs.map(d => d.data()).filter(d => d.is_active === true);
+  const snap = await getDocs(eventsRef);
+  const activeEvents = snap.docs.map(d => d.data())
+    .filter((d: any) => d.is_active === true && d.department_id === data.department_id);
   const days = Array.from(new Set(activeEvents.map(d => d.day_number))).sort((a, b) => a - b);
   return { days };
 };
 
 export const getSchoolSessions = async ({ data }: { data: any }) => {
   const eventsRef = collection(db, "events");
-  const q = query(
-    eventsRef, 
-    where("department_id", "==", data.department_id)
-  );
-  const snap = await getDocs(q);
+  const snap = await getDocs(eventsRef);
   const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .filter((d: any) => d.day_number === Number(data.day_number) && d.is_active === true);
+    .filter((d: any) => d.department_id === data.department_id && d.day_number === Number(data.day_number) && d.is_active === true);
   
   // Client side sort due to lack of composite index right now
   sessions.sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
