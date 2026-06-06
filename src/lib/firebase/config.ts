@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBNgxxP7pT8HkB0T9tBqttPDfK9x6qmCYU",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "krmu-induction-d4786.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "krmu-induction-d4786",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "krmu-induction-d4786.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1028446405662",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1028446405662:web:28477df5e0855fba499a0f",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-MF64BDDG94"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDw2sjsdlKj3FhJMhuj2CF38qj_1almLZg",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "krmu-induction-app-d3591.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "krmu-induction-app-d3591",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "krmu-induction-app-d3591.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "939570467292",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:939570467292:web:9f04d2d01778aa7dfa3f19",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-E8C7MWHNL2"
 };
 
 // Initialize Firebase

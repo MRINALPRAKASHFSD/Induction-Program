@@ -85,33 +85,38 @@ function RegisterPage() {
       year: parseInt(form.year),
     };
 
-    const res = await registerStudent({ data: profile });
+    try {
+      const res = await registerStudent({ data: profile });
 
-    if (!res.ok) {
-      toast.error("Failed to register.");
+      if (!res.ok) {
+        toast.error("Failed to register.");
+        return;
+      }
+
+      if (res.duplicate) {
+        toast.info("You're already registered — welcome back!");
+      } else {
+        toast.success("Registered successfully!");
+      }
+
+      // Save to local profile so boarding pass works on this device
+      localDb.saveStudentProfile({
+        id: res.student_id,
+        full_name: profile.full_name,
+        enrollment_no: profile.enrollment_no,
+        branch: `${form.branch} · ${deptName}`,
+        semester: `Year ${form.year} · ${form.course}`,
+        created_at: new Date().toISOString(),
+        department_id: form.department_id,
+      });
+
+      setDone(profile.enrollment_no);
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      toast.error(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    if (res.duplicate) {
-      toast.info("You're already registered — welcome back!");
-    } else {
-      toast.success("Registered successfully!");
-    }
-
-    // Save to local profile so boarding pass works on this device
-    localDb.saveStudentProfile({
-      id: res.student_id,
-      full_name: profile.full_name,
-      enrollment_no: profile.enrollment_no,
-      branch: `${form.branch} · ${deptName}`,
-      semester: `Year ${form.year} · ${form.course}`,
-      created_at: new Date().toISOString(),
-      department_id: form.department_id,
-    });
-
-    setDone(profile.enrollment_no);
-    setSubmitting(false);
   };
 
   if (done) {

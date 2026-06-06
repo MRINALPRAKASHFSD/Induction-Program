@@ -15,7 +15,7 @@ const studentSchema = z.object({
   full_name: z.string().trim().min(2).max(120),
   enrollment_no: z.string().trim().min(3).max(40),
   email: z.string().trim().email().max(200),
-  phone: z.string().trim().min(7).max(20),
+  phone: z.string().trim().min(7).max(20).or(z.literal("")),
   department_id: z.string().uuid().or(z.string()),
   branch_id: z.string().uuid().or(z.string()).nullable().optional(),
   course: z.string().trim().min(1).max(80),
