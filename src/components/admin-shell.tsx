@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LayoutDashboard, Calendar, Users, Sparkles, BarChart3, Activity, LogOut, Menu, X, ScanLine, ShieldCheck } from "lucide-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
+import { auth } from "@/lib/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -25,9 +26,13 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const signOut = () => {
-    sessionStorage.removeItem("krmu_admin_session");
-    navigate({ to: "/admin/login" });
+  const signOutAdmin = async () => {
+    try {
+      await auth.signOut();
+      navigate({ to: "/admin/login" });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   if (loading) {
@@ -76,7 +81,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
           </div>
           <div className="flex items-center gap-3">
             <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm"><Link to="/">View site</Link></Button>
-            <Button onClick={signOut} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><LogOut className="mr-1.5 h-4 w-4" /> Sign out</Button>
+            <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><LogOut className="mr-1.5 h-4 w-4" /> Sign out</Button>
           </div>
         </div>
       </header>

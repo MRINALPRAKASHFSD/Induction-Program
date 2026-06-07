@@ -10,7 +10,8 @@ import {
   orderBy, 
   limit,
   setDoc,
-  runTransaction
+  runTransaction,
+  serverTimestamp
 } from "firebase/firestore";
 
 /* ─── Active events list (for the event selector dropdown) ─────────────── */
@@ -135,7 +136,7 @@ export const scanMarkAttendance = async ({ data }: { data: any }): Promise<ScanR
       transaction.set(attendanceRef, {
         student_id: studentId,
         event_id: data.event_id,
-        scanned_at: new Date().toISOString()
+        scanned_at: serverTimestamp()
       });
 
       return {

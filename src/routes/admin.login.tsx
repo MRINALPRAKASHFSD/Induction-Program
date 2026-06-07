@@ -2,10 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Shield, Eye, EyeOff, Lock } from "lucide-react";
+import { Shield, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/config";
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -17,71 +19,31 @@ export const Route = createFileRoute("/admin/login")({
   component: AdminLogin,
 });
 
-// ── Local credential store ──────────────────────────────────────────────────
-// Default password is "krmu@admin2024". Admin can change it from settings.
-// We hash with a simple digest so the plain text isn't in localStorage.
-const ADMIN_KEY = "krmu_admin_password_hash";
-const DEFAULT_HASH = "7a3f8b2e1c4d9f0e6a5b3c7d2e8f1a4b"; // krmu@admin2024
-
-function simpleHash(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const chr = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + chr;
-    hash |= 0;
-  }
-  // Convert to hex-like string
-  return Math.abs(hash).toString(16).padStart(8, "0") + str.length.toString(16);
-}
-
-function getStoredHash(): string {
-  return localStorage.getItem(ADMIN_KEY) || DEFAULT_HASH;
-}
-
-function checkPassword(password: string): boolean {
-  const storedHash = getStoredHash();
-  // First-time: default hash is the magic string; also check actual hash
-  if (storedHash === DEFAULT_HASH) {
-    return password === "krmu@admin2024";
-  }
-  return simpleHash(password) === storedHash;
-}
-
-const SESSION_KEY = "krmu_admin_session";
-
-export function setAdminSession() {
-  sessionStorage.setItem(SESSION_KEY, "authenticated");
-}
-
-export function clearAdminSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
-
 // ── Component ───────────────────────────────────────────────────────────────
 function AdminLogin() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const onLogin = (e: React.FormEvent) => {
+  const onLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
 
-    // Simulate a tiny delay so it feels intentional
-    setTimeout(() => {
-      if (checkPassword(password)) {
-        setAdminSession();
-        toast.success("Welcome back 👋");
-        navigate({ to: "/admin/dashboard" });
-      } else {
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-        toast.error("Incorrect password");
-      }
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast.success("Welcome back 👋");
+      navigate({ to: "/admin/dashboard" });
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      toast.error("Incorrect email or password");
+    } finally {
       setBusy(false);
-    }, 400);
+    }
   };
 
   return (
@@ -126,9 +88,26 @@ function AdminLogin() {
           {/* Form */}
           <form onSubmit={onLogin} className="grid gap-5">
             <div className="grid gap-2">
+              <Label htmlFor="admin-email" className="flex items-center gap-1.5 text-[#5a2c14] font-semibold">
+                <Mail className="h-3.5 w-3.5" />
+                Admin Email
+              </Label>
+              <Input
+                id="admin-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@krmu.edu"
+                className="bg-white/70 border-[#8a4a22]/20 focus-visible:ring-[#8a4a22]/40 shadow-sm"
+                autoFocus
+              />
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="admin-password" className="flex items-center gap-1.5 text-[#5a2c14] font-semibold">
                 <Lock className="h-3.5 w-3.5" />
-                Admin Password
+                Password
               </Label>
               <div className="relative">
                 <Input
@@ -137,9 +116,8 @@ function AdminLogin() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
+                  placeholder="••••••••"
                   className="pr-10 bg-white/70 border-[#8a4a22]/20 focus-visible:ring-[#8a4a22]/40 shadow-sm"
-                  autoFocus
                 />
                 <button
                   type="button"
@@ -155,7 +133,7 @@ function AdminLogin() {
               type="submit"
               variant="liquidGlassDark"
               size="lg"
-              disabled={busy || !password}
+              disabled={busy || !email || !password}
               className="h-12 mt-2 rounded-full font-bold shadow-md"
             >
               {busy ? (
@@ -167,9 +145,6 @@ function AdminLogin() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-[#7a4020]/60 font-medium">
-            Default: <code className="bg-white/40 px-1.5 py-0.5 rounded font-mono border border-[#8a4a22]/10">krmu@admin2024</code>
-          </p>
         </motion.div>
 
         <p className="text-center text-[11px] text-[#7a4020]/50 mt-6 font-medium uppercase tracking-widest">

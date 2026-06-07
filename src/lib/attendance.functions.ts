@@ -8,7 +8,8 @@ import {
   query, 
   where, 
   setDoc,
-  runTransaction
+  runTransaction,
+  serverTimestamp
 } from "firebase/firestore";
 
 /**
@@ -40,13 +41,12 @@ export const recordScan = async ({ data }: { data: any }) => {
       }
 
       // 2. Fetch Student by enrollment_no
-      const studentsRef = collection(db, "students");
-      const studentQ = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-      const studentSnap = await getDocs(studentQ);
-      if (studentSnap.empty) throw new Error("Student not found.");
+      const studentRef = doc(db, "students", data.enrollment_no);
+      const studentDoc = await transaction.get(studentRef);
+      if (!studentDoc.exists()) throw new Error("Student not found.");
       
-      const studentId = studentSnap.docs[0].id;
-      const studentData = studentSnap.docs[0].data();
+      const studentId = studentDoc.id;
+      const studentData = studentDoc.data();
 
       // 3. Record attendance
       const attendanceId = `${eventId}_${studentId}`;
@@ -65,7 +65,7 @@ export const recordScan = async ({ data }: { data: any }) => {
       transaction.set(attendanceRef, {
         student_id: studentId,
         event_id: eventId,
-        scanned_at: new Date().toISOString()
+        scanned_at: serverTimestamp()
       });
 
       return {
@@ -94,12 +94,11 @@ export const registerForClub = async ({ data }: { data: any }) => {
     const clubData = clubSnap.docs[0].data();
 
     // Fetch student
-    const studentsRef = collection(db, "students");
-    const studentQ = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-    const studentSnap = await getDocs(studentQ);
-    if (studentSnap.empty) return { ok: false as const, error: "Please register as a student first." };
+    const studentRef = doc(db, "students", data.enrollment_no);
+    const studentDoc = await getDoc(studentRef);
+    if (!studentDoc.exists()) return { ok: false as const, error: "Please register as a student first." };
     
-    const studentId = studentSnap.docs[0].id;
+    const studentId = studentDoc.id;
 
     // Register
     const regId = `${clubId}_${studentId}`;
@@ -113,7 +112,7 @@ export const registerForClub = async ({ data }: { data: any }) => {
     await setDoc(regRef, {
       club_id: clubId,
       student_id: studentId,
-      registered_at: new Date().toISOString()
+      registered_at: serverTimestamp()
     });
 
     return { ok: true as const, club: clubData.name, duplicate: false };

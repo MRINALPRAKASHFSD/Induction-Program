@@ -8,7 +8,8 @@ import {
   getDocs, 
   query, 
   where, 
-  orderBy 
+  orderBy,
+  writeBatch
 } from "firebase/firestore";
 
 const studentSchema = z.object({
@@ -24,35 +25,41 @@ const studentSchema = z.object({
 
 export const registerStudent = async ({ data }: { data: any }) => {
   const parsed = studentSchema.parse(data);
-  const studentsRef = collection(db, "students");
+  const newStudentRef = doc(db, "students", parsed.enrollment_no);
   
-  // Check duplicate by enrollment_no
-  const dupCheck = query(studentsRef, where("enrollment_no", "==", parsed.enrollment_no));
-  const snap = await getDocs(dupCheck);
-  if (!snap.empty) {
-    return { ok: true, student_id: snap.docs[0].id, duplicate: true };
+  // Check duplicate by checking if doc exists
+  const docSnap = await getDoc(newStudentRef);
+  if (docSnap.exists()) {
+    return { ok: true, student_id: newStudentRef.id, duplicate: true };
   }
 
-  const newStudentRef = doc(studentsRef);
-  await setDoc(newStudentRef, {
-    ...parsed,
+  const { email, phone, ...publicData } = parsed;
+
+  const batch = writeBatch(db);
+  
+  batch.set(newStudentRef, {
+    ...publicData,
     id: newStudentRef.id,
     created_at: new Date().toISOString()
   });
+
+  const privateRef = doc(db, "students", parsed.enrollment_no, "private", "contact");
+  batch.set(privateRef, { email, phone });
+
+  await batch.commit();
 
   return { ok: true, student_id: newStudentRef.id, duplicate: false };
 };
 
 export const lookupStudent = async ({ data }: { data: any }) => {
   if (!data.enrollment_no) return { student: null };
-  const studentsRef = collection(db, "students");
-  const q = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-  const snap = await getDocs(q);
+  const studentRef = doc(db, "students", data.enrollment_no);
+  const snap = await getDoc(studentRef);
   
-  if (snap.empty) {
+  if (!snap.exists()) {
     return { student: null };
   }
-  return { student: { id: snap.docs[0].id, ...snap.docs[0].data() } };
+  return { student: { id: snap.id, ...snap.data() } };
 };
 
 export const getDepartments = async () => {
@@ -85,11 +92,10 @@ export const getSchoolSessions = async ({ data }: { data: any }) => {
 
 export const generateQrPayload = async ({ data }: { data: any }) => {
   let studentRef = null;
-  const studentsRef = collection(db, "students");
-  const studentQ = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-  const studentSnap = await getDocs(studentQ);
-  if (!studentSnap.empty) {
-    studentRef = { id: studentSnap.docs[0].id, ...studentSnap.docs[0].data() } as any;
+  const studentDocRef = doc(db, "students", data.enrollment_no);
+  const studentSnap = await getDoc(studentDocRef);
+  if (studentSnap.exists()) {
+    studentRef = { id: studentSnap.id, ...studentSnap.data() } as any;
   }
 
   const sessionDoc = await getDoc(doc(db, "events", data.session_id));
