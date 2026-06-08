@@ -9,21 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MyPassRouteImport } from './routes/my-pass'
 import { Route as ClubsRouteImport } from './routes/clubs'
 import { Route as AttendanceRouteImport } from './routes/attendance'
+import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ScanTokenRouteImport } from './routes/scan.$token'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminScheduleRouteImport } from './routes/admin.schedule'
 import { Route as AdminScannerRouteImport } from './routes/admin.scanner'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
+import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 
+const ScheduleRoute = ScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -44,6 +53,11 @@ const AttendanceRoute = AttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnnouncementsRoute = AnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -57,6 +71,11 @@ const ScanTokenRoute = ScanTokenRouteImport.update({
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminScheduleRoute = AdminScheduleRouteImport.update({
+  id: '/admin/schedule',
+  path: '/admin/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminScannerRoute = AdminScannerRouteImport.update({
@@ -84,6 +103,11 @@ const AdminClubsRoute = AdminClubsRouteImport.update({
   path: '/admin/clubs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
+  id: '/admin/announcements',
+  path: '/admin/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/admin/analytics',
   path: '/admin/analytics',
@@ -97,50 +121,62 @@ const AdminActivityRoute = AdminActivityRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
+  '/schedule': typeof ScheduleRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
+  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
   '/scan/$token': typeof ScanTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
+  '/schedule': typeof ScheduleRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
+  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
   '/scan/$token': typeof ScanTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
+  '/schedule': typeof ScheduleRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
+  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
   '/scan/$token': typeof ScanTokenRoute
 }
@@ -148,72 +184,95 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/announcements'
     | '/attendance'
     | '/clubs'
     | '/my-pass'
     | '/register'
+    | '/schedule'
     | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
+    | '/admin/schedule'
     | '/admin/students'
     | '/scan/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/announcements'
     | '/attendance'
     | '/clubs'
     | '/my-pass'
     | '/register'
+    | '/schedule'
     | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
+    | '/admin/schedule'
     | '/admin/students'
     | '/scan/$token'
   id:
     | '__root__'
     | '/'
+    | '/announcements'
     | '/attendance'
     | '/clubs'
     | '/my-pass'
     | '/register'
+    | '/schedule'
     | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
+    | '/admin/schedule'
     | '/admin/students'
     | '/scan/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnnouncementsRoute: typeof AnnouncementsRoute
   AttendanceRoute: typeof AttendanceRoute
   ClubsRoute: typeof ClubsRoute
   MyPassRoute: typeof MyPassRoute
   RegisterRoute: typeof RegisterRoute
+  ScheduleRoute: typeof ScheduleRoute
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminClubsRoute: typeof AdminClubsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminScannerRoute: typeof AdminScannerRoute
+  AdminScheduleRoute: typeof AdminScheduleRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
   ScanTokenRoute: typeof ScanTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/schedule': {
+      id: '/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof ScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -242,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -261,6 +327,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/students'
       fullPath: '/admin/students'
       preLoaderRoute: typeof AdminStudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/schedule': {
+      id: '/admin/schedule'
+      path: '/admin/schedule'
+      fullPath: '/admin/schedule'
+      preLoaderRoute: typeof AdminScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/scanner': {
@@ -298,6 +371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClubsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/announcements': {
+      id: '/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AdminAnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/analytics': {
       id: '/admin/analytics'
       path: '/admin/analytics'
@@ -317,17 +397,21 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnnouncementsRoute: AnnouncementsRoute,
   AttendanceRoute: AttendanceRoute,
   ClubsRoute: ClubsRoute,
   MyPassRoute: MyPassRoute,
   RegisterRoute: RegisterRoute,
+  ScheduleRoute: ScheduleRoute,
   AdminActivityRoute: AdminActivityRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminClubsRoute: AdminClubsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminScannerRoute: AdminScannerRoute,
+  AdminScheduleRoute: AdminScheduleRoute,
   AdminStudentsRoute: AdminStudentsRoute,
   ScanTokenRoute: ScanTokenRoute,
 }
