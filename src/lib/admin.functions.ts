@@ -1,20 +1,21 @@
 import { z } from "zod";
 import { db } from "@/lib/firebase/config";
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  orderBy, 
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
   limit,
   where,
-  addDoc,
-  getCountFromServer
+  getCountFromServer,
+  increment,
 } from "firebase/firestore";
+import { eventCache } from "@/lib/event-cache";
 
 /* ---------------- Events ---------------- */
 
@@ -31,11 +32,12 @@ const eventInput = z.object({
 
 export const createEvent = async ({ data }: { data: any }) => {
   const eventsRef = collection(db, "events");
-  // auto-generate ID
   const newEventRef = doc(eventsRef);
   const qr_token = "krmu-" + Math.random().toString(36).substring(2, 10);
   const eventData = { ...data, qr_token, id: newEventRef.id, created_at: new Date().toISOString() };
   await setDoc(newEventRef, eventData);
+  // Bust student-facing caches so new event is visible immediately
+  eventCache.invalidate();
   return eventData;
 };
 
@@ -44,12 +46,16 @@ export const updateEvent = async ({ data }: { data: any }) => {
   if (!id) throw new Error("Missing ID for update");
   const eventRef = doc(db, "events", id);
   await updateDoc(eventRef, patch);
+  // Bust student-facing caches so updated session data is visible immediately
+  eventCache.invalidate();
   return { id, ...patch };
 };
 
 export const deleteEvent = async ({ data }: { data: any }) => {
   if (!data.id) throw new Error("Missing ID for delete");
   await deleteDoc(doc(db, "events", data.id));
+  // Bust student-facing caches so deleted event is no longer shown
+  eventCache.invalidate();
   return { ok: true };
 };
 
@@ -102,16 +108,15 @@ export const registerForClub = async ({ data }: { data: any }) => {
   const { enrollment_no, slug } = data;
   if (!enrollment_no || !slug) throw new Error("Missing data");
 
-  // check if student exists
-  const studentsRef = collection(db, "students");
-  const qStudent = query(studentsRef, where("enrollment_no", "==", enrollment_no), limit(1));
-  const studentSnap = await getDocs(qStudent);
-  if (studentSnap.empty) {
+  // Direct O(1) student lookup — enrollment_no IS the document ID
+  const studentRef = doc(db, "students", enrollment_no);
+  const studentDoc = await getDoc(studentRef);
+  if (!studentDoc.exists()) {
     throw new Error("Student not found. Please register first.");
   }
-  const studentData = studentSnap.docs[0].data();
+  const studentId = studentDoc.id;
 
-  // find club
+  // Club lookup by slug (single-field, auto-indexed by Firestore)
   const clubsRef = collection(db, "clubs");
   const qClub = query(clubsRef, where("slug", "==", slug), limit(1));
   const clubSnap = await getDocs(qClub);
@@ -121,21 +126,24 @@ export const registerForClub = async ({ data }: { data: any }) => {
   const clubData = clubSnap.docs[0].data();
   const club_id = clubSnap.docs[0].id;
 
-  // check if already registered
-  const regsRef = collection(db, "club_registrations");
-  const qReg = query(regsRef, where("enrollment_no", "==", enrollment_no), where("club_id", "==", club_id), limit(1));
-  const regSnap = await getDocs(qReg);
-  if (!regSnap.empty) {
+  // Dedup check via compound doc ID (O(1) read, no collection scan needed)
+  const regId = `${club_id}_${studentId}`;
+  const regRef = doc(db, "club_registrations", regId);
+  const regDoc = await getDoc(regRef);
+  if (regDoc.exists()) {
     return { ok: true, duplicate: true };
   }
 
-  // insert
-  await addDoc(regsRef, {
-    enrollment_no,
-    student_name: studentData.full_name,
+  // Write with the compound doc ID so security rules and dedup both work
+  await setDoc(regRef, {
     club_id,
-    club_slug: slug,
-    registered_at: new Date().toISOString()
+    student_id: studentId,
+    registered_at: new Date().toISOString(),
+  });
+
+  // Gamification: Add +25 points for joining a club
+  await updateDoc(studentRef, {
+    points: increment(25)
   });
 
   return { ok: true };

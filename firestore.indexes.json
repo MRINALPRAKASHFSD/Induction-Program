@@ -1,0 +1,47 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "department_id", "order": "ASCENDING" },
+        { "fieldPath": "is_active",     "order": "ASCENDING" },
+        { "fieldPath": "day_number",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "department_id", "order": "ASCENDING" },
+        { "fieldPath": "day_number",    "order": "ASCENDING" },
+        { "fieldPath": "is_active",     "order": "ASCENDING" },
+        { "fieldPath": "starts_at",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "is_active",  "order": "ASCENDING" },
+        { "fieldPath": "day_number", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "club_registrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "enrollment_no", "order": "ASCENDING" },
+        { "fieldPath": "club_id",        "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "students",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "points", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
