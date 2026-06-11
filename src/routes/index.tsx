@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { useLiveCount } from "@/hooks/use-live-count";
+
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/")({
@@ -73,9 +73,36 @@ function Countdown({ targetDate }: { targetDate: string }) {
 }
 
 function Landing() {
-  const students = useLiveCount("students");
-  const scans = useLiveCount("attendance");
-  const clubs = useLiveCount("club_registrations");
+  const [stats, setStats] = useState<{ students: number | null, attendance: number | null, clubs: number | null }>({
+    students: null,
+    attendance: null,
+    clubs: null
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/live-impact');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setStats(data);
+      } catch (err) {
+        console.error('Failed to fetch live stats', err);
+      }
+    }
+    
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const students = stats.students;
+  const scans = stats.attendance;
+  const clubs = stats.clubs;
 
   return (
     <div className="min-h-screen bg-background">
