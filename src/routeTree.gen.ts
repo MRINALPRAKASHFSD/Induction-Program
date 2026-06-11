@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as StudentScanRouteImport } from './routes/student-scan'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MyPassRouteImport } from './routes/my-pass'
 import { Route as ClubsRouteImport } from './routes/clubs'
@@ -25,11 +24,6 @@ import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 
-const StudentScanRoute = StudentScanRouteImport.update({
-  id: '/student-scan',
-  path: '/student-scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -107,7 +101,6 @@ export interface FileRoutesByFullPath {
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
-  '/student-scan': typeof StudentScanRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/clubs': typeof AdminClubsRoute
@@ -124,7 +117,6 @@ export interface FileRoutesByTo {
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
-  '/student-scan': typeof StudentScanRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/clubs': typeof AdminClubsRoute
@@ -142,7 +134,6 @@ export interface FileRoutesById {
   '/clubs': typeof ClubsRoute
   '/my-pass': typeof MyPassRoute
   '/register': typeof RegisterRoute
-  '/student-scan': typeof StudentScanRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/clubs': typeof AdminClubsRoute
@@ -161,7 +152,6 @@ export interface FileRouteTypes {
     | '/clubs'
     | '/my-pass'
     | '/register'
-    | '/student-scan'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/clubs'
@@ -178,7 +168,6 @@ export interface FileRouteTypes {
     | '/clubs'
     | '/my-pass'
     | '/register'
-    | '/student-scan'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/clubs'
@@ -195,7 +184,6 @@ export interface FileRouteTypes {
     | '/clubs'
     | '/my-pass'
     | '/register'
-    | '/student-scan'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/clubs'
@@ -213,7 +201,6 @@ export interface RootRouteChildren {
   ClubsRoute: typeof ClubsRoute
   MyPassRoute: typeof MyPassRoute
   RegisterRoute: typeof RegisterRoute
-  StudentScanRoute: typeof StudentScanRoute
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminClubsRoute: typeof AdminClubsRoute
@@ -227,13 +214,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/student-scan': {
-      id: '/student-scan'
-      path: '/student-scan'
-      fullPath: '/student-scan'
-      preLoaderRoute: typeof StudentScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -341,7 +321,6 @@ const rootRouteChildren: RootRouteChildren = {
   ClubsRoute: ClubsRoute,
   MyPassRoute: MyPassRoute,
   RegisterRoute: RegisterRoute,
-  StudentScanRoute: StudentScanRoute,
   AdminActivityRoute: AdminActivityRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminClubsRoute: AdminClubsRoute,
