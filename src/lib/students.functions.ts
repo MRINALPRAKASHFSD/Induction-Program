@@ -13,18 +13,23 @@ import {
 } from "firebase/firestore";
 
 const studentSchema = z.object({
-  full_name: z.string().trim().min(2).max(120),
-  enrollment_no: z.string().trim().min(3).max(40),
-  email: z.string().trim().email().max(200),
-  phone: z.string().trim().min(7).max(20).or(z.literal("")),
+  full_name: z.string().trim().min(2, "Name is too short").max(120),
+  enrollment_no: z.string().trim().min(3, "Enrollment number is too short").max(40),
+  email: z.string().trim().email("Invalid email address").max(200),
+  phone: z.string().trim().refine(val => val === "" || val.length >= 10, { message: "Phone number must be at least 10 digits if provided" }),
   department_id: z.string().uuid().or(z.string()),
   branch_id: z.string().uuid().or(z.string()).nullable().optional(),
-  course: z.string().trim().min(1).max(80),
+  course: z.string().trim().min(1, "Course is required").max(80),
   year: z.number().int().min(1).max(6),
 });
 
 export const registerStudent = async ({ data }: { data: any }) => {
-  const parsed = studentSchema.parse(data);
+  const parsedResult = studentSchema.safeParse(data);
+  if (!parsedResult.success) {
+    return { ok: false, error: parsedResult.error.errors[0].message };
+  }
+  const parsed = parsedResult.data;
+  
   const newStudentRef = doc(db, "students", parsed.enrollment_no);
   
   // Check duplicate by checking if doc exists

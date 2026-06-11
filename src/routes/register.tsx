@@ -89,7 +89,7 @@ function RegisterPage() {
       const res = await registerStudent({ data: profile });
 
       if (!res.ok) {
-        toast.error("Failed to register.");
+        toast.error(res.error || "Failed to register.");
         return;
       }
 
