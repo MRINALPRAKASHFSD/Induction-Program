@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap, Scan } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
@@ -12,13 +12,7 @@ export function SiteHeader() {
           </span>
           <span>KRMU Induction</span>
         </Link>
-        <nav className="flex items-center gap-2">
-          <Button asChild variant="liquidGlassMaroon" className="h-9 px-4 rounded-full font-medium text-xs gap-1.5">
-            <Link to="/student-scan">
-              <Scan className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Scan QR</span>
-            </Link>
-          </Button>
+        <nav className="flex items-center">
           <Button asChild variant="liquidGlassDark" className="h-9 px-5 rounded-full font-medium text-xs">
             <Link to="/admin/login">
               Admin Panel
@@ -29,4 +23,3 @@ export function SiteHeader() {
     </header>
   );
 }
-

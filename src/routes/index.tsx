@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Scan } from "lucide-react";
+import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { useLiveCount } from "@/hooks/use-live-count";
@@ -168,13 +168,7 @@ function Landing() {
                   Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-semibold">
-                <Link to="/student-scan">
-                  <Scan className="mr-2 h-4 w-4" />
-                  Scan QR
-                </Link>
-              </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium opacity-80">
+              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium">
                 <Link to="/attendance">
                   <QrCode className="mr-2 h-4 w-4" />
                   Lodge Attendance
