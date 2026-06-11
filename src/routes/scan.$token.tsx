@@ -73,19 +73,45 @@ function ScanPage() {
 
   if (result?.ok) {
     return (
-      <div className="min-h-screen bg-hero text-primary-foreground">
-        <div className="container mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+      <div className="relative min-h-screen bg-[#0a0a0a] text-white overflow-hidden">
+        {/* Background glow effects */}
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#FFB75E]/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-[#FF5E5E]/10 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="relative container mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 z-10">
           <SuccessBurst
             title={result.duplicate ? "Already checked in" : "Attendance marked!"}
             subtitle={`${result.student.name} · ${result.event.title}`}
+            className="border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] text-white"
           />
-          <div className="mt-6 grid gap-2 rounded-xl bg-white/10 p-4 text-sm backdrop-blur">
-            <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Day {result.event.day} of induction</div>
-            <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {result.event.venue}</div>
-          </div>
-          <Button asChild variant="liquidGlassWhite" size="lg" className="mt-6 rounded-full font-semibold text-primary">
-            <Link to="/">Done</Link>
-          </Button>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="mt-6 grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm backdrop-blur-md shadow-lg"
+          >
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFB75E]/20 text-[#FFB75E]">
+                <Calendar className="h-4 w-4" /> 
+              </div>
+              <span className="font-medium tracking-wide">Day {result.event.day} of induction</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFB75E]/20 text-[#FFB75E]">
+                <MapPin className="h-4 w-4" /> 
+              </div>
+              <span className="font-medium tracking-wide">{result.event.venue}</span>
+            </div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            <Button asChild size="lg" className="mt-8 w-full rounded-full bg-gradient-to-r from-[#FFB75E] to-[#E69B40] hover:from-[#FFC882] hover:to-[#FFB75E] text-black font-bold border-none h-14 shadow-[0_0_20px_rgba(255,183,94,0.3)] transition-all hover:shadow-[0_0_30px_rgba(255,183,94,0.5)] btn-hover-scale">
+              <Link to="/">Done</Link>
+            </Button>
+          </motion.div>
         </div>
       </div>
     );
