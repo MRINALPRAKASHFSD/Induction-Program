@@ -1,12 +1,12 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+    initializeApp({
+      credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // Handle newline characters in private key string securely
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
     });
@@ -24,14 +24,14 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     return res.status(500).json({ 
       error: 'Firebase Admin not initialized. Ensure FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are set.' 
     });
   }
 
   try {
-    const db = admin.firestore();
+    const db = getFirestore();
     
     // Run all aggregation queries in parallel
     const [students, attendance, clubs] = await Promise.all([
