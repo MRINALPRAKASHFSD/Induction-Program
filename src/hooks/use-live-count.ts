@@ -1,28 +1,34 @@
-import { useQuery } from "@tanstack/react-query";
-
-async function fetchLiveImpact() {
-  const res = await fetch("/api/live-impact");
-  if (!res.ok) {
-    throw new Error("Failed to fetch live impact counts");
-  }
-  return res.json();
-}
+import { useEffect, useState } from "react";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 export function useLiveCount(table: "students" | "attendance" | "club_registrations" | "events") {
-  const { data } = useQuery({
-    queryKey: ["live-impact"],
-    queryFn: fetchLiveImpact,
-    refetchInterval: 10000, // Poll every 10 seconds
-    staleTime: 5000,
-    retry: 2,
-  });
+  const [count, setCount] = useState<number | null>(null);
 
-  if (!data) return null;
+  useEffect(() => {
+    let cancelled = false;
 
-  switch (table) {
-    case "students": return data.students ?? null;
-    case "attendance": return data.attendance ?? null;
-    case "club_registrations": return data.clubs ?? null;
-    default: return null;
-  }
+    async function fetchCount() {
+      try {
+        const coll = collection(db, table);
+        const snapshot = await getCountFromServer(coll);
+        if (!cancelled) {
+          setCount(snapshot.data().count);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch count for ${table}:`, err);
+      }
+    }
+
+    // Fetch immediately, then poll every 15 seconds
+    fetchCount();
+    const interval = setInterval(fetchCount, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [table]);
+
+  return count;
 }
