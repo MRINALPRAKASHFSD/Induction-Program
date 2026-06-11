@@ -39,15 +39,14 @@ export const getAllEvents = async () => {
 /* ─── Student boarding pass (profile + attended day numbers) ────────────── */
 
 export const getStudentPass = async ({ data }: { data: any }) => {
-  const studentsRef = collection(db, "students");
-  const q = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-  const snap = await getDocs(q);
+  const studentRef = doc(db, "students", data.enrollment_no);
+  const studentSnap = await getDoc(studentRef);
   
-  if (snap.empty) {
+  if (!studentSnap.exists()) {
     return { student: null, attendedDays: [] };
   }
   
-  const student = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
+  const student = { id: studentSnap.id, ...studentSnap.data() } as any;
   
   // Resolve department manually if needed, but we'll return raw for now
   const studentRes = {
@@ -60,21 +59,23 @@ export const getStudentPass = async ({ data }: { data: any }) => {
     branch: student.branch_id || null,
   };
 
-  const attendanceRef = collection(db, "attendance");
-  const attQ = query(attendanceRef, where("student_id", "==", student.id));
-  const attSnap = await getDocs(attQ);
+  const eventsRef = collection(db, "events");
+  const activeEventsQ = query(eventsRef, where("is_active", "==", true));
+  const eventsSnap = await getDocs(activeEventsQ);
   
-  // Need to get the events to find day_number
   const attendedDays = new Set<number>();
-  for (const aDoc of attSnap.docs) {
-    const attData = aDoc.data();
-    if (attData.event_id) {
-      const eDoc = await getDoc(doc(db, "events", attData.event_id));
-      if (eDoc.exists() && eDoc.data().day_number) {
-        attendedDays.add(eDoc.data().day_number);
-      }
+  
+  // Look up attendance docs directly using composite ID to avoid 'list' permission
+  await Promise.all(eventsSnap.docs.map(async (eDoc) => {
+    const eventData = eDoc.data();
+    if (!eventData.day_number) return;
+    
+    const attRef = doc(db, "attendance", `${eDoc.id}_${student.id}`);
+    const attSnap = await getDoc(attRef);
+    if (attSnap.exists()) {
+      attendedDays.add(eventData.day_number);
     }
-  }
+  }));
 
   return {
     student: studentRes,
@@ -107,14 +108,13 @@ export const scanMarkAttendance = async ({ data }: { data: any }): Promise<ScanR
         throw new Error("This session has already ended.");
       }
 
-      // 2. Fetch Student by enrollment_no
-      const studentsRef = collection(db, "students");
-      const q = query(studentsRef, where("enrollment_no", "==", data.enrollment_no));
-      const studentSnap = await getDocs(q); // getDocs outside transaction is technically not locking the query, but it's safe enough here
-      if (studentSnap.empty) throw new Error("Student not found.");
+      // 2. Fetch Student by enrollment_no (Direct lookup)
+      const studentRef = doc(db, "students", data.enrollment_no);
+      const studentDoc = await transaction.get(studentRef);
+      if (!studentDoc.exists()) throw new Error("Student not found.");
       
-      const studentId = studentSnap.docs[0].id;
-      const studentData = studentSnap.docs[0].data();
+      const studentId = studentDoc.id;
+      const studentData = studentDoc.data();
 
       // 3. Check for existing attendance to avoid duplicates
       // We'll create a composite document ID to guarantee uniqueness in attendance: {event_id}_{student_id}
