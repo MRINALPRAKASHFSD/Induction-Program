@@ -41,36 +41,36 @@
 
 :root {
   --radius: 0.75rem;
-  /* KRMU brand: Navy Blue + Red */
+  /* KRMU brand: deep maroon + warm gold */
   --background: oklch(0.99 0.005 80);
   --foreground: oklch(0.18 0.03 25);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.03 25);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 25);
-  --primary: #001732; /* KRMU Dark Blue */
-  --primary-foreground: #ffffff;
-  --primary-glow: #0060aa;
-  --secondary: #F5F5F5; /* KRMU Light Gray */
-  --secondary-foreground: #001732;
-  --muted: #F5F5F5;
-  --muted-foreground: #7087A8;
-  --accent: #cb000d; /* KRMU Red */
-  --accent-foreground: #ffffff;
+  --primary: oklch(0.36 0.13 20);          /* maroon */
+  --primary-foreground: oklch(0.98 0.01 80);
+  --primary-glow: oklch(0.48 0.17 25);
+  --secondary: oklch(0.96 0.015 60);
+  --secondary-foreground: oklch(0.25 0.05 25);
+  --muted: oklch(0.96 0.01 60);
+  --muted-foreground: oklch(0.5 0.02 40);
+  --accent: oklch(0.78 0.14 75);           /* warm gold */
+  --accent-foreground: oklch(0.2 0.03 25);
   --success: oklch(0.62 0.16 150);
   --success-foreground: oklch(1 0 0);
   --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(1 0 0);
   --border: oklch(0.92 0.01 60);
   --input: oklch(0.94 0.01 60);
-  --ring: #001732;
-  --chart-1: #001732;
-  --chart-2: #cb000d;
+  --ring: oklch(0.48 0.17 25);
+  --chart-1: oklch(0.48 0.17 25);
+  --chart-2: oklch(0.78 0.14 75);
   --chart-3: oklch(0.55 0.13 195);
   --chart-4: oklch(0.62 0.16 150);
   --chart-5: oklch(0.65 0.18 305);
 
-  --gradient-hero: linear-gradient(135deg, #001732 0%, #0060aa 100%);
+  --gradient-hero: linear-gradient(135deg, oklch(0.36 0.13 20) 0%, oklch(0.48 0.17 25) 60%, oklch(0.78 0.14 75) 100%);
   --gradient-card: linear-gradient(180deg, oklch(1 0 0) 0%, oklch(0.98 0.01 60) 100%);
   --shadow-elegant: 0 10px 40px -10px color-mix(in oklab, var(--primary) 30%, transparent);
   --shadow-glow: 0 0 60px color-mix(in oklab, var(--accent) 40%, transparent);
@@ -83,22 +83,22 @@
   --card-foreground: oklch(0.97 0.01 80);
   --popover: oklch(0.22 0.03 25);
   --popover-foreground: oklch(0.97 0.01 80);
-  --primary: #cb000d; /* KRMU Red */
-  --primary-foreground: #ffffff;
-  --primary-glow: #e31e24;
-  --secondary: #001732; /* KRMU Dark Blue */
-  --secondary-foreground: #ffffff;
-  --muted: #051630;
-  --muted-foreground: #7087A8;
-  --accent: #0060aa;
-  --accent-foreground: #ffffff;
+  --primary: oklch(0.78 0.14 75);
+  --primary-foreground: oklch(0.18 0.03 25);
+  --primary-glow: oklch(0.85 0.14 80);
+  --secondary: oklch(0.28 0.03 25);
+  --secondary-foreground: oklch(0.97 0.01 80);
+  --muted: oklch(0.28 0.03 25);
+  --muted-foreground: oklch(0.72 0.02 60);
+  --accent: oklch(0.5 0.17 25);
+  --accent-foreground: oklch(0.97 0.01 80);
   --success: oklch(0.68 0.16 150);
   --success-foreground: oklch(0.12 0.02 25);
   --destructive: oklch(0.65 0.2 27);
   --destructive-foreground: oklch(0.97 0.01 80);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
-  --ring: #cb000d;
+  --ring: oklch(0.78 0.14 75);
 }
 
 @layer base {
@@ -227,7 +227,7 @@
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.45) !important;
-  color: #001732 !important; /* maroon primary text */
+  color: oklch(0.36 0.13 20) !important; /* maroon primary text */
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08),
               inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
@@ -240,7 +240,7 @@
               0 0 25px rgba(255, 183, 94, 0.45), /* warm gold accent glow */
               inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
   transform: translateY(-2px) scale(1.03) !important;
-  color: #001732 !important;
+  color: oklch(0.36 0.13 20) !important;
 }
 
 .btn-liquid-glass-white::before {
@@ -270,7 +270,7 @@
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(58, 26, 32, 0.12) !important;
-  color: #001732 !important; /* maroon text */
+  color: oklch(0.36 0.13 20) !important; /* maroon text */
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02),
               inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
@@ -308,20 +308,20 @@
 .btn-liquid-glass-maroon {
   position: relative !important;
   overflow: hidden !important;
-  background: rgba(0, 23, 50, 0.92) !important; /* frosted maroon */
+  background: oklch(0.36 0.13 20 / 92%) !important; /* frosted maroon */
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(0, 23, 50, 0.3) !important;
+  border: 1px solid oklch(0.36 0.13 20 / 30%) !important;
   color: oklch(0.98 0.01 80) !important; /* white-ish text */
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 23, 50, 0.12),
+  box-shadow: 0 8px 32px 0 oklch(0.36 0.13 20 / 12%),
               inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
 }
 
 .btn-liquid-glass-maroon:hover {
-  background: rgba(0, 23, 50, 0.98) !important;
-  border-color: rgba(0, 23, 50, 0.5) !important;
-  box-shadow: 0 15px 35px -5px rgba(0, 23, 50, 0.22),
+  background: oklch(0.36 0.13 20 / 98%) !important;
+  border-color: oklch(0.36 0.13 20 / 50%) !important;
+  box-shadow: 0 15px 35px -5px oklch(0.36 0.13 20 / 22%),
               0 0 25px rgba(255, 183, 94, 0.35), /* warm gold accent glow */
               inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
   transform: translateY(-2px) scale(1.02) !important;
