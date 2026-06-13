@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound } from "lucide-react";
+import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
@@ -275,31 +275,76 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="panel-liquid-glass py-12 mt-10">
-        <div className="container mx-auto max-w-6xl px-4 flex flex-col md:flex-row items-start justify-between gap-10">
-          <div className="flex flex-col items-start gap-4 max-w-2xl">
-            <div className="flex items-center gap-2 text-lg text-[#2c1208] font-bold tracking-tight">
-              K.R. Mangalam University · Induction 2026
-            </div>
+      <footer className="bg-white/80 border-t border-[#8a4a22]/10 pt-16 pb-8 mt-16 relative overflow-hidden backdrop-blur-xl">
+        <div className="container mx-auto max-w-6xl px-4 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 lg:gap-12 mb-16">
             
-            <div className="mt-1 space-y-3">
-              <div className="flex items-start gap-3 bg-white/30 p-4 rounded-xl border border-white/40 shadow-sm">
+            {/* Branding & Privacy */}
+            <div className="md:col-span-5 lg:col-span-6 flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-[#8a4a22]/20">
+                  A
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold text-[#2c1208] tracking-tight leading-none">Aarambh</span>
+                  <span className="text-[0.7rem] font-bold text-[#8a4a22] uppercase tracking-[0.2em] mt-1.5">Induction 2026</span>
+                </div>
+              </div>
+              
+              <p className="text-sm text-[#7a4020]/70 leading-relaxed max-w-md">
+                The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the class of 2026.
+              </p>
+
+              <div className="flex items-start gap-3 bg-[#8a4a22]/5 p-4 rounded-xl border border-[#8a4a22]/10 mt-2 max-w-md">
                 <ShieldCheck className="h-5 w-5 text-[#8a4a22] shrink-0 mt-0.5" />
-                <p className="text-sm text-[#5a2c14] leading-relaxed">
-                  <strong>Strict Privacy & Data Security.</strong> Your data is encrypted and processed securely. It is used exclusively for onboarding, attendance logging, and club assignments. We do not track your location, share your personal details with third-party marketers, or send unsolicited spam.
+                <p className="text-xs text-[#5a2c14] leading-relaxed">
+                  <strong className="block mb-1 text-[#2c1208]">Data Security Guarantee</strong> 
+                  Your data is encrypted and used exclusively for university onboarding. We never track location or share details with third parties.
                 </p>
               </div>
             </div>
-            
-            <div className="text-[0.7rem] text-[#7a4020]/60 mt-3 font-medium uppercase tracking-widest">
-              &copy; {new Date().getFullYear()} K.R. Mangalam University. All rights reserved.
+
+            {/* Quick Links */}
+            <div className="md:col-span-3 lg:col-span-3 md:col-start-7 lg:col-start-8 flex flex-col gap-4 mt-2 md:mt-0">
+              <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-wider mb-2">Platform</h4>
+              <nav className="flex flex-col gap-3.5">
+                <Link to="/attendance" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
+                  <QrCode className="h-4 w-4" /> Lodge Attendance
+                </Link>
+                <Link to="/schedule" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
+                  <Calendar className="h-4 w-4" /> Event Schedule
+                </Link>
+                <Link to="/announcements" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
+                  <Activity className="h-4 w-4" /> Announcements
+                </Link>
+              </nav>
+            </div>
+
+            {/* Support / Legal */}
+            <div className="md:col-span-3 lg:col-span-2 flex flex-col gap-4 mt-2 md:mt-0">
+              <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-wider mb-2">Resources</h4>
+              <nav className="flex flex-col gap-3.5">
+                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Help Center</a>
+                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Privacy Policy</a>
+                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Terms of Service</a>
+                <Link to="/admin/login" className="text-sm font-semibold text-[#8a4a22] hover:text-[#5a2c14] transition-colors mt-2 inline-flex items-center">
+                  Admin Portal <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </Link>
+              </nav>
             </div>
           </div>
-          
-          <div className="flex flex-col items-start md:items-end gap-3 mt-2 md:mt-0">
-            <Link to="/admin/login" className="inline-flex items-center justify-center rounded-full bg-white/60 px-6 py-2.5 text-sm font-semibold text-[#8a4a22] shadow-sm ring-1 ring-inset ring-[#8a4a22]/10 transition-all hover:bg-white hover:text-[#5a2c14] hover:shadow-md hover:-translate-y-0.5">
-              Admin Portal
-            </Link>
+
+          {/* Bottom Bar */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-[#8a4a22]/10">
+            <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide">
+              &copy; {new Date().getFullYear()} K.R. Mangalam University. All rights reserved.
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[#7a4020]/60 font-medium uppercase tracking-wider">
+              <span>Co-powered by</span>
+              <a href="https://eozka.com" target="_blank" rel="noreferrer" className="text-[#8a4a22] font-black tracking-widest text-sm flex items-center gap-1.5 hover:text-[#5a2c14] transition-colors">
+                <Zap className="h-4 w-4 fill-[#8a4a22]" /> eOzka
+              </a>
+            </div>
           </div>
         </div>
       </footer>
