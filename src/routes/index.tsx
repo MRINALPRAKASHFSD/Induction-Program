@@ -292,14 +292,14 @@ function Landing() {
               </div>
               
               <p className="text-sm text-[#7a4020]/70 leading-relaxed max-w-md">
-                The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the class of 2026.
+                The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the incoming class of 2026.
               </p>
 
               <div className="flex items-start gap-3 bg-[#8a4a22]/5 p-4 rounded-xl border border-[#8a4a22]/10 mt-2 max-w-md">
                 <ShieldCheck className="h-5 w-5 text-[#8a4a22] shrink-0 mt-0.5" />
                 <p className="text-xs text-[#5a2c14] leading-relaxed">
-                  <strong className="block mb-1 text-[#2c1208]">Data Security Guarantee</strong> 
-                  Your data is encrypted and used exclusively for university onboarding. We never track location or share details with third parties.
+                  <strong className="block mb-1 text-[#2c1208]">Enterprise Security</strong> 
+                  End-to-end encrypted and strictly for university onboarding. We never track location or share data.
                 </p>
               </div>
             </div>
@@ -309,10 +309,10 @@ function Landing() {
               <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-wider mb-2">Platform</h4>
               <nav className="flex flex-col gap-3.5">
                 <Link to="/attendance" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
-                  <QrCode className="h-4 w-4" /> Lodge Attendance
+                  <QrCode className="h-4 w-4" /> Attendance
                 </Link>
                 <Link to="/schedule" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
-                  <Calendar className="h-4 w-4" /> Event Schedule
+                  <Calendar className="h-4 w-4" /> Schedule
                 </Link>
                 <Link to="/announcements" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors inline-flex items-center gap-2.5">
                   <Activity className="h-4 w-4" /> Announcements
@@ -327,24 +327,24 @@ function Landing() {
                 <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Help Center</a>
                 <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Privacy Policy</a>
                 <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Terms of Service</a>
-                <Link to="/admin/login" className="text-sm font-semibold text-[#8a4a22] hover:text-[#5a2c14] transition-colors mt-2 inline-flex items-center">
-                  Admin Portal <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                <Link to="/admin/login" className="mt-2 flex items-center justify-between bg-[#8a4a22]/5 border border-[#8a4a22]/10 rounded-xl p-3 hover:bg-[#8a4a22]/10 transition-colors group">
+                  <span className="text-xs font-bold text-[#5a2c14] leading-tight">Admin<br />Portal</span>
+                  <ArrowRight className="h-4 w-4 text-[#8a4a22] group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </nav>
             </div>
           </div>
 
           {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8 border-t border-[#8a4a22]/10">
-            <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide">
-              &copy; {new Date().getFullYear()} K.R. Mangalam University. All rights reserved.
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-8 border-t border-[#8a4a22]/10">
+            <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide flex items-center">
+              &copy; 2026 K.R. Mangalam University. <span className="mx-2 text-[#7a4020]/30">•</span> All rights reserved.
             </div>
-            <div className="flex items-center gap-3 text-sm text-[#7a4020]/60 font-medium uppercase tracking-wider">
-              <span>Co-powered by</span>
-              <a href="https://eozka.com" target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity">
-                <img src="/eozka-logo.jpg" alt="eOzka" className="h-12 w-auto mix-blend-multiply object-contain" />
-              </a>
-            </div>
+            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 bg-white border border-[#8a4a22]/15 rounded-full px-5 py-2.5 hover:shadow-sm hover:border-[#8a4a22]/30 transition-all">
+              <span className="text-[0.65rem] font-bold text-[#7a4020]/60 uppercase tracking-[0.15em]">Engineered & Co-powered by</span>
+              <div className="w-[1px] h-4 bg-[#8a4a22]/20"></div>
+              <img src="/eozka-co-powered.png" alt="eOzka" className="h-3.5 w-auto mix-blend-multiply opacity-90" />
+            </a>
           </div>
         </div>
       </footer>
