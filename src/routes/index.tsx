@@ -339,10 +339,10 @@ function Landing() {
             <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide">
               &copy; {new Date().getFullYear()} K.R. Mangalam University. All rights reserved.
             </div>
-            <div className="flex items-center gap-2 text-xs text-[#7a4020]/60 font-medium uppercase tracking-wider">
+            <div className="flex items-center gap-3 text-sm text-[#7a4020]/60 font-medium uppercase tracking-wider">
               <span>Co-powered by</span>
-              <a href="https://eozka.com" target="_blank" rel="noreferrer" className="text-[#8a4a22] font-black tracking-widest text-sm flex items-center gap-1.5 hover:text-[#5a2c14] transition-colors">
-                <Zap className="h-4 w-4 fill-[#8a4a22]" /> eOzka
+              <a href="https://eozka.com" target="_blank" rel="noreferrer" className="hover:opacity-80 transition-opacity">
+                <img src="/eozka-logo.jpg" alt="eOzka" className="h-12 w-auto mix-blend-multiply object-contain" />
               </a>
             </div>
           </div>
