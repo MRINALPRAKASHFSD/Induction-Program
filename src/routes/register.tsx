@@ -29,28 +29,34 @@ export const Route = createFileRoute("/register")({
 // ─── Static KRMU data (no DB call needed) ──────────────────────────────────
 const DEPARTMENTS = [
   { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
-  { id: "soms", code: "SOMS", name: "School of Management Studies" },
+  { id: "zsai", code: "ZSAI", name: "Zenith School of AI" },
+  { id: "somc", code: "SOMC", name: "School of Management and Commerce" },
   { id: "sols", code: "SOLS", name: "School of Legal Studies" },
-  { id: "soa", code: "SOA", name: "School of Architecture" },
-  { id: "soah", code: "SOAH", name: "School of Allied Health Sciences" },
+  { id: "smas", code: "SMAS", name: "School of Medical & Allied Sciences" },
+  { id: "sola", code: "SOLA", name: "School of Liberal Arts" },
+  { id: "sbas", code: "SBAS", name: "School of Basic & Applied Sciences" },
+  { id: "soad", code: "SOAD", name: "School of Architecture & Design" },
+  { id: "sprs", code: "SPRS", name: "School of Physiotherapy and Rehabilitation Sciences" },
+  { id: "semc", code: "SEMC", name: "School of Emerging Media and Creator Economy" },
   { id: "soe", code: "SOE", name: "School of Education" },
-  { id: "somc", code: "SOMC", name: "School of Media & Communication" },
-  { id: "sosc", code: "SOSC", name: "School of Science" },
-  { id: "sohs", code: "SOHS", name: "School of Hospitality Studies" },
-  { id: "sofa", code: "SOFA", name: "School of Fine Arts & Design" },
+  { id: "sas", code: "SAS", name: "School of Agricultural Sciences" },
+  { id: "shmct", code: "SHMCT", name: "School of Hotel Management & Catering Technology" },
 ];
 
 const BRANCHES_BY_DEPT: Record<string, string[]> = {
-  soet: ["Computer Science Engineering", "Civil Engineering", "Mechanical Engineering", "Electronics & Communication", "Electrical Engineering", "Information Technology", "AI & Machine Learning", "Data Science", "Cyber Security"],
-  soms: ["MBA", "BBA", "BBA (Hons.)", "B.Com (Hons.)", "B.Com"],
+  soet: ["Computer Science Engineering", "Civil Engineering", "Mechanical Engineering", "Electronics & Communication", "Electrical Engineering", "Information Technology", "Cyber Security"],
+  zsai: ["AI & Machine Learning", "Data Science"],
+  somc: ["MBA", "BBA", "BBA (Hons.)", "B.Com (Hons.)", "B.Com"],
   sols: ["LLB (3-Year)", "LLB (5-Year / BA LLB)", "LLM"],
-  soa: ["B.Arch"],
-  soah: ["B.Pharm", "Physiotherapy (BPT)", "Optometry", "Medical Lab Tech", "Radiology"],
+  smas: ["B.Pharm", "Medical Lab Tech", "Radiology", "Optometry"],
+  sola: ["BA (Hons.) English", "BA (Hons.) Psychology", "BA (Hons.) Economics"],
+  sbas: ["B.Sc Chemistry", "B.Sc Physics", "B.Sc Mathematics", "B.Sc Biotechnology", "B.Sc Microbiology"],
+  soad: ["B.Arch", "B.Des (Interior Design)", "B.Des (Fashion Design)"],
+  sprs: ["Physiotherapy (BPT)", "MPT"],
+  semc: ["B.Journalism & Mass Communication", "BA (Hons.) Media Studies"],
   soe: ["B.Ed", "D.El.Ed", "M.Ed"],
-  somc: ["B.Journalism & Mass Communication", "BA (Hons.) Media Studies"],
-  sosc: ["B.Sc Chemistry", "B.Sc Physics", "B.Sc Mathematics", "B.Sc Biotechnology", "B.Sc Microbiology"],
-  sohs: ["B.Sc Hotel Management"],
-  sofa: ["B.Des (Fashion Design)", "B.Des (Interior Design)"],
+  sas: ["B.Sc (Hons.) Agriculture"],
+  shmct: ["B.Sc Hotel Management"],
 };
 
 function RegisterPage() {
@@ -74,6 +80,11 @@ function RegisterPage() {
     e.preventDefault();
     if (!form.full_name || !form.enrollment_no || !form.email || !form.department_id || !form.branch || !form.course) {
       toast.error("Please fill all required fields.");
+      return;
+    }
+
+    if (!form.email.toLowerCase().endsWith("@gmail.com")) {
+      toast.error("Please enter a valid @gmail.com address.");
       return;
     }
 
@@ -237,77 +248,87 @@ function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <main className="container mx-auto max-w-xl px-4 py-8 sm:py-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-          <h1 className="text-3xl font-bold">Student Registration</h1>
-          <p className="mt-1 text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
-        </motion.div>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Animated Liquid Glass Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+        <div className="orb orb-4" />
+      </div>
 
-        <form onSubmit={onRequestOtp} className="mt-8 grid gap-4 rounded-2xl border bg-card-soft p-6 shadow-sm">
-          <Field label="Full Name">
-            <Input required minLength={2} value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="e.g. Aarav Sharma" />
-          </Field>
+      <div className="relative z-10">
+        <SiteHeader />
+        <main className="container mx-auto max-w-xl px-4 py-8 sm:py-12">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+            <h1 className="text-3xl font-bold">Student Registration</h1>
+            <p className="mt-1 text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
+          </motion.div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Enrollment Number">
-              <Input required value={form.enrollment_no} onChange={(e) => update("enrollment_no", e.target.value)} placeholder="KRMU24CS0001" className="uppercase" />
+          <form onSubmit={onRequestOtp} className="mt-8 grid gap-4 rounded-2xl panel-liquid-glass p-6 shadow-glow relative z-10">
+            <Field label="Full Name">
+              <Input required minLength={2} value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="e.g. Aarav Sharma" className="bg-background/60" />
             </Field>
-            <Field label="Phone (optional)">
-              <Input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 9xxxxxxxxx" />
-            </Field>
-          </div>
 
-          <Field label="Email">
-            <Input required type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@krmangalam.edu.in" />
-          </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Enrollment Number">
+                <Input required value={form.enrollment_no} onChange={(e) => update("enrollment_no", e.target.value)} placeholder="KRMU24CS0001" className="uppercase bg-background/60" />
+              </Field>
+              <Field label="Phone (optional)">
+                <Input type="tel" value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+91 9xxxxxxxxx" className="bg-background/60" />
+              </Field>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Department">
-              <Select value={form.department_id} onValueChange={(v) => update("department_id", v)}>
-                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.code} — {d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Field label="Email">
+              <Input required type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@gmail.com" className="bg-background/60" />
             </Field>
-            <Field label="Branch">
-              <Select value={form.branch} onValueChange={(v) => update("branch", v)} disabled={!form.department_id}>
-                <SelectTrigger><SelectValue placeholder={form.department_id ? "Select branch" : "Pick department first"} /></SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b} value={b}>{b}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Course">
-              <Input required value={form.course} onChange={(e) => update("course", e.target.value)} placeholder="B.Tech / BBA / LLB…" />
-            </Field>
-            <Field label="Year">
-              <Select value={form.year} onValueChange={(v) => update("year", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="School">
+                <Select value={form.department_id} onValueChange={(v) => update("department_id", v)}>
+                  <SelectTrigger className="bg-background/60"><SelectValue placeholder="Select school" /></SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENTS.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Program">
+                <Select value={form.branch} onValueChange={(v) => update("branch", v)} disabled={!form.department_id}>
+                  <SelectTrigger className="bg-background/60"><SelectValue placeholder={form.department_id ? "Select program" : "Pick school first"} /></SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
 
-          <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting} className="mt-2 h-12 text-base rounded-full font-semibold">
-            {submitting ? "Sending OTP…" : "Continue with OTP"}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            By registering you agree to the KRMU induction code of conduct.
-          </p>
-        </form>
-      </main>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Course">
+                <Input required value={form.course} onChange={(e) => update("course", e.target.value)} placeholder="Write your course..." className="bg-background/60" />
+              </Field>
+              <Field label="Year">
+                <Select value={form.year} onValueChange={(v) => update("year", v)}>
+                  <SelectTrigger className="bg-background/60"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting} className="mt-2 h-12 text-base rounded-full font-semibold">
+              {submitting ? "Sending OTP…" : "Continue with OTP"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              By registering you agree to the KRMU induction code of conduct.
+            </p>
+          </form>
+        </main>
+      </div>
     </div>
   );
 }
