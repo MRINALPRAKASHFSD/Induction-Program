@@ -173,67 +173,89 @@ function RegisterPage() {
 
   if (done === "success") {
     return (
-      <div className="min-h-screen bg-background">
-        <SiteHeader />
-        <main className="container mx-auto max-w-md px-4 py-12">
-          <SuccessBurst
-            title="Registration Complete!"
-            subtitle="Your email has been verified and your profile is ready."
-          />
-          <div className="mt-6 grid gap-2">
-            <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold">
-              <Link to="/my-pass">View Digital Pass</Link>
-            </Button>
-            <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium">
-              <Link to="/">Back to home</Link>
-            </Button>
-          </div>
-        </main>
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Animated Liquid Glass Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" />
+          <div className="orb orb-2" />
+          <div className="orb orb-3" />
+          <div className="orb orb-4" />
+        </div>
+
+        <div className="relative z-10">
+          <SiteHeader />
+          <main className="container mx-auto max-w-md px-4 py-12">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
+              <SuccessBurst
+                title="Registration Complete!"
+                subtitle="Your email has been verified and your profile is ready."
+              />
+              <div className="mt-8 grid gap-3">
+                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
+                  <Link to="/my-pass">View Digital Pass</Link>
+                </Button>
+                <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium h-12">
+                  <Link to="/">Back to home</Link>
+                </Button>
+              </div>
+            </motion.div>
+          </main>
+        </div>
       </div>
     );
   }
 
   if (otpMode) {
     return (
-      <div className="min-h-screen bg-background">
-        <SiteHeader />
-        <main className="container mx-auto max-w-md px-4 py-12">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <div className="text-center mb-8">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Animated Liquid Glass Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" />
+          <div className="orb orb-2" />
+          <div className="orb orb-3" />
+          <div className="orb orb-4" />
+        </div>
+
+        <div className="relative z-10">
+          <SiteHeader />
+          <main className="container mx-auto max-w-md px-4 py-12">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+              <div className="text-center mb-8 relative z-10">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h1 className="text-3xl font-bold">Verify your Email</h1>
+                <p className="mt-2 text-muted-foreground text-sm">
+                  We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>
+                </p>
               </div>
-              <h1 className="text-2xl font-bold">Verify your Email</h1>
-              <p className="mt-2 text-muted-foreground text-sm">
-                We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>
-              </p>
-            </div>
-            
-            <form onSubmit={onVerifyOtp} className="space-y-6 bg-card border rounded-2xl p-6 shadow-sm">
-              <div className="space-y-2 text-center">
-                <Label htmlFor="otp">Enter 6-digit Code</Label>
-                <Input 
-                  id="otp"
-                  type="text" 
-                  maxLength={6}
-                  required 
-                  className="text-center text-2xl tracking-[0.5em] font-mono h-14" 
-                  value={otp} 
-                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))} 
-                  placeholder="------" 
-                />
-              </div>
-              <div className="space-y-3">
-                <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting || otp.length !== 6} className="w-full h-12 rounded-full font-semibold">
-                  {submitting ? "Verifying…" : "Verify & Complete"}
-                </Button>
-                <Button type="button" variant="ghost" className="w-full rounded-full" onClick={() => setOtpMode(false)}>
-                  Change Email
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </main>
+              
+              <form onSubmit={onVerifyOtp} className="space-y-6 panel-liquid-glass rounded-2xl p-6 shadow-glow relative z-10">
+                <div className="space-y-2 text-center">
+                  <Label htmlFor="otp">Enter 6-digit Code</Label>
+                  <Input 
+                    id="otp"
+                    type="text" 
+                    maxLength={6}
+                    required 
+                    className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-background/60" 
+                    value={otp} 
+                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))} 
+                    placeholder="------" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting || otp.length !== 6} className="w-full h-12 rounded-full font-semibold">
+                    {submitting ? "Verifying…" : "Verify & Complete"}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full rounded-full hover:bg-background/40" onClick={() => setOtpMode(false)}>
+                    Change Email
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </main>
+        </div>
       </div>
     );
   }

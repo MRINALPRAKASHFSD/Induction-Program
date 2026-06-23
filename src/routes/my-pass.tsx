@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import QRCode from "qrcode";
 import { User, Award, CalendarDays, Zap, ArrowRight, ShieldCheck, Bell } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
@@ -21,7 +20,6 @@ export const Route = createFileRoute("/my-pass")({
 function MyPassPage() {
   const [profile, setProfile] = useState<LocalStudent | null>(null);
   const [livePoints, setLivePoints] = useState<number | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,15 +27,6 @@ function MyPassPage() {
     if (p) {
       setProfile(p);
       
-      // Generate QR Code
-      QRCode.toDataURL(JSON.stringify({ type: 'student_pass', enrollment_no: p.enrollment_no }), {
-        width: 300,
-        margin: 2,
-        color: { dark: "#2d0d12", light: "#ffffff00" }, // Transparent background
-      })
-        .then(setQrCodeUrl)
-        .catch(console.error);
-
       // Fetch live points from server
       lookupStudent({ data: { enrollment_no: p.enrollment_no } })
         .then((res: any) => {
@@ -120,17 +109,6 @@ function MyPassPage() {
               </div>
             </div>
 
-            {/* QR Code Section */}
-            <div className="mt-8 flex flex-col items-center justify-center rounded-2xl bg-white p-4 shadow-inner">
-              {qrCodeUrl ? (
-                <img src={qrCodeUrl} alt="Digital Pass QR" className="h-48 w-48 object-contain mix-blend-multiply" />
-              ) : (
-                <div className="h-48 w-48 animate-pulse bg-muted rounded-xl" />
-              )}
-              <p className="mt-3 text-xs font-medium text-muted-foreground text-center">
-                Scan at entry points and clubs
-              </p>
-            </div>
           </div>
 
           {/* Gamification Stats */}
