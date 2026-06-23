@@ -43,21 +43,12 @@ const DEPARTMENTS = [
   { id: "shmct", code: "SHMCT", name: "School of Hotel Management & Catering Technology" },
 ];
 
-const BRANCHES_BY_DEPT: Record<string, string[]> = {
-  soet: ["Computer Science Engineering", "Civil Engineering", "Mechanical Engineering", "Electronics & Communication", "Electrical Engineering", "Information Technology", "Cyber Security"],
-  zsai: ["AI & Machine Learning", "Data Science"],
-  somc: ["MBA", "BBA", "BBA (Hons.)", "B.Com (Hons.)", "B.Com"],
-  sols: ["LLB (3-Year)", "LLB (5-Year / BA LLB)", "LLM"],
-  smas: ["B.Pharm", "Medical Lab Tech", "Radiology", "Optometry"],
-  sola: ["BA (Hons.) English", "BA (Hons.) Psychology", "BA (Hons.) Economics"],
-  sbas: ["B.Sc Chemistry", "B.Sc Physics", "B.Sc Mathematics", "B.Sc Biotechnology", "B.Sc Microbiology"],
-  soad: ["B.Arch", "B.Des (Interior Design)", "B.Des (Fashion Design)"],
-  sprs: ["Physiotherapy (BPT)", "MPT"],
-  semc: ["B.Journalism & Mass Communication", "BA (Hons.) Media Studies"],
-  soe: ["B.Ed", "D.El.Ed", "M.Ed"],
-  sas: ["B.Sc (Hons.) Agriculture"],
-  shmct: ["B.Sc Hotel Management"],
-};
+const PROGRAM_LEVELS = [
+  "Undergraduate Programmes",
+  "Postgraduate Programmes",
+  "Doctoral Programmes",
+  "Diploma Programmes",
+];
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -73,7 +64,7 @@ function RegisterPage() {
   const update = <K extends keyof typeof form>(k: K, v: string) =>
     setForm((f) => ({ ...f, [k]: v, ...(k === "department_id" ? { branch: "" } : {}) }));
 
-  const branches = BRANCHES_BY_DEPT[form.department_id] ?? [];
+  const branches = form.department_id ? PROGRAM_LEVELS : [];
   const deptName = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
 
   const onRequestOtp = async (e: React.FormEvent) => {
