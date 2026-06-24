@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import jwt from 'jsonwebtoken';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -77,26 +77,25 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: result.error });
     }
 
-    // OTP is valid. Get or create Firebase Auth user
-    const auth = getAuth();
-    let uid;
-    try {
-      const user = await auth.getUserByEmail(email);
-      uid = user.uid;
-    } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        const newUser = await auth.createUser({
-          email: email.toLowerCase(),
-          emailVerified: true
-        });
-        uid = newUser.uid;
-      } else {
-        throw error;
-      }
+    // OTP is valid. 
+    // Instead of firebase-admin/auth which crashes on Vercel due to missing native bindings,
+    // we sign the Firebase Custom Token manually.
+    if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+       throw new Error("Missing credentials for token generation");
     }
-
-    // Generate Custom Token for the client
-    const customToken = await auth.createCustomToken(uid);
+    
+    const uid = email.toLowerCase();
+    const customToken = jwt.sign(
+      { uid: uid }, 
+      process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), 
+      {
+        algorithm: 'RS256',
+        issuer: process.env.FIREBASE_CLIENT_EMAIL,
+        subject: process.env.FIREBASE_CLIENT_EMAIL,
+        audience: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+        expiresIn: '1h'
+      }
+    );
     
     return res.status(200).json({ success: true, customToken });
   } catch (error: any) {
