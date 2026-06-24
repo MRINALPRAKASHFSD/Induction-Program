@@ -340,10 +340,10 @@ function Landing() {
             <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide flex items-center">
               &copy; 2026 K.R. Mangalam University. <span className="mx-2 text-[#7a4020]/30">•</span> All rights reserved.
             </div>
-            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 bg-white border border-[#8a4a22]/15 rounded-full px-5 py-2.5 hover:shadow-sm hover:border-[#8a4a22]/30 transition-all">
-              <span className="text-[0.65rem] font-bold text-[#7a4020]/60 uppercase tracking-[0.15em]">Engineered & Co-powered by</span>
-              <div className="w-[1px] h-4 bg-[#8a4a22]/20"></div>
-              <img src="/eozka-co-powered.png" alt="eOzka" className="h-3.5 w-auto mix-blend-multiply opacity-90" />
+            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="flex items-center gap-5 bg-white border border-[#8a4a22]/15 rounded-full px-8 py-3 hover:shadow-md hover:border-[#8a4a22]/30 transition-all">
+              <span className="text-[15px] font-bold text-[#7a4020]/80 uppercase tracking-[0.12em] leading-none">Engineered & Co-powered by</span>
+              <div className="w-[2px] h-7 bg-[#8a4a22]/20"></div>
+              <img src="/eozka-logo.jpg" alt="eOzka" className="h-14 w-auto mix-blend-multiply object-contain scale-[1.1]" />
             </a>
           </div>
         </div>
