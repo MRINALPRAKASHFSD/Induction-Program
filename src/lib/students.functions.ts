@@ -39,6 +39,15 @@ export const registerStudent = async ({ data }: { data: any }) => {
   // Direct O(1) doc lookup — enrollment_no is the document ID
   const docSnap = await getDoc(newStudentRef);
   if (docSnap.exists()) {
+    const existingData = docSnap.data();
+    // If the enrollment number is already registered under a different email/auth session
+    if (existingData.auth_uid && existingData.auth_uid !== parsed.auth_uid) {
+      return { 
+        ok: false, 
+        error: "This enrollment number is already registered on another device or email. Please log in with the original email or contact support." 
+      };
+    }
+    // Otherwise, they are just "logging back in" on a new device with the SAME email.
     return { ok: true, student_id: newStudentRef.id, duplicate: true };
   }
 

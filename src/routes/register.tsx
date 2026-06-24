@@ -14,7 +14,7 @@ import { localDb } from "@/lib/local-db";
 import { registerStudent } from "@/lib/students.functions";
 
 import { auth } from "@/lib/firebase/config";
-import { signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -60,6 +60,21 @@ function RegisterPage() {
   const [otpMode, setOtpMode] = useState(false);
   const [otp, setOtp] = useState("");
   const [done, setDone] = useState<string | null>(null);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
+
+  // Check auth state to prevent re-registration
+  import("react").then((React) => {
+    React.useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setAlreadyRegistered(true);
+        } else {
+          setAlreadyRegistered(false);
+        }
+      });
+      return () => unsubscribe();
+    }, []);
+  });
 
   const update = <K extends keyof typeof form>(k: K, v: string) =>
     setForm((f) => ({ ...f, [k]: v, ...(k === "department_id" ? { branch: "" } : {}) }));
@@ -253,6 +268,52 @@ function RegisterPage() {
                   </Button>
                 </div>
               </form>
+            </motion.div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (alreadyRegistered) {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Animated Liquid Glass Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" />
+          <div className="orb orb-2" />
+          <div className="orb orb-3" />
+          <div className="orb orb-4" />
+        </div>
+
+        <div className="relative z-10">
+          <SiteHeader />
+          <main className="container mx-auto max-w-md px-4 py-12">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-3">Already Registered</h1>
+              <p className="text-muted-foreground mb-8">
+                You are currently logged in. To register a new account, you must log out first.
+              </p>
+              <div className="mt-4 grid gap-3">
+                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
+                  <Link to="/my-pass">View Digital Pass</Link>
+                </Button>
+                <Button 
+                  variant="liquidGlassDark" 
+                  size="lg" 
+                  className="rounded-full font-medium h-12"
+                  onClick={async () => {
+                    await signOut(auth);
+                    localDb.clear();
+                    window.location.reload();
+                  }}
+                >
+                  Log out
+                </Button>
+              </div>
             </motion.div>
           </main>
         </div>
