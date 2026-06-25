@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
 import { SuccessBurst } from "@/components/success-burst";
@@ -57,45 +57,52 @@ function RegisterPage() {
     department_id: "", branch: "", course: "", year: "1",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [otpMode, setOtpMode] = useState(false);
-  const [otp, setOtp] = useState("");
   const [done, setDone] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
-  // Check auth state to prevent re-registration
-  import("react").then((React) => {
-    React.useEffect(() => {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          setAlreadyRegistered(true);
-        } else {
-          setAlreadyRegistered(false);
-        }
-      });
-      return () => unsubscribe();
-    }, []);
-  });
+  // ── Email verification states ──────────────────────────────────────────────
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmail, setVerifyingEmail] = useState(false);
+  const [emailOtp, setEmailOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [storedCustomToken, setStoredCustomToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAlreadyRegistered(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const update = <K extends keyof typeof form>(k: K, v: string) =>
     setForm((f) => ({ ...f, [k]: v, ...(k === "department_id" ? { branch: "" } : {}) }));
 
+  // Reset email verification whenever the email changes
+  const updateEmail = (v: string) => {
+    update("email", v);
+    if (emailVerified || verifyingEmail) {
+      setEmailVerified(false);
+      setVerifyingEmail(false);
+      setEmailOtp("");
+      setStoredCustomToken(null);
+    }
+  };
+
   const branches = form.department_id ? PROGRAM_LEVELS : [];
   const deptName = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
 
-  const onRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.full_name || !form.enrollment_no || !form.email || !form.department_id || !form.branch || !form.course) {
-      toast.error("Please fill all required fields.");
+  // ── Send OTP to email ──────────────────────────────────────────────────────
+  const onSendEmailOtp = async () => {
+    if (!form.email) {
+      toast.error("Please enter your email address first.");
       return;
     }
-
     if (!form.email.toLowerCase().endsWith("@gmail.com")) {
       toast.error("Please enter a valid @gmail.com address.");
       return;
     }
 
-    setSubmitting(true);
-
+    setSendingOtp(true);
     try {
       const response = await fetch("/api/send-otp", {
         method: "POST",
@@ -109,32 +116,30 @@ function RegisterPage() {
       } else {
         throw new Error("API returned an invalid response (not JSON). Ensure your backend is running.");
       }
-      
       if (!response.ok) throw new Error(data.error || "Failed to send OTP");
-
-      setOtpMode(true);
+      setVerifyingEmail(true);
       toast.success("OTP sent to your email!");
     } catch (err: any) {
-      console.error("OTP request error:", err);
-      toast.error(err.message || "An unexpected error occurred.");
+      console.error("Send OTP error:", err);
+      toast.error(err.message || "Failed to send OTP.");
     } finally {
-      setSubmitting(false);
+      setSendingOtp(false);
     }
   };
 
-  const onVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp || otp.length !== 6) {
-      toast.error("Please enter a valid 6-digit OTP.");
+  // ── Verify OTP inline ──────────────────────────────────────────────────────
+  const onVerifyEmailOtp = async () => {
+    if (!emailOtp || emailOtp.length !== 6) {
+      toast.error("Please enter the 6-digit OTP.");
       return;
     }
 
-    setSubmitting(true);
+    setSendingOtp(true);
     try {
       const response = await fetch("/api/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, otp }),
+        body: JSON.stringify({ email: form.email, otp: emailOtp }),
       });
       const contentType = response.headers.get("content-type");
       let data;
@@ -143,13 +148,40 @@ function RegisterPage() {
       } else {
         throw new Error("API returned an invalid response (not JSON). Ensure your backend is running.");
       }
-      
       if (!response.ok) throw new Error(data.error || "Invalid OTP");
 
-      // Sign in securely using custom token
-      const result = await signInWithCustomToken(auth, data.customToken);
+      setStoredCustomToken(data.customToken);
+      setEmailVerified(true);
+      setVerifyingEmail(false);
+      setEmailOtp("");
+      toast.success("Email verified ✓");
+    } catch (err: any) {
+      console.error("Verify OTP error:", err);
+      toast.error(err.message || "Invalid OTP. Please try again.");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
 
-      // Create student profile
+  // ── Final registration submit ───────────────────────────────────────────────
+  const onSubmitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.full_name || !form.enrollment_no || !form.email || !form.department_id || !form.branch || !form.course) {
+      toast.error("Please fill all required fields.");
+      return;
+    }
+
+    if (!emailVerified || !storedCustomToken) {
+      toast.error("Please verify your email first using the 'Verify Email' button.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Sign in with the token we already obtained during email verification
+      const result = await signInWithCustomToken(auth, storedCustomToken);
+
       const profile = {
         full_name: form.full_name,
         enrollment_no: form.enrollment_no.toUpperCase(),
@@ -179,24 +211,23 @@ function RegisterPage() {
 
       setDone("success");
     } catch (err: any) {
-      console.error("OTP verify error:", err);
-      toast.error(err.message || "Invalid OTP.");
+      console.error("Registration error:", err);
+      toast.error(err.message || "Registration failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
+  // ── Success screen ──────────────────────────────────────────────────────────
   if (done === "success") {
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Animated Liquid Glass Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="orb orb-1" />
           <div className="orb orb-2" />
           <div className="orb orb-3" />
           <div className="orb orb-4" />
         </div>
-
         <div className="relative z-10">
           <SiteHeader />
           <main className="container mx-auto max-w-md px-4 py-12">
@@ -220,72 +251,16 @@ function RegisterPage() {
     );
   }
 
-  if (otpMode) {
-    return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Animated Liquid Glass Background */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-          <div className="orb orb-4" />
-        </div>
-
-        <div className="relative z-10">
-          <SiteHeader />
-          <main className="container mx-auto max-w-md px-4 py-12">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-              <div className="text-center mb-8 relative z-10">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <h1 className="text-3xl font-bold">Verify your Email</h1>
-                <p className="mt-2 text-muted-foreground text-sm">
-                  We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>
-                </p>
-              </div>
-              
-              <form onSubmit={onVerifyOtp} className="space-y-6 panel-liquid-glass rounded-2xl p-6 shadow-glow relative z-10">
-                <div className="space-y-2 text-center">
-                  <Label htmlFor="otp">Enter 6-digit Code</Label>
-                  <Input 
-                    id="otp"
-                    type="text" 
-                    maxLength={6}
-                    required 
-                    className="text-center text-2xl tracking-[0.5em] font-mono h-14 bg-background/60" 
-                    value={otp} 
-                    onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))} 
-                    placeholder="------" 
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting || otp.length !== 6} className="w-full h-12 rounded-full font-semibold">
-                    {submitting ? "Verifying…" : "Verify & Complete"}
-                  </Button>
-                  <Button type="button" variant="ghost" className="w-full rounded-full hover:bg-background/40" onClick={() => setOtpMode(false)}>
-                    Change Email
-                  </Button>
-                </div>
-              </form>
-            </motion.div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
+  // ── Already registered screen ───────────────────────────────────────────────
   if (alreadyRegistered) {
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Animated Liquid Glass Background */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="orb orb-1" />
           <div className="orb orb-2" />
           <div className="orb orb-3" />
           <div className="orb orb-4" />
         </div>
-
         <div className="relative z-10">
           <SiteHeader />
           <main className="container mx-auto max-w-md px-4 py-12">
@@ -301,9 +276,9 @@ function RegisterPage() {
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
                   <Link to="/my-pass">View Digital Pass</Link>
                 </Button>
-                <Button 
-                  variant="liquidGlassDark" 
-                  size="lg" 
+                <Button
+                  variant="liquidGlassDark"
+                  size="lg"
                   className="rounded-full font-medium h-12"
                   onClick={async () => {
                     await signOut(auth);
@@ -321,9 +296,9 @@ function RegisterPage() {
     );
   }
 
+  // ── Main registration form ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Animated Liquid Glass Background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="orb orb-1" />
         <div className="orb orb-2" />
@@ -339,7 +314,7 @@ function RegisterPage() {
             <p className="mt-1 text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
           </motion.div>
 
-          <form onSubmit={onRequestOtp} className="mt-8 grid gap-4 rounded-2xl panel-liquid-glass p-6 shadow-glow relative z-10">
+          <form onSubmit={onSubmitForm} className="mt-8 grid gap-4 rounded-2xl panel-liquid-glass p-6 shadow-glow relative z-10">
             <Field label="Full Name">
               <Input required minLength={2} value={form.full_name} onChange={(e) => update("full_name", e.target.value)} placeholder="e.g. Aarav Sharma" className="bg-background/60" />
             </Field>
@@ -353,9 +328,111 @@ function RegisterPage() {
               </Field>
             </div>
 
-            <Field label="Email">
-              <Input required type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@gmail.com" className="bg-background/60" />
-            </Field>
+            {/* ── Email field with inline verification ── */}
+            <div className="grid gap-2">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Email</Label>
+                {emailVerified && (
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                      <path d="m9 11 3 3L22 4"/>
+                    </svg>
+                    Verified
+                  </motion.span>
+                )}
+              </div>
+
+              <div className="relative">
+                <Input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateEmail(e.target.value)}
+                  placeholder="you@gmail.com"
+                  className={`bg-background/60 transition-colors ${emailVerified ? "border-emerald-500/50 focus-visible:ring-emerald-500/30" : ""}`}
+                />
+              </div>
+
+              {/* Verify Email button — shown when not yet verified and not in OTP entry */}
+              {!emailVerified && !verifyingEmail && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}>
+                  <button
+                    type="button"
+                    onClick={onSendEmailOtp}
+                    disabled={sendingOtp || !form.email}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-border/60 bg-background/40 hover:bg-background/80 hover:border-primary/40 text-muted-foreground hover:text-foreground transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingOtp ? (
+                      <>
+                        <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        Sending…
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect width="20" height="16" x="2" y="4" rx="2"/>
+                          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        Verify Email
+                      </>
+                    )}
+                  </button>
+                </motion.div>
+              )}
+
+              {/* Inline OTP entry — shown after OTP is sent */}
+              <AnimatePresence>
+                {verifyingEmail && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-1 flex flex-col gap-2 rounded-xl border border-border/50 bg-background/30 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Enter the 6-digit code sent to <span className="font-medium text-foreground">{form.email}</span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          maxLength={6}
+                          value={emailOtp}
+                          onChange={(e) => setEmailOtp(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="------"
+                          className="text-center text-lg tracking-[0.4em] font-mono h-10 bg-background/60 flex-1"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={onVerifyEmailOtp}
+                          disabled={sendingOtp || emailOtp.length !== 6}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          {sendingOtp ? (
+                            <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          ) : (
+                            "Confirm"
+                          )}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setVerifyingEmail(false); setEmailOtp(""); }}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="School">
@@ -394,8 +471,14 @@ function RegisterPage() {
               </Field>
             </div>
 
-            <Button type="submit" variant="liquidGlassMaroon" size="lg" disabled={submitting} className="mt-2 h-12 text-base rounded-full font-semibold">
-              {submitting ? "Sending OTP…" : "Continue with OTP"}
+            <Button
+              type="submit"
+              variant="liquidGlassMaroon"
+              size="lg"
+              disabled={submitting}
+              className="mt-2 h-12 text-base rounded-full font-semibold"
+            >
+              {submitting ? "Registering…" : "Register"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
               By registering you agree to the KRMU induction code of conduct.
