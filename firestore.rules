@@ -98,5 +98,32 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;
     }
+
+    // 8. SECURE DOCUMENTS
+    match /secure_documents/{docId} {
+      // Only super_admin can read the documents list
+      allow read: if request.auth != null && request.auth.token.role == 'super_admin';
+      // Only coordinator can upload document metadata
+      allow create: if request.auth != null && request.auth.token.role == 'coordinator';
+      // Allow updates for soft deletes/restores (coordinators can't delete, super_admins can)
+      allow update: if request.auth != null && (request.auth.token.role == 'coordinator' || request.auth.token.role == 'super_admin');
+      allow delete: if request.auth != null && request.auth.token.role == 'super_admin';
+    }
+
+    // 9. USERS (RBAC)
+    match /users/{userId} {
+      // Allow a user to read their own profile, or super_admin to read all
+      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.role == 'super_admin');
+      // Only super_admin can create/update users
+      allow write: if request.auth != null && request.auth.token.role == 'super_admin';
+    }
+
+    // 10. AUDIT LOGS
+    match /audit_logs/{logId} {
+      // Only super admin can read the audit logs
+      allow read: if request.auth != null && request.auth.token.role == 'super_admin';
+      allow create: if request.auth != null;
+      allow update, delete: if false; // Immutable logs
+    }
   }
 }
