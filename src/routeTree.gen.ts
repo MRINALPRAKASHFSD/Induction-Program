@@ -22,6 +22,7 @@ import { Route as AdminScheduleRouteImport } from './routes/admin.schedule'
 import { Route as AdminScannerRouteImport } from './routes/admin.scanner'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
+import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
@@ -93,6 +94,11 @@ const AdminEventsRoute = AdminEventsRouteImport.update({
   path: '/admin/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDocumentsRoute = AdminDocumentsRouteImport.update({
+  id: '/admin/documents',
+  path: '/admin/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/admin/dashboard',
   path: '/admin/dashboard',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/scanner': typeof AdminScannerRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/clubs'
     | '/admin/dashboard'
+    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/scanner'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminClubsRoute: typeof AdminClubsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDocumentsRoute: typeof AdminDocumentsRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminScannerRoute: typeof AdminScannerRoute
@@ -357,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/documents': {
+      id: '/admin/documents'
+      path: '/admin/documents'
+      fullPath: '/admin/documents'
+      preLoaderRoute: typeof AdminDocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/dashboard': {
       id: '/admin/dashboard'
       path: '/admin/dashboard'
@@ -408,6 +428,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminClubsRoute: AdminClubsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminDocumentsRoute: AdminDocumentsRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminScannerRoute: AdminScannerRoute,
