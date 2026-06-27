@@ -117,7 +117,6 @@ function AdminDocumentsPage() {
   const lockVault = async () => {
     setCurrentUserRole(null);
     if (timerRef.current) clearTimeout(timerRef.current);
-    await signOut(auth);
   };
 
   const startTimer = () => {
@@ -381,19 +380,19 @@ function AdminDocumentsPage() {
         {/* Tabs */}
         <div className="flex gap-2 p-1 bg-black/5 rounded-xl w-fit flex-wrap">
           <button
-            onClick={() => { setActiveTab("upload"); lockVault(); }}
+            onClick={() => setActiveTab("upload")}
             className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === "upload" ? "bg-white shadow-sm text-[#5a2c14]" : "text-[#7a4020] hover:text-[#5a2c14]"}`}
           >
             <UploadCloud className="w-4 h-4" /> Coordinator Upload
           </button>
           <button
-            onClick={() => { setActiveTab("view"); lockVault(); }}
+            onClick={() => { setActiveTab("view"); if (currentUserRole === 'super_admin') fetchDocuments(); }}
             className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === "view" ? "bg-white shadow-sm text-[#5a2c14]" : "text-[#7a4020] hover:text-[#5a2c14]"}`}
           >
             <ShieldCheck className="w-4 h-4" /> Super Admin View
           </button>
           <button
-            onClick={() => { setActiveTab("users"); lockVault(); }}
+            onClick={() => setActiveTab("users")}
             className={`px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === "users" ? "bg-white shadow-sm text-[#5a2c14]" : "text-[#7a4020] hover:text-[#5a2c14]"}`}
           >
             <Users className="w-4 h-4" /> User Management
