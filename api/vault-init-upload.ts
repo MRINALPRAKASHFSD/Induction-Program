@@ -11,7 +11,7 @@ if (!getApps().length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
     });
   } catch (e) {
     console.error("Firebase Admin Initialization Error:", e);
@@ -40,8 +40,8 @@ export default async function handler(req: any, res: any) {
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await getAuth().verifyIdToken(token);
 
-    if (decodedToken.role !== 'coordinator') {
-      return res.status(403).json({ error: 'Forbidden. Only coordinators can upload.' });
+    if (decodedToken.role !== 'coordinator' && decodedToken.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Forbidden. Only authorized personnel can upload.' });
     }
 
     const { filename, fileSize, fileHash, category } = req.body;
