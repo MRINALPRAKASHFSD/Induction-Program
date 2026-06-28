@@ -324,9 +324,9 @@ function Landing() {
             <div className="md:col-span-3 lg:col-span-2 flex flex-col gap-4 mt-2 md:mt-0">
               <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-wider mb-2">Resources</h4>
               <nav className="flex flex-col gap-3.5">
-                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Help Center</a>
-                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Privacy Policy</a>
-                <a href="#" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Terms of Service</a>
+                <Link to="/help" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Help Center</Link>
+                <Link to="/privacy" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Privacy Policy</Link>
+                <Link to="/terms" className="text-sm text-[#7a4020]/70 hover:text-[#8a4a22] transition-colors">Terms of Service</Link>
                 <Link to="/admin/login" className="mt-2 flex items-center justify-between bg-[#8a4a22]/5 border border-[#8a4a22]/10 rounded-xl p-3 hover:bg-[#8a4a22]/10 transition-colors group">
                   <span className="text-xs font-bold text-[#5a2c14] leading-tight">Admin<br />Portal</span>
                   <ArrowRight className="h-4 w-4 text-[#8a4a22] group-hover:translate-x-0.5 transition-transform" />
@@ -338,7 +338,7 @@ function Landing() {
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-8 border-t border-[#8a4a22]/10">
             <div className="text-xs text-[#7a4020]/60 font-medium tracking-wide flex items-center">
-              &copy; 2026 K.R. Mangalam University. <span className="mx-2 text-[#7a4020]/30">•</span> All rights reserved.
+              &copy; 2024 EOZKA. <span className="mx-2 text-[#7a4020]/30">•</span> All rights reserved.
             </div>
             <a href="https://eozka.com" target="_blank" rel="noreferrer" className="flex items-center gap-5 bg-white border border-[#8a4a22]/15 rounded-full px-8 py-3 hover:shadow-md hover:border-[#8a4a22]/30 transition-all">
               <span className="text-[15px] font-bold text-[#7a4020]/80 uppercase tracking-[0.12em] leading-none">Engineered & Co-powered by</span>
