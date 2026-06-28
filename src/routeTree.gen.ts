@@ -9,9 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as MyPassRouteImport } from './routes/my-pass'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as ClubsRouteImport } from './routes/clubs'
 import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
@@ -29,6 +32,11 @@ import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcem
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScheduleRoute = ScheduleRouteImport.update({
   id: '/schedule',
   path: '/schedule',
@@ -39,9 +47,19 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MyPassRoute = MyPassRouteImport.update({
   id: '/my-pass',
   path: '/my-pass',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClubsRoute = ClubsRouteImport.update({
@@ -130,9 +148,12 @@ export interface FileRoutesByFullPath {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
+  '/terms': typeof TermsRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -151,9 +172,12 @@ export interface FileRoutesByTo {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
+  '/terms': typeof TermsRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -173,9 +197,12 @@ export interface FileRoutesById {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
+  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
   '/schedule': typeof ScheduleRoute
+  '/terms': typeof TermsRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -196,9 +223,12 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/help'
     | '/my-pass'
+    | '/privacy'
     | '/register'
     | '/schedule'
+    | '/terms'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -217,9 +247,12 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/help'
     | '/my-pass'
+    | '/privacy'
     | '/register'
     | '/schedule'
+    | '/terms'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -238,9 +271,12 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/help'
     | '/my-pass'
+    | '/privacy'
     | '/register'
     | '/schedule'
+    | '/terms'
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
@@ -260,9 +296,12 @@ export interface RootRouteChildren {
   AnnouncementsRoute: typeof AnnouncementsRoute
   AttendanceRoute: typeof AttendanceRoute
   ClubsRoute: typeof ClubsRoute
+  HelpRoute: typeof HelpRoute
   MyPassRoute: typeof MyPassRoute
+  PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
   ScheduleRoute: typeof ScheduleRoute
+  TermsRoute: typeof TermsRoute
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
@@ -279,6 +318,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
@@ -293,11 +339,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/my-pass': {
       id: '/my-pass'
       path: '/my-pass'
       fullPath: '/my-pass'
       preLoaderRoute: typeof MyPassRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clubs': {
@@ -420,9 +480,12 @@ const rootRouteChildren: RootRouteChildren = {
   AnnouncementsRoute: AnnouncementsRoute,
   AttendanceRoute: AttendanceRoute,
   ClubsRoute: ClubsRoute,
+  HelpRoute: HelpRoute,
   MyPassRoute: MyPassRoute,
+  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
   ScheduleRoute: ScheduleRoute,
+  TermsRoute: TermsRoute,
   AdminActivityRoute: AdminActivityRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
