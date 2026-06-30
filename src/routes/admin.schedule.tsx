@@ -48,7 +48,7 @@ function AdminSchedule() {
       {!rows ? (
         <div className="grid gap-3" />
       ) : rows.length === 0 ? (
-        <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No sessions scheduled.</p>
+        <p className="rounded-xl border glass-card-hero p-8 text-center text-sm text-muted-foreground">No sessions scheduled.</p>
       ) : (
         <div className="space-y-8">
           {days.map((day) => (
@@ -78,7 +78,7 @@ function EventCard({ event, onChanged }: { event: any; onChanged: () => void }) 
     catch (e: any) { toast.error(e.message); }
   };
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-col gap-3">
+    <div className="rounded-xl border glass-card-hero p-4 shadow-sm flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
