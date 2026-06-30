@@ -42,7 +42,7 @@ function AdminDashboard() {
         <Kpi icon={Calendar} label="Events live" value={events} accent="from-chart-3 to-primary" />
       </div>
 
-      <section className="mt-8 rounded-2xl border bg-card p-5 shadow-sm">
+      <section className="mt-8 rounded-2xl border glass-card-hero p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Live registration feed</h2>
@@ -75,7 +75,7 @@ function AdminDashboard() {
 
 function Kpi({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number | null; accent: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border bg-card p-5 shadow-sm">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border glass-card-hero p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">{label}</span>
         <span className={`grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br ${accent} text-primary-foreground shadow-sm`}>
