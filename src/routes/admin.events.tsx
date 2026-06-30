@@ -92,7 +92,7 @@ function AdminEvents() {
       {!rows ? (
         <div className="grid gap-3" />
       ) : rows.length === 0 ? (
-        <p className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No events yet. Create one to get started.</p>
+        <p className="rounded-xl border glass-card-hero p-8 text-center text-sm text-muted-foreground">No events yet. Create one to get started.</p>
       ) : (
         <div className="grid gap-3">
           {rows.map((r) => <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />)}
@@ -132,7 +132,7 @@ function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; o
   const deptName = departments.find(d => d.id === row.department_id)?.name || "All Schools";
 
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <div className="rounded-xl border glass-card-hero p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

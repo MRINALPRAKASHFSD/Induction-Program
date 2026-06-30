@@ -79,7 +79,7 @@ function AdminAnnouncementsPage() {
     <AdminShell title="Manage Announcements">
       <div className="grid gap-8 md:grid-cols-2">
         {/* Publish Form */}
-        <div className="rounded-xl border bg-card p-6 shadow-sm h-fit">
+        <div className="rounded-xl border glass-card-hero p-6 shadow-sm h-fit">
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
             <Send className="h-5 w-5 text-primary" /> Publish New
           </h2>
@@ -129,13 +129,13 @@ function AdminAnnouncementsPage() {
               <div className="h-24 bg-muted rounded-xl" />
             </div>
           ) : announcements.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground border rounded-xl bg-card">
+            <div className="text-center py-10 text-muted-foreground border rounded-xl glass-card-hero">
               No announcements published yet.
             </div>
           ) : (
             <div className="space-y-3">
               {announcements.map(a => (
-                <div key={a.id} className={`p-4 rounded-xl border ${a.is_important ? 'border-red-500/20 bg-red-500/5' : 'bg-card'}`}>
+                <div key={a.id} className={`p-4 rounded-xl border ${a.is_important ? 'border-red-500/20 bg-red-500/5' : 'glass-card-hero'}`}>
                   <div className="flex justify-between items-start gap-4">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
