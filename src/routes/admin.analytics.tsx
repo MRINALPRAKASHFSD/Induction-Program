@@ -110,7 +110,7 @@ function AdminAnalytics() {
 
 function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border bg-card p-4 shadow-sm ${className}`}>
+    <div className={`rounded-xl border glass-card-hero p-4 shadow-sm ${className}`}>
       <h3 className="mb-3 text-sm font-semibold">{title}</h3>
       {children}
     </div>
