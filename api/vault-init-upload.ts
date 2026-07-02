@@ -44,14 +44,22 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: 'Forbidden. Only authorized personnel can upload.' });
     }
 
-    const { filename, fileSize, fileHash, category } = req.body;
+    const { filename, fileSize, fileHash, category, uploadType = 'Document', imageLocation } = req.body;
 
     if (!filename || !fileSize || !fileHash || !category) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (fileSize > 10 * 1024 * 1024) {
-      return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+    let maxSize = 10 * 1024 * 1024; // 10MB default
+    if (category === 'Reports') {
+      maxSize = 100 * 1024 * 1024; // 100MB
+    } else if (uploadType === 'Image') {
+      maxSize = 50 * 1024 * 1024; // 50MB
+    }
+
+    if (fileSize > maxSize) {
+      const mbSize = maxSize / (1024 * 1024);
+      return res.status(400).json({ error: `File size exceeds ${mbSize}MB limit for this category/type` });
     }
 
     const db = getFirestore();
@@ -84,8 +92,20 @@ export default async function handler(req: any, res: any) {
     const bucket = getStorage().bucket();
     const year = new Date().getFullYear();
     const timestamp = Date.now();
-    // Path: documents/YYYY/Category/timestamp_filename
-    const filePath = `documents/${year}/${category.toLowerCase()}/${timestamp}_${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const safeCategory = category.toLowerCase().replace(/\s+/g, '-');
+    const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    // Bifurcated storage path:
+    //   documents/YYYY/category/timestamp_file
+    //   images/geo-tagged/YYYY/category/timestamp_file
+    //   images/non-geo-tagged/YYYY/category/timestamp_file
+    let filePath: string;
+    if (uploadType === 'Image') {
+      const geoFolder = imageLocation === 'Geo-tagged' ? 'geo-tagged' : 'non-geo-tagged';
+      filePath = `images/${geoFolder}/${year}/${safeCategory}/${timestamp}_${safeFilename}`;
+    } else {
+      filePath = `documents/${year}/${safeCategory}/${timestamp}_${safeFilename}`;
+    }
     const file = bucket.file(filePath);
 
     const [url] = await file.getSignedUrl({
@@ -110,7 +130,9 @@ export default async function handler(req: any, res: any) {
       country: country,
       filename: filename,
       category: category,
-      fileHash: fileHash
+      fileHash: fileHash,
+      uploadType: uploadType,
+      ...(uploadType === 'Image' && imageLocation ? { imageLocation } : {})
     });
 
     return res.status(200).json({ 
