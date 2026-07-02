@@ -6,7 +6,7 @@ Built to handle **5,000+ concurrent students** with a Liquid Glass UI, RBAC auth
 
 ---
 
-## ✨ Feature Overview
+## ✨ Feature Overview!
 
 ```mermaid
 mindmap
