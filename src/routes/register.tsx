@@ -282,7 +282,7 @@ function RegisterPage() {
                   className="rounded-full font-medium h-12"
                   onClick={async () => {
                     await signOut(auth);
-                    localDb.clear();
+                    localStorage.clear();
                     window.location.reload();
                   }}
                 >
