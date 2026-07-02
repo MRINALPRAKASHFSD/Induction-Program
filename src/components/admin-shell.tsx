@@ -58,7 +58,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background">
+    <div className="min-h-screen relative overflow-hidden text-[#2c1208]">
       {/* Background Elements */}
       <div className="bg-hero-premium fixed inset-0 -z-10" />
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
@@ -82,7 +82,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm"><Link to="/">View site</Link></Button>
+            <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm text-[#2c1208]"><Link to="/">View site</Link></Button>
             <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><LogOut className="mr-1.5 h-4 w-4" /> Sign out</Button>
           </div>
         </div>

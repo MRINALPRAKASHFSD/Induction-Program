@@ -195,7 +195,7 @@ function AdminDashboard() {
       </div>
 
       {/* Live feed + export */}
-      <section className="mt-8 rounded-2xl border glass-card-hero p-5 shadow-sm">
+      <section className="mt-8 rounded-2xl glass-card-hero p-5 shadow-sm">
         {/* Header row */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -219,27 +219,27 @@ function AdminDashboard() {
             {exportButtons.map(({ format, label, Icon }) => (
               <Button
                 key={format}
-                variant="outline"
+                variant="liquidGlassWhite"
                 size="sm"
                 disabled={allStudents.length === 0 || exporting !== null}
                 onClick={() => handleExport(format)}
-                className="h-8 gap-1.5 text-xs border-primary/20 hover:bg-primary/5"
+                className="h-8 gap-1.5 text-xs text-[#2c1208] shadow-sm rounded-full"
               >
                 {exporting === format ? (
                   <span className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
                 ) : (
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-3.5 w-3.5 text-[#8a4a22]" />
                 )}
                 {label}
               </Button>
             ))}
 
             <Button
-              variant="outline"
+              variant="liquidGlassMaroon"
               size="sm"
               disabled={allStudents.length === 0 || exporting !== null}
               onClick={() => handleExport("csv")}
-              className="h-8 gap-1.5 text-xs bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+              className="h-8 gap-1.5 text-xs shadow-sm rounded-full"
             >
               <Download className="h-3.5 w-3.5" />
               Export All
@@ -294,9 +294,9 @@ function AdminDashboard() {
 
 function Kpi({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number | null; accent: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border glass-card-hero p-5 shadow-sm">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl glass-card-hero p-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
+        <span className="text-sm font-semibold text-[#5a2c14]">{label}</span>
         <span className={`grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br ${accent} text-primary-foreground shadow-sm`}>
           <Icon className="h-4 w-4" />
         </span>

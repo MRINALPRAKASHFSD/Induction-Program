@@ -311,7 +311,7 @@ function AdminStudents() {
       </div>
 
       {/* ── Capacity Info Bar ─────────────────────────────────────────────── */}
-      <div className="mb-4 flex items-center justify-between rounded-lg border glass-card-hero px-4 py-2.5 text-xs text-muted-foreground">
+      <div className="mb-4 flex items-center justify-between glass-card-hero px-4 py-2.5 text-xs text-[#5a2c14] font-semibold">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Layers className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">
@@ -349,7 +349,7 @@ function AdminStudents() {
 
       {/* ── Room Occupancy Grid (expandable) ─────────────────────────────── */}
       {showOccupancy && (
-        <div className="mb-5 rounded-xl border glass-card-hero shadow-sm overflow-hidden">
+        <div className="mb-5 rounded-xl glass-card-hero shadow-sm overflow-hidden">
           <div className="bg-muted/30 px-5 py-3 border-b flex items-center justify-between">
             <h3 className="text-sm font-semibold">Room Occupancy</h3>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -406,7 +406,7 @@ function AdminStudents() {
       )}
 
       {/* ── Student Table ─────────────────────────────────────────────────── */}
-      <div className="rounded-xl border glass-card-hero shadow-sm overflow-hidden">
+      <div className="rounded-xl glass-card-hero shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30">

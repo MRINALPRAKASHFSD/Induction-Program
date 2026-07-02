@@ -357,7 +357,7 @@ function ScannerPage() {
         </div>
 
         {/* Event selector */}
-        <div className="rounded-2xl border glass-card-hero p-4 shadow-sm">
+        <div className="rounded-2xl glass-card-hero p-4 shadow-sm">
           <label
             htmlFor="event-selector"
             className="block text-sm font-semibold mb-2"
@@ -394,7 +394,7 @@ function ScannerPage() {
 
         {/* Camera selector */}
         {cameras.length > 0 && (
-          <div className="rounded-2xl border glass-card-hero p-4 shadow-sm">
+          <div className="rounded-2xl glass-card-hero p-4 shadow-sm">
             <label
               htmlFor="camera-selector"
               className="block text-sm font-semibold mb-2"
@@ -572,7 +572,7 @@ function ManualEntryFallback({
   };
 
   return (
-    <div className="rounded-2xl border glass-card-hero p-4 shadow-sm">
+    <div className="rounded-2xl glass-card-hero p-4 shadow-sm">
       <button
         className="flex w-full items-center justify-between text-sm font-medium"
         onClick={() => setOpen((o) => !o)}
