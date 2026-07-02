@@ -78,7 +78,7 @@ export default async function handler(req: any, res: any) {
     
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(stringToSign);
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/^"|"$/g, '').replace(/^'|'$/g, '').replace(/\\n/g, '\n');
     const signature = sign.sign(privateKey, 'base64');
     
     const queryParams = new URLSearchParams({
@@ -98,6 +98,11 @@ export default async function handler(req: any, res: any) {
 
     // Generate Audit Log
     const db = getFirestore();
+    try {
+      db.settings({ preferRest: true });
+    } catch (e) {
+      // ignore if already set
+    }
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     
@@ -113,7 +118,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ url });
 
   } catch (error: any) {
-    console.error("Download Error:", error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Vault Download Error:", error);
+    return res.status(500).json({ error: `Internal Server Error: ${error.message}`, stack: error.stack });
   }
 }

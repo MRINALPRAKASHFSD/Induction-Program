@@ -85,6 +85,11 @@ export default async function handler(req: any, res: any) {
     }
 
     const db = getFirestore();
+    try {
+      db.settings({ preferRest: true });
+    } catch (e) {
+      // ignore if already set
+    }
     const uid = decodedToken.uid;
 
     // 1. Backend Rate Limiting (Cooldown)
@@ -135,7 +140,7 @@ export default async function handler(req: any, res: any) {
     
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(stringToSign);
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/^"|"$/g, '').replace(/^'|'$/g, '').replace(/\\n/g, '\n');
     const signature = sign.sign(privateKey, 'base64');
     
     const queryParams = new URLSearchParams({
@@ -173,6 +178,6 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error("Init Upload Error:", error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: \`Internal Server Error: \${error.message}\`, stack: error.stack });
   }
 }
