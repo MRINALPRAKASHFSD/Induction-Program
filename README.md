@@ -1,144 +1,241 @@
-# 🎓 Induction Program Attendance & Engagement Hub
+# 🎓 KRMU Induction Management System
 
-A premium, high-performance, and visually stunning web application designed to manage university induction events, capture real-time student attendance via QR code scanning, coordinate club registrations, and present interactive analytics.
+A **premium, enterprise-grade** web application built to manage university induction events at scale. Designed for **KRMU (K.R. Mangalam University)**, it handles real-time student attendance via QR scanning, secure document management, club registrations, analytics, and coordinator management — all backed by a serverless Firebase stack.
 
-Built with a state-of-the-art serverless stack, it is optimized to handle high-concurrency surges (up to 5,000+ students) using atomic database procedures, custom indexes, and edge-native page rendering.
+Built to handle **5,000+ concurrent students** with a Liquid Glass UI, RBAC authentication, signed URL document security, and a full audit trail.
 
 ---
 
-## ✨ Core Features
+## ✨ Feature Overview
 
-*   **📱 Instant QR Code Attendance**: Integrated client-side camera scanning with duplication checks and instant visual feedback (< 2ms database latency).
-*   **📊 Dynamic Admin Analytics**: A rich, responsive dashboard featuring bento-grid layouts, attendance hourly heatmaps, club registration distributions, and department breakdowns.
-*   **📝 Dynamic Form Builder**: Create custom feedback or registration forms on-the-fly for specific events, departments, or clubs.
-*   **👥 Club Showcase & Registrations**: A beautiful slug-based catalog of student clubs with tag filtering and one-click registration.
-*   **🔐 Row Level Security (RLS)**: Strict access control ensuring only authorized staff can access student rosters and analytics, while public users can register and scan securely.
+### 🏠 Student-Facing
+| Feature | Description |
+| :--- | :--- |
+| **QR Code Registration** | Students register and receive a unique QR boarding pass |
+| **Self-Attendance Scanning** | Scan QR at event gates for instant attendance capture |
+| **Club Showcase** | Browse and register for clubs with tag filtering |
+| **Schedule Viewer** | View induction day-wise event schedules |
+| **Help & Support** | Dedicated help, privacy policy, and terms pages |
+
+### 🔐 Admin Panel (Role-Based Access Control)
+| Feature | Access |
+| :--- | :--- |
+| **Dashboard** | Super Admin |
+| **Student Management** | Super Admin |
+| **Club & Event Management** | Super Admin |
+| **Announcements** | Super Admin |
+| **Analytics & Heatmaps** | Super Admin |
+| **Activity Logs** | Super Admin |
+| **Document Vault (Upload)** | Coordinator + Super Admin |
+| **Document Vault (View/Download/Delete)** | Super Admin only |
+| **User Management** | Super Admin only |
+
+---
+
+## 🗄️ Document Vault — Enterprise Security
+
+The Document Vault is the flagship feature — a fully secured, audit-logged file management system.
+
+### Key Security Features
+- **🔒 RBAC Authentication** — Coordinators can upload; Super Admins can view/download/delete
+- **⏱️ Auto-Lock** — Vault auto-locks after 5 minutes of inactivity
+- **🔗 Signed URLs** — All file access uses short-lived (30-second) Firebase signed URLs — no direct public storage access
+- **🔍 Magic Byte Validation** — Server-side file type verification (prevents extension spoofing)
+- **#️⃣ SHA-256 Deduplication** — Duplicate file uploads blocked using hash comparison
+- **⏳ Rate Limiting** — 5-second upload cooldown per user enforced on the backend
+- **📋 Full Audit Log** — Every INITIATE_UPLOAD, DOWNLOAD, VIEW, SOFT_DELETE, RESTORE, HARD_DELETE, ASSIGN_ROLE is logged with IP, device, country, and timestamp
+
+### Storage Path Structure (Bifurcated)
+```
+Firebase Storage
+├── documents/
+│   └── {YYYY}/
+│       └── {category}/
+│           └── {timestamp}_{filename}
+└── images/
+    ├── geo-tagged/
+    │   └── {YYYY}/
+    │       └── {category}/
+    │           └── {timestamp}_{filename}
+    └── non-geo-tagged/
+        └── {YYYY}/
+            └── {category}/
+                └── {timestamp}_{filename}
+```
+
+### Upload Categories
+- Orientation
+- Induction Day 1 → Day 5
+- Other
+
+### Trash & Recovery
+- **Soft Delete** → moves to trash (kept 30 days)
+- **Restore** → moves back to active
+- **Hard Delete** → permanently removes from Firestore database
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology | Key Purpose |
+| Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Core Framework** | **TanStack Start (React 19 + TypeScript)** | Edge-rendered, type-safe full-stack routing, hydration-optimized server functions, and lightning-fast page loading. |
-| **Styling & UI** | **Tailwind CSS v4** | Next-generation CSS-first styling utility engine using modern CSS variables, container queries, and `@theme` configurations. |
-| **Animations** | **Framer Motion** | Premium micro-animations, physics-based spring page transitions, hover states, and smooth layout changes. |
-| **Database & Auth** | **Supabase** | Cloud-native PostgreSQL database providing Auth, Realtime subscription channels, and Row-Level Security (RLS). |
-| **Charts & Data** | **Recharts** | Beautiful SVG-rendered interactive responsive charts (Bar, Area, Pie) with custom tooltips. |
-| **Form Handling** | **React Hook Form + Zod** | High-performance, schema-validated forms with strict type-safety. |
-| **QR Code Engine** | **HTML5-QRCode + Node-QRCode** | Stealthy, robust QR reading and generation directly within browser-native canvases. |
+| **Framework** | TanStack Start (React 19 + TypeScript) | Full-stack SSR, type-safe routing |
+| **Styling** | Tailwind CSS v4 | CSS-first utility engine |
+| **Animations** | Framer Motion | Spring transitions, micro-animations |
+| **UI Components** | Shadcn/UI + Radix UI | Accessible, headless component library |
+| **Database & Auth** | Firebase Firestore + Firebase Auth | Real-time database, custom claims RBAC |
+| **File Storage** | Firebase Storage (Blaze Plan) | Secure file hosting with signed URLs |
+| **Backend APIs** | Vercel Serverless Functions (TypeScript) | Auth, upload, download, role management |
+| **Charts** | Recharts | Responsive SVG charts |
+| **QR Engine** | HTML5-QRCode | Camera-based QR scanning |
+| **Toast Notifications** | Sonner | Clean notification stack |
 
 ---
 
-## 🧬 High-Performance Database Design (Scale to 5,000+)
+## 🔑 User Roles
 
-To support the massive traffic spike when thousands of students arrive at an auditorium door at the exact same minute, the database is optimized to eliminate sequential execution delays:
+| Role | Permissions |
+| :--- | :--- |
+| `coordinator` | Upload documents & images to the vault |
+| `super_admin` | Full access — view, download, delete, manage users, analytics |
+| Both roles | Can be assigned simultaneously to a single user |
 
-### 1. Atomic Transaction RPC (`mark_attendance`)
-Instead of doing 3 slow sequential network round-trips from the serverless function (checking if the event is active, looking up the student, and then inserting attendance), we run an atomic database procedure. This function runs inside PostgreSQL in **under 3ms**:
-```sql
-select * from public.mark_attendance(p_qr_token := '...', p_enrollment_no := '...');
-```
-*   **Automatic Dup-Protection**: Utilizes standard Postgres `unique_violation` exception handling to return standard `duplicate: true` flags, completely eliminating pre-check SELECT queries.
-*   **Sub-Millisecond Indexes**: Custom B-Tree index on `public.students(enrollment_no)` and unique index on `public.events(qr_token)` ensures instant record resolution.
-
-### 2. Consolidated Aggregations (`get_analytics`)
-Compiles complex metrics, multi-table counts, and hourly trends into a single nested JSON object in one query execution, completely avoiding database locks and heavy serverless overhead.
+Roles are set via **Firebase Auth Custom Claims** and verified server-side on every API call.
 
 ---
 
-## 🎬 Premium Design & Animations
+## 📡 API Endpoints
 
-The user interface uses a **modern, rich dark-mode aesthetic** combined with curated color gradients and interactive micro-animations to create a premium software feel:
-
-*   **Spring Physics transitions**: Framer motion handles all page transitions and modal entries with natural-feeling spring configurations (`stiffness: 300, damping: 30`).
-*   **Hover & Active States**: Custom scaling effects, glow borders, and micro-movements on action buttons keep the page feeling alive.
-*   **Responsive Bento Grids**: Layouts naturally shift, reorganize, and scale smoothly depending on the user's viewport using CSS Grid and Tailwind v4.
+| Endpoint | Method | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `/api/vault-init-upload` | POST | coordinator / super_admin | Validates file, generates signed GCS upload URL |
+| `/api/vault-download` | POST | super_admin | Generates 30-second signed download/view URL |
+| `/api/vault-assign-role` | POST | super_admin | Creates Firebase user and assigns role(s) |
+| `/api/send-otp` | POST | Public | Sends OTP for student verification |
+| `/api/verify-otp` | POST | Public | Verifies OTP token |
+| `/api/live-impact` | GET | Public | Returns live attendance impact stats |
 
 ---
 
 ## 🚀 Local Setup & Installation
 
-The project uses **Bun** (preferred) or **npm** for package management.
-
-### 1. Install Dependencies
+### 1. Clone & Install Dependencies
 ```bash
-# Using bun (recommended since bunfig.toml and bun.lock are present)
-bun install
-
-# Or using npm
+git clone https://github.com/MRINALPRAKASHFSD/Induction-Program.git
+cd Induction-Program
 npm install
 ```
 
-### 2. Initialize your Supabase Database
-1. Create a project on your [Supabase Dashboard](https://supabase.com/dashboard).
-2. Go to the **SQL Editor** (`>_` icon on the left sidebar).
-3. Open the **[supabase/consolidated_schema.sql](file:///Users/mrinalprakash/Library/Mobile%20Documents/com~apple~CloudDocs/Induction-Program/supabase/consolidated_schema.sql)** file from your project directory.
-4. Copy its contents, paste them into the Supabase SQL editor, and click **Run**.
+### 2. Firebase Setup
+1. Create a project on [Firebase Console](https://console.firebase.google.com)
+2. Enable **Firestore**, **Firebase Auth**, and **Firebase Storage** (Blaze plan for Storage)
+3. Go to **Project Settings → Service Accounts → Generate new private key**
+4. Download the JSON — you'll use it for the environment variables below
 
 ### 3. Setup Environment Variables
-Create or update your `.env` file in the root of the project:
+Create a `.env` file in the project root:
 ```ini
-SUPABASE_PUBLISHABLE_KEY="your_anon_public_key"
-SUPABASE_URL="https://your_project_id.supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="your_secret_service_role_key"
+# Firebase Client SDK (Vite)
+VITE_FIREBASE_API_KEY="your_api_key"
+VITE_FIREBASE_AUTH_DOMAIN="your_project.firebaseapp.com"
+VITE_FIREBASE_PROJECT_ID="your_project_id"
+VITE_FIREBASE_STORAGE_BUCKET="your_project.appspot.com"
+VITE_FIREBASE_MESSAGING_SENDER_ID="your_sender_id"
+VITE_FIREBASE_APP_ID="your_app_id"
 
-VITE_SUPABASE_PROJECT_ID="your_project_id"
-VITE_SUPABASE_PUBLISHABLE_KEY="your_anon_public_key"
-VITE_SUPABASE_URL="https://your_project_id.supabase.co"
-VITE_SUPABASE_SERVICE_ROLE_KEY="your_secret_service_role_key"
+# Firebase Admin SDK (Server/API)
+FIREBASE_PROJECT_ID="your_project_id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-xxx@your_project.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_STORAGE_BUCKET="your_project.appspot.com"
 ```
 
-### 4. Start the Development Server
+### 4. Deploy Firestore & Storage Rules
 ```bash
-# Using bun
-bun run dev
+# Install Firebase CLI if needed
+npm install -g firebase-tools
+firebase login
 
-# Using npm
+# Deploy rules
+firebase deploy --only firestore:rules
+firebase deploy --only storage
+```
+
+### 5. Start the Development Server
+```bash
 npm run dev
 ```
-Open **[http://localhost:8080](http://localhost:8080)** in your browser!
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 ---
 
-## 🗺️ Database Schema Visual Map
+## 📁 Project Structure
 
-```mermaid
-erDiagram
-    DEPARTMENTS ||--o{ BRANCHES : "has"
-    DEPARTMENTS ||--o{ STUDENTS : "contains"
-    BRANCHES ||--o{ STUDENTS : "belongs_to"
-    STUDENTS ||--o{ ATTENDANCE : "scanned"
-    EVENTS ||--o{ ATTENDANCE : "records"
-    CLUBS ||--o{ CLUB_REGISTRATIONS : "lists"
-    STUDENTS ||--o{ CLUB_REGISTRATIONS : "joins"
-    DYNAMIC_FORMS ||--o{ FORM_RESPONSES : "gathers"
-    STUDENTS ||--o{ FORM_RESPONSES : "submits"
-    
-    STUDENTS {
-        uuid id PK
-        text enrollment_no UK
-        text full_name
-        text email UK
-        text phone
-        uuid department_id FK
-        uuid branch_id FK
-        text course
-        int year
-        timestamptz created_at
-    }
-    
-    EVENTS {
-        uuid id PK
-        text title
-        text description
-        int day_number
-        text venue
-        timestamptz starts_at
-        timestamptz ends_at
-        text qr_token UK
-        boolean is_active
-        uuid created_by FK
-        timestamptz created_at
-    }
 ```
+Induction-Program/
+├── api/                          # Vercel serverless functions
+│   ├── vault-init-upload.ts      # Secure upload initiation
+│   ├── vault-download.ts         # Signed download URL generation
+│   ├── vault-assign-role.ts      # User creation & role assignment
+│   ├── send-otp.ts               # OTP delivery
+│   ├── verify-otp.ts             # OTP verification
+│   └── live-impact.ts            # Live stats endpoint
+├── src/
+│   ├── components/               # Shared UI components
+│   │   ├── admin-shell.tsx       # Admin layout wrapper
+│   │   ├── ui/                   # Shadcn components
+│   │   └── ...
+│   ├── routes/                   # TanStack Router pages
+│   │   ├── index.tsx             # Landing page
+│   │   ├── register.tsx          # Student registration
+│   │   ├── admin.dashboard.tsx   # Admin dashboard
+│   │   ├── admin.documents.tsx   # Document vault
+│   │   ├── admin.students.tsx    # Student management
+│   │   ├── admin.analytics.tsx   # Analytics & charts
+│   │   └── ...
+│   ├── lib/
+│   │   └── firebase/config.ts    # Firebase initialization
+│   └── styles.css                # Global Liquid Glass styles
+├── attendance-system/            # Legacy standalone attendance HTML/JS
+├── firestore.rules               # Firestore security rules
+├── storage.rules                 # Firebase Storage security rules
+└── vite.config.ts                # Vite + TanStack configuration
+```
+
+---
+
+## 🎨 Design System — Liquid Glass
+
+The entire admin panel uses a **Liquid Glass** aesthetic inspired by Apple's modern UI:
+
+- **Frosted glass cards** — `bg-white/40 backdrop-blur-xl`
+- **Soft translucent panels** — `bg-white/30 backdrop-blur-md`
+- **Glass input fields** — `bg-white/50 backdrop-blur-md`
+- **Rounded corners** — 18–24px throughout
+- **Smooth hover animations** — Framer Motion spring physics
+- **Maroon accent palette** — KRMU brand colors (`#8a2c14`, `#5a2c14`)
+
+---
+
+## 🏛️ Firestore Collections
+
+| Collection | Purpose |
+| :--- | :--- |
+| `students` | Student registration records |
+| `events` | Induction event definitions |
+| `attendance` | QR scan attendance records |
+| `clubs` | Club listings |
+| `club_registrations` | Student-club join records |
+| `announcements` | Admin announcements |
+| `secure_documents` | Document vault metadata |
+| `audit_logs` | Full system audit trail |
+| `users` | Vault user profiles with roles |
+| `rate_limits` | Per-user upload rate limiting |
+| `otp_requests` | OTP verification records |
+
+---
+
+## 📄 License
+
+This project is proprietary software built for **K.R. Mangalam University** internal use.  
+© 2026 KRMU. All rights reserved.
