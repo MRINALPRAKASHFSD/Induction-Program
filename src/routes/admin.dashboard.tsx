@@ -249,10 +249,10 @@ function AdminDashboard() {
 
         {/* Table header */}
         {recent.length > 0 && (
-          <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-x-4 border-b pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="mt-4 grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_1fr_auto] gap-x-4 border-b pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>Student</span>
-            <span className="hidden sm:block">Enrollment No</span>
-            <span>Registered At</span>
+            <span className="hidden sm:block text-left">Enrollment No</span>
+            <span className="text-right">Registered At</span>
           </div>
         )}
 
@@ -267,14 +267,14 @@ function AdminDashboard() {
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.02 }}
-              className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center py-3"
+              className="grid grid-cols-[1fr_auto] sm:grid-cols-[2fr_1fr_auto] gap-x-4 items-center py-3"
             >
-              <div>
-                <div className="font-medium text-sm">{s.full_name}</div>
-                <div className="text-xs text-muted-foreground sm:hidden">{s.enrollment_no}</div>
-                {s.branch && <div className="text-xs text-muted-foreground">{s.branch}{s.course ? ` · ${s.course}` : ""}</div>}
+              <div className="min-w-0">
+                <div className="font-medium text-sm truncate">{s.full_name}</div>
+                <div className="text-xs text-muted-foreground sm:hidden truncate">{s.enrollment_no}</div>
+                {s.branch && <div className="text-xs text-muted-foreground truncate">{s.branch}{s.course ? ` · ${s.course}` : ""}</div>}
               </div>
-              <div className="hidden sm:block text-xs text-muted-foreground font-mono">{s.enrollment_no}</div>
+              <div className="hidden sm:block text-xs text-muted-foreground font-mono text-left truncate">{s.enrollment_no}</div>
               <div className="text-xs text-muted-foreground text-right whitespace-nowrap">
                 {formatDateTime(s.created_at)}
               </div>
