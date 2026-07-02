@@ -35,7 +35,7 @@ service cloud.firestore {
     // 2. STUDENTS
     match /students/{enrollmentId} {
       allow get: if true; 
-      allow list: if false; 
+      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
       allow create: if isValidStudent();
       allow update: if 
         // 1. Department ID cannot be changed (Lock)
@@ -61,7 +61,7 @@ service cloud.firestore {
     // 3. ATTENDANCE
     match /attendance/{docId} {
       allow get: if true;
-      allow list: if false;
+      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
       allow create: if isAttendanceValid(docId); // Enforces schema and composite ID
       allow update, delete: if false; // Immutable once recorded
     }
@@ -75,7 +75,7 @@ service cloud.firestore {
     // 5. CLUB REGISTRATIONS
     match /club_registrations/{regId} {
       allow get: if true;
-      allow list: if false;
+      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
       allow create: if isClubRegistrationValid(regId); // Enforces schema and composite ID
       allow update, delete: if false;
     }
