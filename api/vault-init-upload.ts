@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getStorage } from 'firebase-admin/storage';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
@@ -50,7 +50,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth().verifyIdToken(token);
+    
+    // Manually verify Firebase ID token to avoid firebase-admin/auth native bindings crash on Vercel
+    const keysRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+    const keys = await keysRes.json();
+    const decodedHeader = jwt.decode(token, { complete: true }) as any;
+    const kid = decodedHeader?.header?.kid;
+    if (!kid || !keys[kid]) {
+      return res.status(401).json({ error: 'Invalid token signature' });
+    }
+    
+    const decodedToken = jwt.verify(token, keys[kid], { algorithms: ['RS256'] }) as any;
 
     if (decodedToken.role !== 'coordinator' && decodedToken.role !== 'super_admin') {
       return res.status(403).json({ error: 'Forbidden. Only authorized personnel can upload.' });
@@ -100,17 +110,13 @@ export default async function handler(req: any, res: any) {
       return res.status(409).json({ error: 'Duplicate file detected. This exact file has already been uploaded.' });
     }
 
-    // 3. Generate Signed Upload URL
-    const bucket = getStorage().bucket();
+    // 3. Generate Signed Upload URL manually using V2 signature to avoid Vercel native binding crashes
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app';
     const year = new Date().getFullYear();
     const timestamp = Date.now();
     const safeCategory = category.toLowerCase().replace(/\s+/g, '-');
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
 
-    // Bifurcated storage path:
-    //   documents/YYYY/category/timestamp_file
-    //   images/geo-tagged/YYYY/category/timestamp_file
-    //   images/non-geo-tagged/YYYY/category/timestamp_file
     let filePath: string;
     if (uploadType === 'Image') {
       const geoFolder = imageLocation === 'Geo-tagged' ? 'geo-tagged' : 'non-geo-tagged';
@@ -118,14 +124,27 @@ export default async function handler(req: any, res: any) {
     } else {
       filePath = `documents/${year}/${safeCategory}/${timestamp}_${safeFilename}`;
     }
-    const file = bucket.file(filePath);
 
-    const [url] = await file.getSignedUrl({
-      version: 'v4',
-      action: 'write',
-      expires: Date.now() + 15 * 60 * 1000, // 15 minutes to upload
-      contentType: req.body.contentType || 'application/octet-stream', // Important to pass content type if validating
+    const contentType = req.body.contentType || 'application/octet-stream';
+    const expiresUnixSec = Math.floor(Date.now() / 1000) + 15 * 60; // 15 mins
+    const method = 'PUT';
+
+    // V2 Signed URL generation
+    const canonicalizedResource = `/${bucketName}/${filePath.split('/').map(encodeURIComponent).join('/')}`;
+    const stringToSign = `${method}\n\n${contentType}\n${expiresUnixSec}\n${canonicalizedResource}`;
+    
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(stringToSign);
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+    const signature = sign.sign(privateKey, 'base64');
+    
+    const queryParams = new URLSearchParams({
+      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!,
+      Expires: expiresUnixSec.toString(),
+      Signature: signature,
     });
+    
+    const url = `https://storage.googleapis.com${canonicalizedResource}?${queryParams.toString()}`;
 
     // 4. Enhanced Audit Log Creation
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';

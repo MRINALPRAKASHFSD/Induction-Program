@@ -1,21 +1,29 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getStorage } from 'firebase-admin/storage';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-if (!getApps().length) {
-  try {
+let firebaseInitialized = false;
+let firebaseInitError = null;
+
+try {
+  if (!getApps().length) {
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+      throw new Error("Missing Firebase Admin credentials in environment variables.");
+    }
     initializeApp({
       credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
       storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
     });
-  } catch (e) {
-    console.error("Firebase Admin Initialization Error:", e);
   }
+  firebaseInitialized = true;
+} catch (e: any) {
+  console.error("Firebase Admin Initialization Error:", e);
+  firebaseInitError = e.message;
 }
 
 export default async function handler(req: any, res: any) {
@@ -38,10 +46,20 @@ export default async function handler(req: any, res: any) {
     }
 
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth().verifyIdToken(token);
+    
+    // Manually verify Firebase ID token
+    const keysRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+    const keys = await keysRes.json();
+    const decodedHeader = jwt.decode(token, { complete: true }) as any;
+    const kid = decodedHeader?.header?.kid;
+    if (!kid || !keys[kid]) {
+      return res.status(401).json({ error: 'Invalid token signature' });
+    }
+    
+    const decodedToken = jwt.verify(token, keys[kid], { algorithms: ['RS256'] }) as any;
 
-    if (decodedToken.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (decodedToken.role !== 'coordinator' && decodedToken.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Forbidden. Only authorized personnel can download.' });
     }
 
     const { filePath, documentId, fileName, forceDownload } = req.body;
@@ -49,24 +67,36 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'File path is required' });
     }
 
-    const bucket = getStorage().bucket();
-    const file = bucket.file(filePath);
+    // Generate Signed Download URL manually using V2 signature to avoid Vercel native binding crashes
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app';
+    const expiresUnixSec = Math.floor(Date.now() / 1000) + 15 * 60; // 15 mins
+    const method = 'GET';
+    const contentType = ''; // No content-type for GET
 
-    // Generate a 30-second signed URL
-    const config: any = {
-      version: 'v4',
-      action: 'read',
-      expires: Date.now() + 30 * 1000, // 30 seconds
-    };
-
-    if (forceDownload && fileName) {
-      // Force download instead of inline view
-      config.responseDisposition = `attachment; filename="${fileName.replace(/"/g, '')}"`;
+    const canonicalizedResource = `/${bucketName}/${filePath.split('/').map(encodeURIComponent).join('/')}`;
+    const stringToSign = `${method}\n\n${contentType}\n${expiresUnixSec}\n${canonicalizedResource}`;
+    
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(stringToSign);
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+    const signature = sign.sign(privateKey, 'base64');
+    
+    const queryParams = new URLSearchParams({
+      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!,
+      Expires: expiresUnixSec.toString(),
+      Signature: signature,
+    });
+    
+    // Add Response Content-Disposition to force download with correct filename if requested
+    if (forceDownload) {
+      queryParams.set('response-content-disposition', `attachment; filename="${fileName}"`);
+    } else {
+      queryParams.set('response-content-disposition', `inline; filename="${fileName}"`);
     }
+    
+    const url = `https://storage.googleapis.com${canonicalizedResource}?${queryParams.toString()}`;
 
-    const [url] = await file.getSignedUrl(config);
-
-    // Audit Log Creation
+    // Generate Audit Log
     const db = getFirestore();
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
