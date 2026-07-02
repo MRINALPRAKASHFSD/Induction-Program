@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
-import { Search, Download, UserPlus, Building2, RotateCcw, Layers, Eye, EyeOff } from "lucide-react";
+import { Search, Download, UserPlus, Building2, RotateCcw, Layers, Eye, EyeOff, FileText, FileSpreadsheet, FileJson, File } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,112 @@ export const Route = createFileRoute("/admin/students")({
 const TOTAL_STUDENT_CAPACITY = getTotalStudentCapacity();
 const SPECIAL_ROOM_KEYS = Object.keys(ROOM_CONFIG.specialRooms);
 
+
+function formatDateTimeExport(isoString: string) {
+  if (!isoString) return "";
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
+  } catch (e) {
+    return isoString;
+  }
+}
+
+function exportCSV(data: any[]) {
+  const headers = ["#", "Full Name", "Enrollment No", "Course", "Branch", "Semester", "Room No", "Registered At"];
+  const rows = data.map((s, i) => [
+    i + 1,
+    s.full_name ?? "",
+    s.enrollment_no ?? "",
+    s.course ?? "",
+    s.branch ?? "",
+    s.semester ?? "",
+    s.room_no ?? "",
+    formatDateTimeExport(s.created_at),
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  downloadBlob(new Blob([csv], { type: "text/csv" }), "krmu_students.csv");
+}
+
+function exportJSON(data: any[]) {
+  const json = JSON.stringify(
+    data.map((s, i) => ({
+      serial: i + 1,
+      full_name: s.full_name,
+      enrollment_no: s.enrollment_no,
+      course: s.course,
+      branch: s.branch,
+      semester: s.semester,
+      room_no: s.room_no,
+      registered_at: formatDateTimeExport(s.created_at),
+    })),
+    null,
+    2
+  );
+  downloadBlob(new Blob([json], { type: "application/json" }), "krmu_students.json");
+}
+
+async function exportXLSX(data: any[]) {
+  const XLSX = await import("xlsx");
+  const rows = data.map((s, i) => ({
+    "#": i + 1,
+    "Full Name": s.full_name ?? "",
+    "Enrollment No": s.enrollment_no ?? "",
+    "Course": s.course ?? "",
+    "Branch": s.branch ?? "",
+    "Semester": s.semester ?? "",
+    "Room No": s.room_no ?? "",
+    "Registered At": formatDateTimeExport(s.created_at),
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  XLSX.writeFile(wb, "krmu_students.xlsx");
+}
+
+async function exportPDF(data: any[]) {
+  const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  doc.setFontSize(16);
+  doc.text("KRMU Induction — Student Registration Report", 14, 15);
+  doc.setFontSize(10);
+  doc.text(`Generated: ${new Date().toLocaleString("en-IN")}  |  Total: ${data.length} students`, 14, 22);
+
+  autoTable(doc, {
+    startY: 28,
+    head: [["#", "Full Name", "Enrollment No", "Course", "Branch", "Semester", "Room No", "Registered At"]],
+    body: data.map((s, i) => [
+      i + 1,
+      s.full_name ?? "",
+      s.enrollment_no ?? "",
+      s.course ?? "",
+      s.branch ?? "",
+      s.semester ?? "",
+      s.room_no ?? "",
+      formatDateTimeExport(s.created_at),
+    ]),
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [140, 44, 20] },
+    alternateRowStyles: { fillColor: [252, 248, 244] },
+  });
+
+  doc.save("krmu_students.pdf");
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function AdminStudents() {
   const [q, setQ] = useState("");
   const [dept, setDept] = useState<string>("_all");
@@ -37,6 +143,8 @@ function AdminStudents() {
   const [allStudents, setAllStudents] = useState<LocalStudent[]>([]);
   const [allocating, setAllocating] = useState(false);
   const [showOccupancy, setShowOccupancy] = useState(false);
+  const [exporting, setExporting] = useState<string | null>(null);
+
 
   const refresh = useCallback(async () => {
     try {
@@ -163,28 +271,30 @@ function AdminStudents() {
     }
   };
 
-  const onExport = () => {
-    const header = ["enrollment_no", "full_name", "branch", "semester", "room_no", "created_at"];
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [
-      header.join(","),
-      ...allStudents.map((r) =>
-        [r.enrollment_no, r.full_name, r.branch, r.semester, r.room_no ?? "", r.created_at]
-          .map(esc)
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `krmu_students_${new Date().toISOString().split("T")[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  
+  const handleExport = async (format: string) => {
+    if (allStudents.length === 0) return;
+    setExporting(format);
+    try {
+      const sorted = [...allStudents].sort((a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      if (format === "csv") exportCSV(sorted);
+      else if (format === "json") exportJSON(sorted);
+      else if (format === "xlsx") await exportXLSX(sorted);
+      else if (format === "pdf") await exportPDF(sorted);
+    } finally {
+      setExporting(null);
+    }
   };
+
+  const exportButtons = [
+    { format: "csv",  label: "CSV",   Icon: FileText },
+    { format: "xlsx", label: "Excel", Icon: FileSpreadsheet },
+    { format: "pdf",  label: "PDF",   Icon: File },
+    { format: "json", label: "JSON",  Icon: FileJson },
+  ];
+
 
   const getRoomSummary = () => {
     const occupancy: Record<string, number> = {};
@@ -300,9 +410,25 @@ function AdminStudents() {
             </AlertDialogContent>
           </AlertDialog>
 
-          <Button variant="liquidGlassWhite" className="rounded-full" onClick={onExport} disabled={allStudents.length === 0}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
+          
+          {exportButtons.map(({ format, label, Icon }) => (
+            <Button
+              key={format}
+              variant="liquidGlassWhite"
+              size="sm"
+              disabled={allStudents.length === 0 || exporting !== null}
+              onClick={() => handleExport(format)}
+              className="h-10 gap-1.5 text-sm text-[#2c1208] shadow-sm rounded-full"
+            >
+              {exporting === format ? (
+                <span className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              ) : (
+                <Icon className="h-4 w-4 text-[#8a4a22]" />
+              )}
+              {label}
+            </Button>
+          ))}
+
 
           <Button variant="liquidGlassWhite" className="rounded-full" disabled>
             <UserPlus className="mr-2 h-4 w-4" /> Add Student
@@ -439,7 +565,10 @@ function AdminStudents() {
                     <RoomBadge room_no={s.room_no} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {new Date(s.created_at).toLocaleDateString()}
+                    {new Date(s.created_at).toLocaleString('en-IN', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', hour12: true
+                    })}
                   </TableCell>
                 </TableRow>
               ))

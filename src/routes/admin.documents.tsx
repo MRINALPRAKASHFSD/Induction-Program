@@ -40,8 +40,8 @@ async function checkMagicBytes(file: File): Promise<boolean> {
 
 // Liquid Glass Constants
 const glassCard = "bg-white/40 backdrop-blur-xl border border-white/50 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[24px]";
-const glassInput = "bg-white/50 backdrop-blur-md border border-white/60 focus:bg-white/80 transition-all shadow-sm rounded-xl";
-const glassPanel = "bg-white/30 backdrop-blur-md border border-white/40 shadow-sm rounded-2xl";
+const glassInput = "glass-card-hero border-white/60 focus:bg-white/70 transition-all shadow-sm rounded-xl";
+const glassPanel = "glass-card-hero p-6 shadow-sm rounded-2xl";
 
 function AdminDocumentsPage() {
   const [activeTab, setActiveTab] = useState<"upload" | "view" | "users">("upload");
@@ -487,11 +487,15 @@ function AdminDocumentsPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-white/40 backdrop-blur-2xl z-10"
+                className="absolute inset-0 flex flex-col items-center justify-center p-8 glass-card-hero z-10"
               >
-                <div className="w-24 h-24 bg-white/50 border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.05)] rounded-full flex items-center justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-24 h-24 glass-card-hero border border-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] rounded-full flex items-center justify-center mb-6"
+                >
                   <Lock className="w-12 h-12 text-[#5a2c14]" />
-                </div>
+                </motion.div>
                 <h3 className="text-3xl font-bold text-[#2c1208] mb-2 tracking-tight">Vault Locked</h3>
                 <p className="text-[#7a4020] text-center mb-8 max-w-sm font-medium">
                   Sign in with your authorized {activeTab === "upload" ? "Coordinator" : "Super Admin"} credentials to access the secure enterprise module.
@@ -525,9 +529,9 @@ function AdminDocumentsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-8 sm:p-10"
               >
-                <div className="flex items-center justify-between border-b border-white/40 pb-6 mb-8">
+                <div className="flex items-center justify-between border-b border-[#5a2c14]/10 pb-6 mb-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/60 shadow-sm border border-white/80 rounded-[16px] flex items-center justify-center">
+                    <div className="w-12 h-12 glass-card-hero shadow-sm border border-white/80 rounded-[16px] flex items-center justify-center">
                       <Unlock className="w-6 h-6 text-emerald-600" />
                     </div>
                     <div>
@@ -587,14 +591,14 @@ function AdminDocumentsPage() {
                           >
                             <Label className="text-sm font-semibold text-[#5a2c14]">Image Location Metadata</Label>
                             <div className="flex gap-4">
-                              <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${imageLocation === "Geo-tagged" ? "bg-emerald-50/50 border-emerald-200 shadow-sm" : "bg-white/40 border-white/60 hover:bg-white/60"}`}>
+                              <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${imageLocation === "Geo-tagged" ? "bg-emerald-50/50 border-emerald-200 shadow-sm" : "glass-card-hero border-white/60 hover:bg-white/60"}`}>
                                 <input type="radio" name="imageLocation" value="Geo-tagged" checked={imageLocation === "Geo-tagged"} onChange={() => setImageLocation("Geo-tagged")} className="hidden" />
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${imageLocation === "Geo-tagged" ? "border-emerald-500" : "border-gray-300"}`}>
                                   {imageLocation === "Geo-tagged" && <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />}
                                 </div>
                                 <span className="font-semibold text-emerald-800 flex items-center gap-2"><MapPin className="w-4 h-4" /> Geo-tagged</span>
                               </label>
-                              <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${imageLocation === "Non Geo-tagged" ? "bg-amber-50/50 border-amber-200 shadow-sm" : "bg-white/40 border-white/60 hover:bg-white/60"}`}>
+                              <label className={`flex-1 flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${imageLocation === "Non Geo-tagged" ? "bg-amber-50/50 border-amber-200 shadow-sm" : "glass-card-hero border-white/60 hover:bg-white/60"}`}>
                                 <input type="radio" name="imageLocation" value="Non Geo-tagged" checked={imageLocation === "Non Geo-tagged"} onChange={() => setImageLocation("Non Geo-tagged")} className="hidden" />
                                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${imageLocation === "Non Geo-tagged" ? "border-amber-500" : "border-gray-300"}`}>
                                   {imageLocation === "Non Geo-tagged" && <div className="w-2.5 h-2.5 bg-amber-500 rounded-full" />}
