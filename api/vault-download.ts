@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
@@ -68,7 +68,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Generate Signed Download URL manually using V2 signature to avoid Vercel native binding crashes
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app';
+    const bucketName = (process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app').trim();
     const expiresUnixSec = Math.floor(Date.now() / 1000) + 15 * 60; // 15 mins
     const method = 'GET';
     const contentType = ''; // No content-type for GET
@@ -82,7 +82,7 @@ export default async function handler(req: any, res: any) {
     const signature = sign.sign(privateKey, 'base64');
     
     const queryParams = new URLSearchParams({
-      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!,
+      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!.trim(),
       Expires: expiresUnixSec.toString(),
       Signature: signature,
     });

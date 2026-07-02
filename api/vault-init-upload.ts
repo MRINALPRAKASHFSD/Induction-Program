@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
+import * as jwt from 'jsonwebtoken';
+import * as crypto from 'crypto';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
@@ -116,7 +116,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // 3. Generate Signed Upload URL manually using V2 signature to avoid Vercel native binding crashes
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app';
+    const bucketName = (process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app').trim();
     const year = new Date().getFullYear();
     const timestamp = Date.now();
     const safeCategory = category.toLowerCase().replace(/\s+/g, '-');
@@ -144,7 +144,7 @@ export default async function handler(req: any, res: any) {
     const signature = sign.sign(privateKey, 'base64');
     
     const queryParams = new URLSearchParams({
-      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!,
+      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!.trim(),
       Expires: expiresUnixSec.toString(),
       Signature: signature,
     });
@@ -178,6 +178,6 @@ export default async function handler(req: any, res: any) {
 
   } catch (error: any) {
     console.error("Init Upload Error:", error);
-    return res.status(500).json({ error: \`Internal Server Error: \${error.message}\`, stack: error.stack });
+    return res.status(500).json({ error: `Internal Server Error: ${error.message}`, stack: error.stack });
   }
 }
