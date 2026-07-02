@@ -42,14 +42,18 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: 'Forbidden. Only super_admins can assign roles.' });
     }
 
-    const { email, password, name, role } = req.body;
+    const { email, password, name, roles } = req.body;
 
-    if (!email || !password || !name || !role) {
+    // Support both old single-role and new multi-role payloads
+    const rolesArray: string[] = Array.isArray(roles) ? roles : (roles ? [roles] : []);
+
+    if (!email || !password || !name || rolesArray.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (role !== 'coordinator' && role !== 'super_admin') {
-      return res.status(400).json({ error: 'Invalid role' });
+    const validRoles = ['coordinator', 'super_admin'];
+    if (!rolesArray.every(r => validRoles.includes(r))) {
+      return res.status(400).json({ error: 'Invalid role(s) specified' });
     }
 
     // 1. Create the user in Firebase Auth
@@ -60,14 +64,23 @@ export default async function handler(req: any, res: any) {
     });
 
     // 2. Set Custom Claims
-    await getAuth().setCustomUserClaims(userRecord.uid, { role: role });
+    // Firebase claims support a single primary role. If user has both roles,
+    // we set 'super_admin' as primary (higher privilege) and store full list in Firestore.
+    // The upload API checks: decodedToken.role === 'coordinator' || 'super_admin'
+    // so a super_admin already has full access including upload.
+    const primaryRole = rolesArray.includes('super_admin') ? 'super_admin' : 'coordinator';
+    await getAuth().setCustomUserClaims(userRecord.uid, { 
+      role: primaryRole,
+      roles: rolesArray 
+    });
 
-    // 3. (Optional but good for querying) Add to Firestore users collection
+    // 3. Add to Firestore users collection
     const db = getFirestore();
     await db.collection('users').doc(userRecord.uid).set({
       name: name,
       email: email,
-      role: role,
+      role: primaryRole,
+      roles: rolesArray,
       createdAt: FieldValue.serverTimestamp(),
     });
 
@@ -84,13 +97,15 @@ export default async function handler(req: any, res: any) {
       device: userAgent,
       country: country,
       targetUser: email,
-      assignedRole: role,
+      assignedRoles: rolesArray,
+      primaryRole: primaryRole,
     });
 
-    return res.status(200).json({ success: true, uid: userRecord.uid });
+    return res.status(200).json({ success: true, uid: userRecord.uid, primaryRole, roles: rolesArray });
 
   } catch (error: any) {
     console.error("Assign Role Error:", error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
+
