@@ -11,7 +11,7 @@ if (!getApps().length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.appspot.com`,
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET,
     });
   } catch (e) {
     console.error("Firebase Admin Initialization Error:", e);
@@ -44,7 +44,7 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const { filePath, documentId } = req.body;
+    const { filePath, documentId, fileName, forceDownload } = req.body;
     if (!filePath) {
       return res.status(400).json({ error: 'File path is required' });
     }
@@ -53,11 +53,18 @@ export default async function handler(req: any, res: any) {
     const file = bucket.file(filePath);
 
     // Generate a 30-second signed URL
-    const [url] = await file.getSignedUrl({
+    const config: any = {
       version: 'v4',
       action: 'read',
       expires: Date.now() + 30 * 1000, // 30 seconds
-    });
+    };
+
+    if (forceDownload && fileName) {
+      // Force download instead of inline view
+      config.responseDisposition = `attachment; filename="${fileName.replace(/"/g, '')}"`;
+    }
+
+    const [url] = await file.getSignedUrl(config);
 
     // Audit Log Creation
     const db = getFirestore();
@@ -65,7 +72,7 @@ export default async function handler(req: any, res: any) {
     const userAgent = req.headers['user-agent'] || 'unknown';
     
     await db.collection('audit_logs').add({
-      action: 'VIEW_DOCUMENT',
+      action: forceDownload ? 'DOWNLOAD_DOCUMENT' : 'VIEW_DOCUMENT',
       user: 'Super Admin',
       time: FieldValue.serverTimestamp(),
       ip: ip,
