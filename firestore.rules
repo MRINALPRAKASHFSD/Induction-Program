@@ -101,11 +101,11 @@ service cloud.firestore {
 
     // 8. SECURE DOCUMENTS
     match /secure_documents/{docId} {
-      // Only super_admin can read the documents list
-      allow read: if request.auth != null && request.auth.token.role == 'super_admin';
-      // Only coordinator can upload document metadata
-      allow create: if request.auth != null && request.auth.token.role == 'coordinator';
-      // Allow updates for soft deletes/restores (coordinators can't delete, super_admins can)
+      // Allow super_admin and coordinator to read
+      allow read: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
+      // Allow coordinator and super_admin to upload document metadata
+      allow create: if request.auth != null && (request.auth.token.role == 'coordinator' || request.auth.token.role == 'super_admin');
+      // Allow updates for soft deletes/restores
       allow update: if request.auth != null && (request.auth.token.role == 'coordinator' || request.auth.token.role == 'super_admin');
       allow delete: if request.auth != null && request.auth.token.role == 'super_admin';
     }
