@@ -1,0 +1,3 @@
+- Replace SchedulePage JSX with Treasure Hunt Map UI.
+- Update motion properties for Boustraphedon path.
+- Add SVG snake path.
