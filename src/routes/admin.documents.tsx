@@ -183,6 +183,9 @@ function AdminDocumentsPage() {
       const safeDocName = docName.trim();
       const token = await auth.currentUser.getIdToken();
       
+      // Sanitize Content-Type to prevent DOMException in Safari during XHR
+      const safeContentType = (file.type || 'application/octet-stream').replace(/[^\x20-\x7E]/g, '');
+      
       const initRes = await fetch('/api/vault-init-upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -191,7 +194,7 @@ function AdminDocumentsPage() {
           fileSize: file.size, 
           fileHash, 
           category,
-          contentType: file.type || 'application/octet-stream',
+          contentType: safeContentType,
           uploadType,
           imageLocation: uploadType === 'Image' ? imageLocation : undefined
         })
@@ -207,7 +210,7 @@ function AdminDocumentsPage() {
       await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl, true);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('Content-Type', safeContentType);
         
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
