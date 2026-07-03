@@ -200,8 +200,15 @@ function AdminDocumentsPage() {
         })
       });
       
-      const initData = await initRes.json();
-      if (!initRes.ok) throw new Error(initData.error);
+      const initText = await initRes.text();
+      let initData;
+      try {
+        initData = JSON.parse(initText);
+      } catch (parseError) {
+        throw new Error(`Failed to parse API response: ${initText.substring(0, 200)}...`);
+      }
+      
+      if (!initRes.ok) throw new Error(initData.error || initData.message || "Unknown API Error");
       
       const { uploadUrl, filePath } = initData;
       
@@ -361,7 +368,7 @@ function AdminDocumentsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Secure link generated!", { id: loadingToast });
-      window.open(data.url, "_blank");
+      window.open(data.downloadUrl, "_blank");
     } catch (e: any) {
       toast.error(e.message || "Failed to generate URL.", { id: loadingToast });
     }
