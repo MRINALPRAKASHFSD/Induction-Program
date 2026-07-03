@@ -352,6 +352,10 @@ function AdminDocumentsPage() {
 
   const handleDownload = async (docData: any, forceDownload = false) => {
     const loadingToast = toast.loading("Generating secure URL...");
+    
+    // Safari fix: open window synchronously before async operations
+    const newWindow = window.open("about:blank", "_blank");
+    
     try {
       if (!auth.currentUser) throw new Error("Session expired.");
       const token = await auth.currentUser.getIdToken();
@@ -368,8 +372,15 @@ function AdminDocumentsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success("Secure link generated!", { id: loadingToast });
-      window.open(data.downloadUrl, "_blank");
+      
+      if (newWindow) {
+        newWindow.location.href = data.downloadUrl;
+      } else {
+        // Fallback if popup was completely blocked
+        window.location.href = data.downloadUrl;
+      }
     } catch (e: any) {
+      if (newWindow) newWindow.close();
       toast.error(e.message || "Failed to generate URL.", { id: loadingToast });
     }
   };
