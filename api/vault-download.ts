@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getStorage } from 'firebase-admin/storage';
 import * as jwt from 'jsonwebtoken';
-import * as crypto from 'crypto';
 
 let firebaseInitialized = false;
 let firebaseInitError = null;
@@ -49,32 +49,25 @@ export default async function handler(req: any, res: any) {
     }
 
     const uid = decodedToken.user_id || decodedToken.uid;
-    const { filePath, action } = req.body;
+    const bucket = getStorage().bucket(process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app');
+    const { filePath, forceDownload, fileName } = req.body;
 
     if (!filePath) {
       return res.status(400).json({ error: 'Missing required field: filePath' });
     }
 
-    const bucketName = (process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || 'krmu-induction-app-d3591.firebasestorage.app').trim();
-    const expiresUnixSec = Math.floor(Date.now() / 1000) + 15 * 60; // 15 mins
-    const method = 'GET';
-    const contentType = ''; // No content-type for GET
+    const options: any = {
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000,
+    };
 
-    const canonicalizedResource = `/${bucketName}/${filePath.split('/').map(encodeURIComponent).join('/')}`;
-    const stringToSign = `${method}\n\n${contentType}\n${expiresUnixSec}\n${canonicalizedResource}`;
-    
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(stringToSign);
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/^"|"$/g, '').replace(/^'|'$/g, '').replace(/\\n/g, '\n');
-    const signature = sign.sign(privateKey, 'base64');
-    
-    const queryParams = new URLSearchParams({
-      GoogleAccessId: process.env.FIREBASE_CLIENT_EMAIL!.trim(),
-      Expires: expiresUnixSec.toString(),
-      Signature: signature,
-    });
-    
-    const url = `https://storage.googleapis.com${canonicalizedResource}?${queryParams.toString()}`;
+    if (forceDownload) {
+      const safeName = (fileName || 'download').replace(/[^a-zA-Z0-9.\-_ ]/g, '_');
+      options.responseDisposition = `attachment; filename="${safeName}"`;
+    }
+
+    const [url] = await bucket.file(filePath).getSignedUrl(options);
 
     return res.status(200).json({ downloadUrl: url });
 
