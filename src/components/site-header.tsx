@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { GraduationCap, Bell, User, LogOut } from "lucide-react";
+import { Notification, User, Logout } from "iconsax-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase/config";
@@ -45,7 +45,7 @@ export function SiteHeader() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full text-foreground/80 hover:text-foreground">
-                <User className="h-5 w-5" />
+                <User variant="TwoTone" className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-md border-white/20">
@@ -55,7 +55,7 @@ export function SiteHeader() {
                     {user.email}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer mt-1 font-medium">
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <Logout variant="TwoTone" className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </>
@@ -70,7 +70,7 @@ export function SiteHeader() {
           </DropdownMenu>
           <Button asChild variant="ghost" size="icon" className="rounded-full text-foreground/80 hover:text-foreground">
             <Link to="/announcements">
-              <Bell className="h-5 w-5" />
+              <Notification variant="TwoTone" className="h-5 w-5" />
             </Link>
           </Button>
           <Button asChild variant="liquidGlassDark" className="h-9 px-5 rounded-full font-medium text-xs">

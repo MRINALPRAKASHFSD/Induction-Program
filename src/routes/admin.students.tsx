@@ -237,10 +237,10 @@ function AdminStudents() {
           const parts: string[] = [];
           if (result.allocated > 0)
             parts.push(
-              `✓ ${result.allocated} students placed across ${result.roomsUsed} room${result.roomsUsed !== 1 ? "s" : ""}`
+              `${result.allocated} students placed across ${result.roomsUsed} room${result.roomsUsed !== 1 ? "s" : ""}`
             );
           if (result.skipped > 0) parts.push(`${result.skipped} already assigned`);
-          if (result.overflow > 0) parts.push(`⚠ ${result.overflow} overflow (capacity full)`);
+          if (result.overflow > 0) parts.push(`${result.overflow} overflow (capacity full)`);
           toast.success(parts.join(" · "));
         }
         refresh();

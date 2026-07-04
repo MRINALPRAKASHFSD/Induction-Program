@@ -1,6 +1,6 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, Calendar, Users, Sparkles, BarChart3, Activity, LogOut, Menu, X, ScanLine, ShieldCheck, Bell } from "lucide-react";
+import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, Notification } from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { auth } from "@/lib/firebase/config";
@@ -11,14 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 const isClient = typeof window !== 'undefined';
 
 const NAV = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/scanner", label: "QR Scanner", icon: ScanLine },
-  { to: "/admin/events", label: "Events", icon: Calendar },
-  { to: "/admin/students", label: "Students", icon: Users },
-  { to: "/admin/clubs", label: "Clubs", icon: Sparkles },
-  { to: "/admin/announcements", label: "Announcements", icon: Bell },
-  { to: "/admin/documents", label: "Documents", icon: ShieldCheck },
-  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/admin/dashboard", label: "Dashboard", icon: Element3 },
+  { to: "/admin/scanner", label: "QR Scanner", icon: ScanBarcode },
+  { to: "/admin/events", label: "Events", icon: Calendar1 },
+  { to: "/admin/students", label: "Students", icon: Profile2User },
+  { to: "/admin/clubs", label: "Clubs", icon: MagicStar },
+  { to: "/admin/announcements", label: "Announcements", icon: Notification },
+  { to: "/admin/documents", label: "Documents", icon: ShieldTick },
+  { to: "/admin/analytics", label: "Analytics", icon: Chart1 },
   { to: "/admin/activity", label: "Activity", icon: Activity },
 ] as const;
 
@@ -74,16 +74,16 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
         <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <button className="lg:hidden text-[#5a2c14] hover:text-[#2c1208]" onClick={() => setOpen((o) => !o)} aria-label="Toggle nav">
-              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {open ? <CloseSquare variant="TwoTone" className="h-6 w-6" /> : <HambergerMenu variant="TwoTone" className="h-6 w-6" />}
             </button>
             <Link to="/admin/dashboard" className="font-bold text-xl text-[#2c1208] tracking-tight flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-[#8a4a22]" />
+              <ShieldTick variant="TwoTone" className="h-5 w-5 text-[#8a4a22]" />
               KRMU Admin
             </Link>
           </div>
           <div className="flex items-center gap-3">
             <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm text-[#2c1208]"><Link to="/">View site</Link></Button>
-            <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><LogOut className="mr-1.5 h-4 w-4" /> Sign out</Button>
+            <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><Logout variant="TwoTone" className="mr-1.5 h-4 w-4" /> Sign out</Button>
           </div>
         </div>
       </header>
@@ -103,7 +103,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                         : "text-[#7a4020] hover:bg-white/50 hover:text-[#2c1208]"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 ${active ? "text-white" : "text-[#8a4a22]"}`} /> {label}
+                    <Icon variant="TwoTone" className={`h-5 w-5 ${active ? "text-white" : "text-[#8a4a22]"}`} /> {label}
                   </Link>
                 );
               })}
@@ -112,7 +112,7 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
             {/* Privacy & Copyright Block */}
             <div className="glass-card-hero p-5">
               <div className="flex items-center gap-2 mb-3">
-                <ShieldCheck className="h-4 w-4 text-[#8a4a22]" />
+                <ShieldTick variant="TwoTone" className="h-4 w-4 text-[#8a4a22]" />
                 <h4 className="text-[11px] font-bold text-[#2c1208] uppercase tracking-[0.15em]">Privacy First</h4>
               </div>
               <p className="text-xs leading-relaxed text-[#7a4020]/90 font-medium">

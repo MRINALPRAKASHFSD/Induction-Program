@@ -580,8 +580,8 @@ function AdminDocumentsPage() {
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent className="bg-white/90 backdrop-blur-xl border-white/40 rounded-xl">
-                              <SelectItem value="Document">📄 Document</SelectItem>
-                              <SelectItem value="Image">🖼 Image</SelectItem>
+                              <SelectItem value="Document"><div className="flex items-center gap-2"><FileText className="w-4 h-4" /> Document</div></SelectItem>
+                              <SelectItem value="Image"><div className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Image</div></SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -824,8 +824,8 @@ function AdminDocumentsPage() {
                           </SelectTrigger>
                           <SelectContent className="bg-white/90 backdrop-blur-xl rounded-xl">
                             <SelectItem value="All">All Types</SelectItem>
-                            <SelectItem value="Document">📄 Documents</SelectItem>
-                            <SelectItem value="Image">🖼️ Images</SelectItem>
+                            <SelectItem value="Document"><div className="flex items-center gap-2"><FileText className="w-4 h-4" /> Documents</div></SelectItem>
+                            <SelectItem value="Image"><div className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Images</div></SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -839,8 +839,8 @@ function AdminDocumentsPage() {
                             </SelectTrigger>
                             <SelectContent className="bg-white/90 backdrop-blur-xl rounded-xl">
                               <SelectItem value="All">All Locations</SelectItem>
-                              <SelectItem value="Geo-tagged">📍 Geo-tagged</SelectItem>
-                              <SelectItem value="Non Geo-tagged">📌 Non Geo-tagged</SelectItem>
+                              <SelectItem value="Geo-tagged"><div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-500" /> Geo-tagged</div></SelectItem>
+                              <SelectItem value="Non Geo-tagged"><div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-amber-500" /> Non Geo-tagged</div></SelectItem>
                             </SelectContent>
                           </Select>
                         )}
@@ -926,12 +926,13 @@ function AdminDocumentsPage() {
                                     <span className="text-[10px] bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full font-bold border border-purple-200">
                                       {doc.category}
                                     </span>
-                                    <span className="text-[10px] bg-zinc-100 text-zinc-800 px-2.5 py-0.5 rounded-full font-bold border border-zinc-200">
-                                      {doc.uploadType === 'Image' ? '🖼 Image' : '📄 Document'}
+                                    <span className="text-[10px] bg-zinc-100 text-zinc-800 px-2.5 py-0.5 rounded-full font-bold border border-zinc-200 flex items-center gap-1 w-fit">
+                                      {doc.uploadType === 'Image' ? <><ImageIcon className="w-3 h-3"/> Image</> : <><FileText className="w-3 h-3"/> Document</>}
                                     </span>
                                     {doc.uploadType === 'Image' && doc.imageLocation && (
-                                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border ${doc.imageLocation === 'Geo-tagged' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
-                                        {doc.imageLocation === 'Geo-tagged' ? '🟢 Geo-tagged' : '🟠 Non Geo-tagged'}
+                                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold border flex items-center gap-1.5 w-fit ${doc.imageLocation === 'Geo-tagged' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${doc.imageLocation === 'Geo-tagged' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                        {doc.imageLocation === 'Geo-tagged' ? 'Geo-tagged' : 'Non Geo-tagged'}
                                       </span>
                                     )}
                                   </div>

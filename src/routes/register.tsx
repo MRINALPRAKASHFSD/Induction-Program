@@ -154,7 +154,7 @@ function RegisterPage() {
       setEmailVerified(true);
       setVerifyingEmail(false);
       setEmailOtp("");
-      toast.success("Email verified ✓");
+      toast.success("Email verified");
     } catch (err: any) {
       console.error("Verify OTP error:", err);
       toast.error(err.message || "Invalid OTP. Please try again.");

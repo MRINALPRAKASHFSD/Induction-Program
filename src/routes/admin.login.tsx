@@ -34,7 +34,7 @@ function AdminLogin() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast.success("Welcome back 👋");
+      toast.success("Welcome back");
       navigate({ to: "/admin/dashboard" });
     } catch (error: any) {
       console.error("Login failed:", error);

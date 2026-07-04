@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, MapPin } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,7 +89,7 @@ function EventCard({ event, onChanged }: { event: any; onChanged: () => void }) 
             {new Date(event.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
             {new Date(event.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
-          <p className="text-xs font-medium mt-1">📍 {event.venue}</p>
+          <p className="flex items-center gap-1 text-xs font-medium mt-1"><MapPin className="h-3 w-3" /> {event.venue}</p>
           {event.department_id && <p className="text-xs text-primary mt-1">Dept: {event.department_id}</p>}
         </div>
         <div className="flex flex-col gap-2">

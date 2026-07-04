@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, QrCode, Sparkles, Calendar, Download, FileText, FileSpreadsheet, FileJson, File } from "lucide-react";
+import { Profile2User, ScanBarcode, MagicStar, Calendar1, Import, DocumentText, TableDocument, DocumentCode, Document } from "iconsax-react";
 import { useLiveCount } from "@/hooks/use-live-count";
 import { AdminShell } from "@/components/admin-shell";
 import { collection, query, orderBy, getDocs, onSnapshot } from "firebase/firestore";
@@ -178,20 +178,20 @@ function AdminDashboard() {
   };
 
   const exportButtons = [
-    { format: "csv",  label: "CSV",   Icon: FileText },
-    { format: "xlsx", label: "Excel", Icon: FileSpreadsheet },
-    { format: "pdf",  label: "PDF",   Icon: File },
-    { format: "json", label: "JSON",  Icon: FileJson },
+    { format: "csv",  label: "CSV",   Icon: DocumentText },
+    { format: "xlsx", label: "Excel", Icon: TableDocument },
+    { format: "pdf",  label: "PDF",   Icon: Document },
+    { format: "json", label: "JSON",  Icon: DocumentCode },
   ];
 
   return (
     <AdminShell title="Live dashboard" subtitle="Real-time numbers across the induction.">
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Users}     label="Students registered" value={students} accent="from-primary to-primary-glow" />
-        <Kpi icon={QrCode}    label="Total QR scans"      value={scans}    accent="from-accent to-primary-glow" />
-        <Kpi icon={Sparkles}  label="Club joins"          value={clubs}    accent="from-chart-4 to-success" />
-        <Kpi icon={Calendar}  label="Events live"         value={events}   accent="from-chart-3 to-primary" />
+        <Kpi icon={Profile2User}     label="Students registered" value={students} accent="from-primary to-primary-glow" />
+        <Kpi icon={ScanBarcode}    label="Total QR scans"      value={scans}    accent="from-accent to-primary-glow" />
+        <Kpi icon={MagicStar}  label="Club joins"          value={clubs}    accent="from-chart-4 to-success" />
+        <Kpi icon={Calendar1}  label="Events live"         value={events}   accent="from-chart-3 to-primary" />
       </div>
 
       {/* Live feed + export */}
@@ -228,7 +228,7 @@ function AdminDashboard() {
                 {exporting === format ? (
                   <span className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
                 ) : (
-                  <Icon className="h-3.5 w-3.5 text-[#8a4a22]" />
+                  <Icon variant="TwoTone" className="h-3.5 w-3.5 text-[#8a4a22]" />
                 )}
                 {label}
               </Button>
@@ -241,7 +241,7 @@ function AdminDashboard() {
               onClick={() => handleExport("csv")}
               className="h-8 gap-1.5 text-xs shadow-sm rounded-full"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Import variant="TwoTone" className="h-3.5 w-3.5" />
               Export All
             </Button>
           </div>
@@ -292,13 +292,13 @@ function AdminDashboard() {
   );
 }
 
-function Kpi({ icon: Icon, label, value, accent }: { icon: typeof Users; label: string; value: number | null; accent: string }) {
+function Kpi({ icon: Icon, label, value, accent }: { icon: typeof Profile2User; label: string; value: number | null; accent: string }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl glass-card-hero p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[#5a2c14]">{label}</span>
         <span className={`grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br ${accent} text-primary-foreground shadow-sm`}>
-          <Icon className="h-4 w-4" />
+          <Icon variant="TwoTone" className="h-4 w-4" />
         </span>
       </div>
       <div className="mt-3 text-3xl font-bold tabular-nums">{value ?? "—"}</div>
