@@ -1,9 +1,17 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, Notification } from "iconsax-react";
+import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick } from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
-import { auth } from "@/lib/firebase/config";
+import { auth, db } from "@/lib/firebase/config";
+import { collection, query, where, orderBy, onSnapshot, doc, setDoc } from "firebase/firestore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, Clock, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -16,7 +24,7 @@ const NAV = [
   { to: "/admin/events", label: "Events", icon: Calendar1 },
   { to: "/admin/students", label: "Students", icon: Profile2User },
   { to: "/admin/clubs", label: "Clubs", icon: MagicStar },
-  { to: "/admin/announcements", label: "Announcements", icon: Notification },
+  { to: "/admin/announcements", label: "Announcements", icon: Bell },
   { to: "/admin/documents", label: "Documents", icon: ShieldTick },
   { to: "/admin/analytics", label: "Analytics", icon: Chart1 },
   { to: "/admin/activity", label: "Activity", icon: Activity },
@@ -27,6 +35,56 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!userId) return;
+
+    // Listen to active announcements
+    const qAnnouncements = query(
+      collection(db, "announcements"), 
+      where("status", "==", "active"),
+      orderBy("createdAt", "desc")
+    );
+    
+    const unsubAnnouncements = onSnapshot(qAnnouncements, (snap) => {
+      const now = new Date().getTime();
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => {
+        // filter expired
+        if (a.expiresAt && new Date(a.expiresAt).getTime() < now) return false;
+        return true; // Admin sees all
+      });
+      setAnnouncements(docs);
+    });
+
+    // Listen to user's read states
+    const qReads = collection(db, `user_notifications/${userId}/reads`);
+    const unsubReads = onSnapshot(qReads, (snap) => {
+      const reads = new Set(snap.docs.map(d => d.id));
+      setReadIds(reads);
+    });
+
+    return () => {
+      unsubAnnouncements();
+      unsubReads();
+    };
+  }, [userId]);
+
+  const markAsRead = async (id: string) => {
+    if (!userId || readIds.has(id)) return;
+    try {
+      await setDoc(doc(db, `user_notifications/${userId}/reads/${id}`), {
+        readAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Failed to mark read", e);
+    }
+  };
+
+  const unreadCount = announcements.filter(a => !readIds.has(a.id)).length;
+  const displayCount = unreadCount > 99 ? "99+" : unreadCount;
 
   const signOutAdmin = async () => {
     try {
@@ -82,6 +140,87 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
             </Link>
           </div>
           <div className="flex items-center gap-3">
+            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative rounded-full text-amber-500 hover:bg-white/50 hover:text-amber-600">
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white shadow-sm ring-2 ring-white/50">
+                      {displayCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-white/80 backdrop-blur-2xl border-white/40 shadow-2xl rounded-2xl overflow-hidden mt-2">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
+                  <h3 className="font-bold text-[#2c1208]">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto hide-scrollbar">
+                  {announcements.length === 0 ? (
+                    <div className="p-8 text-center text-[#7a4020]/60">
+                      <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm font-medium">You're all caught up!</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      <AnimatePresence>
+                        {announcements.map((a) => {
+                          const isRead = readIds.has(a.id);
+                          return (
+                            <motion.div
+                              key={a.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                            >
+                              <Link 
+                                to="/admin/announcements" 
+                                onClick={() => { markAsRead(a.id); setIsOpen(false); }}
+                                className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/60 relative ${!isRead ? "bg-white/40" : "opacity-75"}`}
+                              >
+                                {!isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />}
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
+                                    {a.title}
+                                  </h4>
+                                  {a.isImportant && (
+                                    <span className="absolute top-4 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                                      <AlertCircle className="w-2.5 h-2.5" /> Urgent
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-[#7a4020] line-clamp-2 leading-relaxed mb-2">
+                                  {a.content}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                                  </div>
+                                </div>
+                              </Link>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
+                <div className="p-2 border-t border-[#8a4a22]/10 bg-white/50">
+                  <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-white/60" asChild>
+                    <Link to="/admin/announcements" onClick={() => setIsOpen(false)}>
+                      Manage Announcements
+                    </Link>
+                  </Button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm text-[#2c1208]"><Link to="/">View site</Link></Button>
             <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><Logout variant="TwoTone" className="mr-1.5 h-4 w-4" /> Sign out</Button>
           </div>
