@@ -1,4 +1,4 @@
-import { defineConfig, Plugin } from "vite";
+import { defineConfig, Plugin, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -54,27 +54,32 @@ const apiMockPlugin = (): Plugin => ({
   }
 });
 
-export default defineConfig(({ command }) => ({
-  plugins: [
-    apiMockPlugin(),
-    tanstackStart({
-      spa: {
-        enabled: true,
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  process.env = { ...process.env, ...env };
+
+  return {
+    plugins: [
+      apiMockPlugin(),
+      tanstackStart({
+        spa: {
+          enabled: true,
+        },
+      }),
+      react(),
+      tailwindcss(),
+      tsconfigPaths(),
+    ],
+    resolve: {
+      alias: {
+        "@": "/src",
       },
-    }),
-    react(),
-    tailwindcss(),
-    tsconfigPaths(),
-  ],
-  resolve: {
-    alias: {
-      "@": "/src",
+      dedupe: ["react", "react-dom", "@tanstack/react-router"],
     },
-    dedupe: ["react", "react-dom", "@tanstack/react-router"],
-  },
-  server: {
-    port: 8080,
-    host: true,
-    strictPort: true,
-  },
-}));
+    server: {
+      port: 8080,
+      host: true,
+      strictPort: true,
+    },
+  };
+});

@@ -2,7 +2,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 // Initialize Firebase Admin (use your existing admin config pattern)
 if (!getApps().length) {
