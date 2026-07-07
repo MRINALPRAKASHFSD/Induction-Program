@@ -123,7 +123,7 @@ export default async function handler(req: any, res: any) {
       primaryRole: primaryRole,
     });
 
-    return res.status(200).json({ success: true, uid: userRecord.uid, primaryRole, roles: rolesArray });
+    return res.status(200).json({ success: true, uid, primaryRole, roles: rolesArray });
 
   } catch (error: any) {
     console.error("Assign Role Error:", error);

@@ -3,7 +3,7 @@ import { getStorage } from 'firebase-admin/storage';
 import * as jwt from 'jsonwebtoken';
 
 let firebaseInitialized = false;
-let firebaseInitError = null;
+let firebaseInitError: string | null = null;
 
 try {
   if (!getApps().length) {

@@ -3,7 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 
 let firebaseInitialized = false;
-let firebaseInitError = null;
+let firebaseInitError: string | null = null;
 
 try {
   if (!getApps().length) {
