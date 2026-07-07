@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { render } from '@react-email/components';
 import * as React from 'react';
 import { OtpEmail } from '../src/components/emails/otp-email';
 
@@ -68,7 +69,7 @@ export default async function handler(req: any, res: any) {
         from: fromEmail,
         to: email,
         subject: 'Your Verification Code — Aarambh 2026',
-        react: React.createElement(OtpEmail, { otp }),
+        html: await render(React.createElement(OtpEmail, { otp })),
       });
     } else {
       console.log(`\n=========================================`);
