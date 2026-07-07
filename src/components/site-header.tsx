@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight } from "lucide-react";
+import { AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight, CheckCircle2 } from "lucide-react";
 
 export function SiteHeader() {
   const [user, setUser] = useState<any>(null);
@@ -28,13 +28,7 @@ export function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setAnnouncements([]);
-      setReadIds(new Set());
-      return;
-    }
-
-    // Listen to active announcements
+    // Listen to active announcements for everyone
     const qAnnouncements = query(
       collection(db, "announcements"),
       where("status", "==", "active")
@@ -43,27 +37,30 @@ export function SiteHeader() {
     const unsubAnnouncements = onSnapshot(qAnnouncements, (snap) => {
       const now = new Date().getTime();
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => {
-        // filter expired
         if (a.expiresAt && new Date(a.expiresAt).getTime() < now) return false;
-        // basic audience filter (assume All Students applies to this user view)
         return a.targetAudience === "All Students";
       });
-      // Sort locally by createdAt desc
-      docs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      docs.sort((a: any, b: any) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
       setAnnouncements(docs);
     });
 
-    // Listen to user's read states
-    const qReads = collection(db, `user_notifications/${user.uid}/reads`);
-    const unsubReads = onSnapshot(qReads, (snap) => {
-      const reads = new Set(snap.docs.map(d => d.id));
-      setReadIds(reads);
-    });
+    return () => unsubAnnouncements();
+  }, []);
 
-    return () => {
-      unsubAnnouncements();
-      unsubReads();
-    };
+  useEffect(() => {
+    if (user) {
+      // Listen to user's read states from Firestore
+      const qReads = collection(db, `user_notifications/${user.uid}/reads`);
+      const unsubReads = onSnapshot(qReads, (snap) => {
+        const reads = new Set(snap.docs.map(d => d.id));
+        setReadIds(reads);
+      });
+      return () => unsubReads();
+    } else {
+      // Load read states from localStorage for anonymous users
+      const localReads = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+      setReadIds(new Set(localReads));
+    }
   }, [user]);
 
   const handleLogout = async () => {
@@ -78,13 +75,36 @@ export function SiteHeader() {
   };
 
   const markAsRead = async (id: string) => {
-    if (!user || readIds.has(id)) return;
-    try {
-      await setDoc(doc(db, `user_notifications/${user.uid}/reads/${id}`), {
-        readAt: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error("Failed to mark read", e);
+    if (readIds.has(id)) return;
+    
+    if (user) {
+      try {
+        await setDoc(doc(db, `user_notifications/${user.uid}/reads/${id}`), {
+          readAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error("Failed to mark read", e);
+      }
+    } else {
+      // Update localStorage for anonymous users
+      const newReads = new Set(readIds);
+      newReads.add(id);
+      setReadIds(newReads);
+      localStorage.setItem('read_announcements', JSON.stringify(Array.from(newReads)));
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unread = announcements.filter(a => !readIds.has(a.id));
+    if (user) {
+      for (const a of unread) {
+        await markAsRead(a.id);
+      }
+    } else {
+      const newReads = new Set(readIds);
+      unread.forEach(a => newReads.add(a.id));
+      setReadIds(newReads);
+      localStorage.setItem('read_announcements', JSON.stringify(Array.from(newReads)));
     }
   };
 
@@ -112,20 +132,34 @@ export function SiteHeader() {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-white/80 backdrop-blur-2xl border-white/40 shadow-2xl rounded-2xl overflow-hidden mt-2">
+            <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
-                <h3 className="font-bold text-[#2c1208]">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-[#2c1208]">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="text-xs font-bold text-[#8a4a22] bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
                 {unreadCount > 0 && (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    {unreadCount} new
-                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={markAllAsRead} 
+                    className="h-6 px-2 text-[10px] uppercase font-bold text-[#8a4a22] hover:bg-[#8a4a22]/10 rounded-full transition-colors"
+                  >
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Mark all read
+                  </Button>
                 )}
               </div>
-              <div className="max-h-[60vh] overflow-y-auto hide-scrollbar">
+              <div className="max-h-[60vh] overflow-y-auto hide-scrollbar bg-gradient-to-b from-[#fdfbf9] to-[#faf6f3]">
                 {announcements.length === 0 ? (
-                  <div className="p-8 text-center text-[#7a4020]/60">
-                    <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm font-medium">You're all caught up!</p>
+                  <div className="p-10 text-center text-[#7a4020]/60">
+                    <div className="w-12 h-12 rounded-full bg-[#8a4a22]/5 flex items-center justify-center mx-auto mb-3">
+                      <Bell className="h-6 w-6 opacity-40" />
+                    </div>
+                    <p className="text-sm font-bold text-[#5a2c14]/60">You're all caught up!</p>
                   </div>
                 ) : (
                   <div className="flex flex-col">
@@ -142,27 +176,36 @@ export function SiteHeader() {
                             <Link 
                               to="/announcements" 
                               onClick={() => { markAsRead(a.id); setIsOpen(false); }}
-                              className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/60 relative ${!isRead ? "bg-white/40" : "opacity-75"}`}
+                              className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/80 relative group ${!isRead ? "bg-white" : "bg-transparent opacity-80"}`}
                             >
-                              {!isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />}
-                              <div className="flex items-start justify-between gap-2 mb-1">
+                              {!isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 rounded-r-full" />}
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
                                 <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
                                   {a.title}
                                 </h4>
                                 {a.isImportant && (
-                                  <span className="absolute top-4 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                                  <span className="absolute top-3 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 shadow-sm">
                                     <AlertCircle className="w-2.5 h-2.5" /> Urgent
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-[#7a4020] line-clamp-2 leading-relaxed mb-2">
+                              <p className={`text-xs line-clamp-2 leading-relaxed mb-3 ${!isRead ? "text-[#5a2c14]" : "text-[#7a4020]"}`}>
                                 {a.content}
                               </p>
                               <div className="flex items-center justify-between">
-                                <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1">
+                                <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1 bg-[#8a4a22]/5 px-1.5 py-0.5 rounded-md">
                                   <Clock className="w-3 h-3" />
                                   {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                                 </div>
+                                {!isRead && (
+                                  <button onClick={(e) => {
+                                      e.preventDefault();
+                                      markAsRead(a.id);
+                                    }} 
+                                    className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 px-2 py-0.5 rounded-full transition-all flex items-center gap-1 z-10 relative">
+                                    <CheckCircle2 className="w-3 h-3" /> Mark read
+                                  </button>
+                                )}
                               </div>
                             </Link>
                           </motion.div>
@@ -172,10 +215,10 @@ export function SiteHeader() {
                   </div>
                 )}
               </div>
-              <div className="p-2 border-t border-[#8a4a22]/10 bg-white/50">
-                <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-white/60" asChild>
+              <div className="p-2 border-t border-[#8a4a22]/10 bg-white/80">
+                <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-[#8a4a22]/5" asChild>
                   <Link to="/announcements" onClick={() => setIsOpen(false)}>
-                    View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block" />
+                    View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block opacity-70" />
                   </Link>
                 </Button>
               </div>

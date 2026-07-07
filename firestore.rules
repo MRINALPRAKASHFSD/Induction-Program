@@ -126,11 +126,11 @@ service cloud.firestore {
       allow update, delete: if false; // Immutable logs
     }
 
-    // Helper function for roles since custom claims might be delayed
     function isSuperAdmin() {
       return request.auth != null && (
-        request.auth.token.role == 'super_admin' || 
+        ('role' in request.auth.token && request.auth.token.role == 'super_admin') || 
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
       );
     }
@@ -138,7 +138,7 @@ service cloud.firestore {
     // 11. ANNOUNCEMENTS
     match /announcements/{announcementId} {
       // Anyone can read active announcements. Super admins can read all (including archived).
-      allow read: if resource.data.get('status', 'active') == 'active' || isSuperAdmin();
+      allow read: if resource.data.status == 'active' || isSuperAdmin();
       // Only super admin can modify announcements from the client, though they should use the API
       allow write: if isSuperAdmin();
     }
