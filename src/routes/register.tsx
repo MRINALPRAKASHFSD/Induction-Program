@@ -55,6 +55,7 @@ function RegisterPage() {
   const [form, setForm] = useState({
     full_name: "", enrollment_no: "", email: "", phone: "",
     department_id: "", branch: "", course: "", year: "1",
+    agreeTerms: false, agreePrivacy: false, consentComms: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -74,7 +75,7 @@ function RegisterPage() {
     return () => unsubscribe();
   }, []);
 
-  const update = <K extends keyof typeof form>(k: K, v: string) =>
+  const update = <K extends keyof typeof form>(k: K, v: any) =>
     setForm((f) => ({ ...f, [k]: v, ...(k === "department_id" ? { branch: "" } : {}) }));
 
   // Reset email verification whenever the email changes
@@ -471,6 +472,21 @@ function RegisterPage() {
               </Field>
             </div>
 
+            <div className="grid gap-3 my-2 text-sm text-muted-foreground mt-4">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" required checked={form.agreeTerms} onChange={e => update("agreeTerms", e.target.checked)} className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary" />
+                <span>I agree to the <Link to="/terms" className="text-primary hover:underline font-medium">Terms of Service</Link></span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" required checked={form.agreePrivacy} onChange={e => update("agreePrivacy", e.target.checked)} className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary" />
+                <span>I agree to the <Link to="/privacy" className="text-primary hover:underline font-medium">Privacy Policy</Link></span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" required checked={form.consentComms} onChange={e => update("consentComms", e.target.checked)} className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary" />
+                <span>I consent to receiving official induction communications</span>
+              </label>
+            </div>
+
             <Button
               type="submit"
               variant="liquidGlassMaroon"
@@ -480,9 +496,6 @@ function RegisterPage() {
             >
               {submitting ? "Registering…" : "Register"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              By registering you agree to the KRMU induction code of conduct.
-            </p>
           </form>
         </main>
       </div>
