@@ -238,18 +238,6 @@ graph TD
 
 ---
 
-## 🚀 Local Setup
-
-```bash
-git clone https://github.com/MRINALPRAKASHFSD/Induction-Program.git
-cd Induction-Program
-npm install
-npm run dev
-```
-
-> ⚙️ Requires Firebase project credentials and a Blaze plan Storage bucket. Contact the system administrator for access.
-
----
 
 ## 📄 License
 
