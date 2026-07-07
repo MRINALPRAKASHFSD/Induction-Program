@@ -30,20 +30,22 @@ function AnnouncementsPage() {
   useEffect(() => {
     const qAnnouncements = query(
       collection(db, "announcements"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "active")
     );
     
     const unsubAnnouncements = onSnapshot(qAnnouncements, (snap) => {
       const now = new Date().getTime();
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => {
-        // filter status
-        if (a.status && a.status !== "active") return false;
         // filter expired
         if (a.expiresAt && new Date(a.expiresAt).getTime() < now) return false;
         // basic audience filter (assume All Students applies to this user view)
         return a.targetAudience === "All Students";
       });
+      docs.sort((a: any, b: any) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
       setAnnouncements(docs);
+      setLoading(false);
+    }, (err) => {
+      console.error("Failed to load announcements:", err);
       setLoading(false);
     });
 
