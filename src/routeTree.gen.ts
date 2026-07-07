@@ -15,6 +15,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as MyPassRouteImport } from './routes/my-pass'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as ClubsRouteImport } from './routes/clubs'
 import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
@@ -60,6 +61,11 @@ const MyPassRoute = MyPassRouteImport.update({
 const HelpRoute = HelpRouteImport.update({
   id: '/help',
   path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClubsRoute = ClubsRouteImport.update({
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/cookies': typeof CookiesRoute
   '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
   '/privacy': typeof PrivacyRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/cookies': typeof CookiesRoute
   '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
   '/privacy': typeof PrivacyRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/announcements': typeof AnnouncementsRoute
   '/attendance': typeof AttendanceRoute
   '/clubs': typeof ClubsRoute
+  '/cookies': typeof CookiesRoute
   '/help': typeof HelpRoute
   '/my-pass': typeof MyPassRoute
   '/privacy': typeof PrivacyRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/cookies'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/cookies'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/attendance'
     | '/clubs'
+    | '/cookies'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -296,6 +308,7 @@ export interface RootRouteChildren {
   AnnouncementsRoute: typeof AnnouncementsRoute
   AttendanceRoute: typeof AttendanceRoute
   ClubsRoute: typeof ClubsRoute
+  CookiesRoute: typeof CookiesRoute
   HelpRoute: typeof HelpRoute
   MyPassRoute: typeof MyPassRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -358,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/clubs': {
@@ -480,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnnouncementsRoute: AnnouncementsRoute,
   AttendanceRoute: AttendanceRoute,
   ClubsRoute: ClubsRoute,
+  CookiesRoute: CookiesRoute,
   HelpRoute: HelpRoute,
   MyPassRoute: MyPassRoute,
   PrivacyRoute: PrivacyRoute,
