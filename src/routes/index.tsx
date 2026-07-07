@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -53,18 +53,29 @@ function Countdown({ targetDate }: { targetDate: string }) {
   }, [targetDate]);
 
   return (
-    <div className="flex items-center gap-4 sm:gap-6">
+    <div className="flex items-center gap-3 sm:gap-5">
       {[
         { value: timeLeft.days, label: "Days" },
         { value: timeLeft.hours, label: "Hours" },
         { value: timeLeft.minutes, label: "Mins" },
         { value: timeLeft.seconds, label: "Secs" },
       ].map((s) => (
-        <div key={s.label} className="text-center min-w-[48px] sm:min-w-[56px]">
-          <div className="text-[#2c1208] font-bold text-xl sm:text-2xl tabular-nums leading-none">
-            {s.value.toString().padStart(2, "0")}
+        <div key={s.label} className="text-center min-w-[56px] sm:min-w-[64px] flex flex-col items-center">
+          <div className="bg-white/40 border border-white/50 shadow-sm rounded-xl w-full h-[48px] sm:h-[56px] backdrop-blur-md relative overflow-hidden flex items-center justify-center">
+            <AnimatePresence>
+              <motion.span
+                key={s.value}
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "-100%", opacity: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="absolute text-[#2c1208] font-black text-2xl sm:text-3xl tabular-nums leading-none"
+              >
+                {s.value.toString().padStart(2, "0")}
+              </motion.span>
+            </AnimatePresence>
           </div>
-          <div className="text-[#8a4a22]/60 text-[0.6rem] sm:text-[0.65rem] uppercase tracking-widest mt-1.5">
+          <div className="text-[#8a4a22]/70 text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-widest mt-2">
             {s.label}
           </div>
         </div>
@@ -206,14 +217,27 @@ function Landing() {
 
             {/* Countdown timer */}
             <motion.div
-              className="mt-12 glass-card-hero px-6 py-4 inline-flex items-center flex-wrap gap-x-6 gap-y-3"
+              className="mt-12 glass-card-hero px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem]"
               variants={{ hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9, delay: 0.15 } } }}
             >
-              <div className="flex items-center gap-3 pr-4 sm:pr-6 border-r border-[#8a4a22]/20">
-                <div className="bg-[#8a4a22]/10 p-2 rounded-full hidden sm:block">
-                  <Clock className="h-5 w-5 text-[#8a4a22]/70" />
+              <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15">
+                <div className="relative hidden sm:block">
+                  <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
+                    >
+                      <Clock className="h-6 w-6 text-[#8a4a22]" />
+                    </motion.div>
+                  </div>
+                  {/* Subtle pulse ring */}
+                  <motion.div 
+                    className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0"
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0] }}
+                    transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
+                  />
                 </div>
-                <span className="text-[#8a4a22]/80 text-[0.65rem] font-bold uppercase tracking-[0.2em] leading-tight text-left">
+                <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left">
                   Induction<br/>Begins In
                 </span>
               </div>
