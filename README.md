@@ -222,17 +222,17 @@ graph LR
 
 ---
 
-## 🎨 Design System — Liquid Glass
+## 🎨 Design System — Liquid Glass & Dynamic Motion
 
-The entire admin panel uses a **Liquid Glass** aesthetic inspired by Apple's modern UI:
+The entire platform uses a **Liquid Glass** aesthetic combined with highly interactive micro-animations inspired by modern premium interfaces:
 
 ```mermaid
 graph TD
-    DS[Liquid Glass Design System] --> Cards["🪟 Glass Cards\nbg-white/40 + backdrop-blur-xl"]
+    DS[Design System & Motion] --> Cards["🪟 Glass Cards\nbg-white/40 + backdrop-blur-xl"]
     DS --> Panels["🔲 Glass Panels\nbg-white/30 + backdrop-blur-md"]
-    DS --> Inputs["📝 Glass Inputs\nbg-white/50 + backdrop-blur-md"]
-    DS --> Radius["📐 Rounded Corners\n18–24px throughout"]
-    DS --> Motion["✨ Framer Motion\nSpring physics animations"]
+    DS --> Motion["✨ Dynamic Motion\nShimmer sweeps & hover scaling"]
+    DS --> Ambience["🌟 Ambient Glow\nReactive blur gradients & orbs"]
+    DS --> Radius["📐 Modern Geometry\nRounded 24px-40px throughout"]
     DS --> Colors["🎨 KRMU Brand Palette\n#8a2c14 · #5a2c14 · #2c1208"]
 ```
 
