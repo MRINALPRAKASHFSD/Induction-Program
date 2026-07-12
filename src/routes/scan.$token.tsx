@@ -98,7 +98,7 @@ function ScanPage() {
         <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-[#FFB75E]/20 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-[#FF5E5E]/10 blur-[120px] rounded-full pointer-events-none" />
         
-        <div className="relative container mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 z-10">
+        <div className="relative container mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 sm:px-6 z-10">
           <SuccessBurst
             title={result.duplicate ? "Already checked in" : "Attendance marked!"}
             subtitle={`${result.student.name} · ${result.event.title}`}
@@ -139,7 +139,7 @@ function ScanPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto max-w-md px-4 py-10">
+      <main className="container mx-auto max-w-md px-4 py-6 sm:py-10">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
             <QrCode className="h-8 w-8" />

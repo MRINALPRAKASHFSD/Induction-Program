@@ -116,7 +116,7 @@ export function SiteHeader() {
       <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-3 font-semibold">
           <img src="/krmu-emblem.jpg" alt="KRMU Emblem" className="h-11 w-auto mix-blend-multiply object-contain" />
-          <span className="text-xl tracking-tight text-[#6b3517]">KRMU Induction</span>
+          <span className="text-xl tracking-tight text-[#6b3517] hidden sm:inline-block">KRMU Induction</span>
         </Link>
         <nav className="flex items-center gap-2">
           
@@ -132,7 +132,7 @@ export function SiteHeader() {
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2">
+            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-[#2c1208]">Notifications</h3>

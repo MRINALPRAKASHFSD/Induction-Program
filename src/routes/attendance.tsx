@@ -277,7 +277,7 @@ function AttendancePage() {
         <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
       </div>
 
-      <main className="relative container mx-auto max-w-lg px-4 py-8 sm:py-10">
+      <main className="relative container mx-auto max-w-lg px-4 py-6 sm:py-10">
         <AnimatePresence mode="wait">
           {!profile && (
             <motion.div 
@@ -288,7 +288,7 @@ function AttendancePage() {
               className="rounded-3xl border bg-card shadow-elegant overflow-hidden"
             >
               <div className="h-2 bg-hero" />
-              <div className="p-8 text-center">
+              <div className="p-6 sm:p-8 text-center">
                 <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
                   <User className="h-8 w-8" />
                 </div>
@@ -325,7 +325,7 @@ function AttendancePage() {
               </div>
 
               {/* Student detail card */}
-              <div className="rounded-3xl border bg-card p-6 shadow-sm relative overflow-hidden">
+              <div className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-hero" />
                 <div className="flex flex-col gap-2">
                   <h3 className="font-bold text-lg text-foreground leading-tight">{profile.full_name}</h3>
@@ -337,7 +337,7 @@ function AttendancePage() {
               </div>
 
               {/* Attendance Lodge Form */}
-              <div className="rounded-3xl border bg-card p-6 shadow-elegant space-y-4">
+              <div className="rounded-3xl border bg-card p-5 sm:p-6 shadow-elegant space-y-4">
                 <h3 className="text-base font-bold flex items-center gap-2 mb-2">
                   <QrCode className="h-5 w-5 text-primary" /> Setup Session Selection
                 </h3>
@@ -496,7 +496,7 @@ function AttendancePage() {
                initial={{ opacity: 0, scale: 0.9 }} 
                animate={{ opacity: 1, scale: 1 }} 
                exit={{ opacity: 0 }}
-               className="flex flex-col items-center justify-center py-20 text-center space-y-4 rounded-3xl border bg-card p-8 shadow-elegant"
+               className="flex flex-col items-center justify-center py-12 sm:py-20 text-center space-y-4 rounded-3xl border bg-card p-6 sm:p-8 shadow-elegant"
              >
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
                   {phase === "success" && <CheckCircle2 className="h-20 w-20 text-success drop-shadow-lg" />}

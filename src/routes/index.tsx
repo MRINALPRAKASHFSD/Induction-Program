@@ -172,7 +172,7 @@ function Landing() {
               className="mt-5"
             >
               <div className="aarambh-wordmark-wrap">
-                <h1 className="aarambh-wordmark text-[3rem] sm:text-[4.8rem] lg:text-[6.2rem]">
+                <h1 className="aarambh-wordmark text-[2.75rem] sm:text-[4.8rem] lg:text-[6.2rem]">
                   Aarambh
                 </h1>
               </div>
@@ -191,7 +191,7 @@ function Landing() {
             <motion.div
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9 } } }}
             >
-              <p className="text-[#2c1208] text-xl sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
+              <p className="text-[#2c1208] text-lg sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
                 Your beginning.{" "}
                 <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
               </p>
@@ -202,15 +202,15 @@ function Landing() {
 
             {/* CTA buttons */}
             <motion.div
-              className="mt-10 flex flex-wrap gap-3"
+              className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3"
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.85 } } }}
             >
-              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold">
+              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold w-full sm:w-auto">
                 <Link to="/register">
                   Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium">
+              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium w-full sm:w-auto">
                 <Link to="/attendance">
                   <QrCode className="mr-2 h-4 w-4" />
                   Lodge Attendance
@@ -254,7 +254,7 @@ function Landing() {
 
       {/* Live Stats Section */}
       <section className="container mx-auto max-w-5xl px-4 py-16 pt-24">
-        <div className="glass-card-hero p-8 sm:p-12 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-10 relative overflow-hidden group border-[#8a4a22]/20 hover:border-[#8a4a22]/30 transition-colors">
+        <div className="glass-card-hero p-6 sm:p-12 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 sm:gap-10 relative overflow-hidden group border-[#8a4a22]/20 hover:border-[#8a4a22]/30 transition-colors">
           <div className="absolute top-0 bottom-0 left-[-100%] w-[100%] bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:left-[100%] transition-all duration-[1500ms] ease-in-out z-0" />
           <div className="max-w-md text-center md:text-left relative z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8a4a22]/10 border border-[#8a4a22]/20 mb-5 shadow-sm">
@@ -269,7 +269,7 @@ function Landing() {
               Watch our community grow instantly as new students register, scan in, and join clubs across campus.
             </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-10 sm:gap-x-14 gap-y-10 relative z-10">
+          <div className="flex flex-wrap justify-center gap-x-6 sm:gap-x-14 gap-y-8 sm:gap-y-10 relative z-10">
             {[
               { value: students ?? "—", label: "Registered" },
               { value: scans ?? "—",   label: "QR Scans"   },
@@ -379,10 +379,10 @@ function Landing() {
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-[#8a4a22]/15">
-            <div className="text-[13px] text-[#7a4020]/70 font-medium tracking-wide flex items-center">
-              &copy; 2024 EOZKA. <span className="mx-3 text-[#7a4020]/30">•</span> All rights reserved.
+            <div className="text-[13px] text-[#7a4020]/70 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
+              &copy; 2024 EOZKA. <span className="mx-3 text-[#7a4020]/30 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
             </div>
-            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group flex items-center gap-5 bg-white border border-[#8a4a22]/20 rounded-full px-8 py-3.5 hover:shadow-xl hover:shadow-[#8a4a22]/5 hover:border-[#8a4a22]/40 transition-all">
+            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group flex flex-col sm:flex-row items-center gap-3 sm:gap-5 bg-white border border-[#8a4a22]/20 rounded-2xl sm:rounded-full px-6 sm:px-8 py-3.5 hover:shadow-xl hover:shadow-[#8a4a22]/5 hover:border-[#8a4a22]/40 transition-all text-center">
               <span className="text-[13px] font-bold text-[#7a4020]/90 uppercase tracking-[0.2em] leading-none">Engineered & Co-powered by</span>
               <div className="w-[1px] h-8 bg-[#8a4a22]/20 group-hover:bg-[#8a4a22]/40 transition-colors"></div>
               <img src="/eozka-logo.jpg" alt="eOzka" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform" />
