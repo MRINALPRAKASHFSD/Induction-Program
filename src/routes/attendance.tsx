@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
 import { getDepartments, getSchoolDays, getSchoolSessions } from "@/lib/students.functions";
-import { recordScan } from "@/lib/attendance.functions";
+import { auth } from "@/lib/firebase/config";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/attendance")({
@@ -224,10 +224,23 @@ function AttendancePage() {
     }
 
     try {
-      // 1. Try server function to push attendance
-      const res = await recordScan({ 
-        data: { qr_token: qrToken, enrollment_no: profile.enrollment_no } 
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("You must be logged in as an admin or student to mark attendance.");
+      }
+      
+      const idToken = await currentUser.getIdToken();
+
+      const response = await fetch('/api/attendance-mark', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ qr_token: qrToken, enrollment_no: profile.enrollment_no }),
       });
+
+      const res = await response.json() as any;
 
       if (res.ok) {
         // Also mirror it in local database to show checked list correctly
@@ -235,12 +248,12 @@ function AttendancePage() {
 
         toast.success("Attendance Lodged!", { id: "lodge-toast" });
         setFeedbackMsg(res.duplicate 
-          ? `You were already checked in for ${res.event.title}` 
-          : `Present marked for ${res.event.title}`
+          ? `You were already checked in for ${res.eventTitle || res.event?.title}` 
+          : `Present marked for ${res.eventTitle || res.event?.title}`
         );
         setPhase(res.duplicate ? "duplicate" : "success");
       } else {
-        throw new Error(res.error || "Server rejected transaction.");
+        throw new Error(res.error || res.message || "Server rejected transaction.");
       }
     } catch (err: any) {
       console.warn("Server push failed", err);
@@ -497,9 +510,11 @@ function AttendancePage() {
                 </h2>
                 <p className="text-muted-foreground text-sm max-w-xs">{feedbackMsg}</p>
                 
-                <div className="pt-4 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full">
-                  <Check className="h-3.5 w-3.5" /> Pushed Successfully to Server
-                </div>
+                {(phase === "success" || phase === "duplicate") && (
+                  <div className="pt-4 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full">
+                    <Check className="h-3.5 w-3.5" /> Pushed Successfully to Server
+                  </div>
+                )}
              </motion.div>
           )}
         </AnimatePresence>
