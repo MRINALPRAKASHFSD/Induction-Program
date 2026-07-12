@@ -57,6 +57,15 @@ mindmap
 
 ---
 
+## 📱 Mobile-First Optimizations
+
+The KRMU IMS is fully optimized for mobile devices, ensuring a flawless experience for students registering or marking attendance on the go:
+- **Responsive Typography & Layouts**: Scaled hero text, adaptive grid systems, and fluid container padding.
+- **Touch-Friendly Controls**: Full-width CTAs, oversized touch targets for buttons, and dynamic dropdown widths.
+- **Vercel API Compatibility**: Full support for ESM (`.js` extensions) and precise glob routing configurations.
+
+---
+
 ## 🔑 Role-Based Access Control
 
 ```mermaid
@@ -234,6 +243,7 @@ graph TD
     DS --> Ambience["🌟 Ambient Glow\nReactive blur gradients & orbs"]
     DS --> Radius["📐 Modern Geometry\nRounded 24px-40px throughout"]
     DS --> Colors["🎨 KRMU Brand Palette\n#8a2c14 · #5a2c14 · #2c1208"]
+    DS --> Mobile["📱 Mobile-First\nFlawless responsive layouts"]
 ```
 
 ---
