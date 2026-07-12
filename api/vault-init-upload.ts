@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
+import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token';
 
 let firebaseInitialized = false;
 let firebaseInitError: string | null = null;
@@ -34,21 +34,19 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: `Firebase Admin not initialized. Reason: ${firebaseInitError}` });
     }
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractBearerToken(req.headers.authorization);
+    if (!token) {
       return res.status(401).json({ error: 'Unauthorized: No token provided' });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    let decodedToken: any;
+    let decodedToken;
     try {
-      decodedToken = jwt.decode(token);
-      if (!decodedToken) throw new Error("Invalid token format");
-    } catch (e: any) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
+      decodedToken = await verifyFirebaseIdToken(token);
+    } catch {
+      return res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
     }
 
-    const uid = decodedToken.user_id || decodedToken.uid;
+    const uid = decodedToken.uid;
     const { filename, fileSize, fileHash, category, uploadType, imageLocation } = req.body;
 
     if (!filename || !fileSize || !fileHash || !category || !uploadType) {

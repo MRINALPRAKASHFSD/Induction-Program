@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import jwt from 'jsonwebtoken';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -42,25 +42,19 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = extractBearerToken(req.headers.authorization);
+    if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const token = authHeader.split('Bearer ')[1];
-    
-    // Manually verify Firebase ID token
-    const keysRes = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
-    const keys = await keysRes.json();
-    const decodedHeader = jwt.decode(token, { complete: true }) as any;
-    const kid = decodedHeader?.header?.kid;
-    if (!kid || !keys[kid]) {
-      return res.status(401).json({ error: 'Invalid token signature' });
+    let decodedToken;
+    try {
+      decodedToken = await verifyFirebaseIdToken(token);
+    } catch {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    
-    const decodedToken = jwt.verify(token, keys[kid], { algorithms: ['RS256'] }) as any;
 
-    const uid = decodedToken.user_id || decodedToken.sub;
+    const uid = decodedToken.uid;
 
     if (decodedToken.role !== 'super_admin') {
       return res.status(403).json({ error: 'Forbidden. Super Admin access required.' });

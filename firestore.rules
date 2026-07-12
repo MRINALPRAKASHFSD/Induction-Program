@@ -25,11 +25,29 @@ service cloud.firestore {
           && data.student_id is string
           && docId == (data.club_id + '_' + data.student_id);
     }
+
+    function isSuperAdmin() {
+      return request.auth != null && (
+        ('role' in request.auth.token && request.auth.token.role == 'super_admin') || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
+      );
+    }
+
+    function isAdminOrCoordinator() {
+      return request.auth != null && (
+        ('role' in request.auth.token && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator')) || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coordinator'))
+      );
+    }
     
     // 1. EVENTS
     match /events/{eventId} {
       allow read: if true;
-      allow write: if false; 
+      allow write: if isAdminOrCoordinator(); 
     }
     
     // 2. STUDENTS
@@ -124,15 +142,6 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.token.role == 'super_admin';
       allow create: if request.auth != null;
       allow update, delete: if false; // Immutable logs
-    }
-
-    function isSuperAdmin() {
-      return request.auth != null && (
-        ('role' in request.auth.token && request.auth.token.role == 'super_admin') || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
-      );
     }
 
     // 11. ANNOUNCEMENTS

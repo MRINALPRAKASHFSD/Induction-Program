@@ -9,6 +9,12 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60
+    },
+    "api/attendance-mark.ts": {
+      "maxDuration": 30
+    },
+    "api/attendance-worker.ts": {
+      "maxDuration": 30
     }
   }
 }

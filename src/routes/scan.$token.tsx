@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SuccessBurst } from "@/components/success-burst";
-import { recordScan } from "@/lib/attendance.functions";
+
+import { auth } from "@/lib/firebase/config";
 
 export const Route = createFileRoute("/scan/$token")({
   head: () => ({
@@ -38,13 +39,32 @@ function ScanPage() {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate slight network delay
+    // Simulate slight network delay for UX
     await new Promise(r => setTimeout(r, 400));
     
     try {
       const enrollClean = enroll.trim().toUpperCase();
+
+      // Enforce login for attendance (ChatGPT security recommendation)
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setResult({ ok: false, error: "You must be logged in to mark attendance. Please register or login first." });
+        setLoading(false);
+        return;
+      }
       
-      const markRes = (await recordScan({ data: { qr_token: token, enrollment_no: enrollClean } })) as {
+      const idToken = await currentUser.getIdToken();
+      
+      const response = await fetch('/api/attendance-mark', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ qr_token: token, enrollment_no: enrollClean }),
+      });
+
+      const markRes = await response.json() as {
         ok: boolean;
         message?: string;
         duplicate?: boolean;
