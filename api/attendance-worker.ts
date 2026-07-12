@@ -20,7 +20,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { Receiver } from '@upstash/qstash';
-import type { AttendanceJobPayload } from '../server/qstash';
+import type { AttendanceJobPayload } from '../server/qstash.js';
 
 // ── Firebase Admin Singleton ──────────────────────────────────────────────────
 let firebaseInitialized = false;

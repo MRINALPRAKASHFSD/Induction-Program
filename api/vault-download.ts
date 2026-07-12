@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
-import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token';
+import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token.js';
 
 let firebaseInitialized = false;
 let firebaseInitError: string | null = null;

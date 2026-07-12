@@ -27,9 +27,9 @@
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { getRedis } from '../server/redis';
-import { publishAttendanceJob } from '../server/qstash';
-import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token';
+import { getRedis } from '../server/redis.js';
+import { publishAttendanceJob } from '../server/qstash.js';
+import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token.js';
 import crypto from 'crypto';
 
 // ── Firebase Admin — module-level singleton ───────────────────────────────────

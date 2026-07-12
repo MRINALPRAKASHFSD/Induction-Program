@@ -1,6 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import * as crypto from 'crypto';
-import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token';
+import { extractBearerToken, verifyFirebaseIdToken } from '../server/verify-id-token.js';
 
 let firebaseInitialized = false;
 let firebaseInitError: string | null = null;
