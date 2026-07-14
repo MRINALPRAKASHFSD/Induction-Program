@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion, AnimatePresence } from "framer-motion";
-import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap, Megaphone } from "lucide-react";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
+import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap, Megaphone } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
@@ -63,7 +63,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
         <div key={s.label} className="text-center min-w-[56px] sm:min-w-[64px] flex flex-col items-center">
           <div className="bg-white/40 border border-white/50 shadow-sm rounded-xl w-full h-[48px] sm:h-[56px] backdrop-blur-md relative overflow-hidden flex items-center justify-center">
             <AnimatePresence>
-              <motion.span
+              <m.span
                 key={s.value}
                 initial={{ y: "100%", opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -72,7 +72,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
                 className="absolute text-[#2c1208] font-black text-2xl sm:text-3xl tabular-nums leading-none"
               >
                 {s.value.toString().padStart(2, "0")}
-              </motion.span>
+              </m.span>
             </AnimatePresence>
           </div>
           <div className="text-[#8a4a22]/70 text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-widest mt-2">
@@ -117,7 +117,8 @@ function Landing() {
   const clubs = stats.clubs;
 
   return (
-    <div className="min-h-screen bg-background">
+    <LazyMotion features={domAnimation}>
+      <div className="min-h-screen bg-background">
       <SiteHeader />
 
       {/* Hero */}
@@ -150,47 +151,29 @@ function Landing() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIgLz4KICAgIDxmZUNvbG9yTWF0cml4IHR5cGU9Im1hdHJpeCIgdmFsdWVzPSIxIDAgMCAwIDAgIDAgMSAwIDAgMCAgMCAwIDEgMCAwICAwIDAgMCAwLjA4IDAiIC8+ICAKICA8L2ZpbHRlcj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiAvPgo8L3N2Zz4=')] opacity-40 mix-blend-multiply pointer-events-none" />
 
         <div className="container relative mx-auto max-w-6xl px-4 py-24 sm:py-32">
-          <motion.div
-            className="max-w-3xl"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
-            }}
-          >
+          <div className="max-w-3xl">
             {/* Eyebrow */}
-            <motion.div
-              variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.7 } } }}
-            >
+            <div className="css-animate-fade-in-up">
               <span className="aarambh-year">K.R. Mangalam University · Student Induction</span>
-            </motion.div>
+            </div>
 
             {/* Wordmark with shimmer */}
-            <motion.div
-              variants={{ hidden: { opacity: 0, y: 28 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 1.1 } } }}
-              className="mt-5"
-            >
+            <div className="mt-5 css-animate-fade-in-up css-delay-1">
               <div className="aarambh-wordmark-wrap">
                 <h1 className="aarambh-wordmark text-[2.75rem] sm:text-[4.8rem] lg:text-[6.2rem]">
                   Aarambh
                 </h1>
               </div>
               <p className="aarambh-year mt-2.5 tracking-[0.32em]">2 0 2 6</p>
-            </motion.div>
+            </div>
 
             {/* Divider */}
-            <motion.div
-              variants={{ hidden: { opacity: 0, scaleX: 0 }, visible: { opacity: 1, scaleX: 1, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9 } } }}
-              style={{ transformOrigin: "left" }}
-            >
+            <div className="css-animate-scale-x css-delay-1">
               <div className="hero-divider" />
-            </motion.div>
+            </div>
 
             {/* Tagline */}
-            <motion.div
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9 } } }}
-            >
+            <div className="css-animate-fade-in-up css-delay-2">
               <p className="text-[#2c1208] text-lg sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
                 Your beginning.{" "}
                 <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
@@ -198,43 +181,37 @@ function Landing() {
               <p className="mt-3.5 text-[#7a4020]/70 text-sm sm:text-base font-normal max-w-xs leading-relaxed">
                 Scan in. Stand out. Belong.
               </p>
-            </motion.div>
+            </div>
 
             {/* CTA buttons */}
-            <motion.div
-              className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3"
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.85 } } }}
-            >
+            <div className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3 css-animate-fade-in-up css-delay-2">
               <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
                 <Link to="/register">
-                  Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
+                  Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </Link>
               </Button>
               <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium w-full sm:w-auto" aria-label="Lodge Attendance">
                 <Link to="/attendance">
-                  <QrCode className="mr-2 h-4 w-4" />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
                   Lodge Attendance
                 </Link>
               </Button>
-            </motion.div>
+            </div>
 
             {/* Countdown timer */}
-            <motion.div
-              className="mt-12 glass-card-hero px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem]"
-              variants={{ hidden: { opacity: 0, y: 22 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.9, delay: 0.15 } } }}
-            >
+            <div className="mt-12 glass-card-hero px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up css-delay-3">
               <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15">
                 <div className="relative hidden sm:block">
                   <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
-                    <motion.div 
+                    <m.div 
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
                     >
                       <Clock className="h-6 w-6 text-[#8a4a22]" />
-                    </motion.div>
+                    </m.div>
                   </div>
                   {/* Subtle pulse ring */}
-                  <motion.div 
+                  <m.div 
                     className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0"
                     animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0] }}
                     transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
@@ -245,8 +222,8 @@ function Landing() {
                 </span>
               </div>
               <Countdown targetDate="2026-08-24T09:00:00+05:30" />
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -390,6 +367,7 @@ function Landing() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </LazyMotion>
   );
 }

@@ -81,5 +81,19 @@ export default defineConfig(({ command, mode }) => {
       host: true,
       strictPort: true,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('framer-motion')) return 'vendor-motion';
+              if (id.includes('lucide-react')) return 'vendor-lucide';
+              if (id.includes('@tanstack/react-router') || id.includes('@tanstack/react-query')) return 'vendor-tanstack';
+              if (id.includes('firebase/app') || id.includes('firebase/auth') || id.includes('firebase/firestore') || id.includes('firebase/storage')) return 'vendor-firebase';
+            }
+          }
+        }
+      }
+    }
   };
 });

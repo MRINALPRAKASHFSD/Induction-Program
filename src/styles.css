@@ -648,3 +648,47 @@
   background: linear-gradient(90deg, rgba(100,38,14,0.40), transparent);
   margin: 1.4rem 0;
 }
+
+/* LCP Optimization: Pure CSS initial animations */
+@keyframes css-fade-in-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes css-fade-in-down {
+  0% { opacity: 0; transform: translateY(-14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes css-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes css-scale-x {
+  0% { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+.css-animate-fade-in-up {
+  animation: css-fade-in-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.css-animate-fade-in-down {
+  animation: css-fade-in-down 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.css-animate-fade-in {
+  animation: css-fade-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.css-animate-scale-x {
+  transform-origin: left;
+  animation: css-scale-x 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Stagger delays */
+.css-delay-1 { animation-delay: 0.2s; opacity: 0; }
+.css-delay-2 { animation-delay: 0.35s; opacity: 0; }
+.css-delay-3 { animation-delay: 0.5s; opacity: 0; }
+
