@@ -1,12 +1,12 @@
-# 🎓 KRMU Induction Management System
+# KRMU Induction Management System
 
-A **premium, enterprise-grade** web application built to manage university induction events at scale. Designed for **KRMU (K.R. Mangalam University)**, it handles real-time student attendance via QR scanning, secure document management, club registrations, analytics, and coordinator management — all backed by a serverless Firebase stack.
+A web application built to manage university induction events. Designed for K.R. Mangalam University (KRMU), it handles student attendance via QR scanning, document management, club registrations, analytics, and coordinator management. It runs on a serverless Firebase stack.
 
-Built to handle **5,000+ concurrent students** with a Liquid Glass UI, RBAC authentication, signed URL document security, and a full audit trail.
+The system supports up to 5,000 concurrent students and includes role-based authentication, signed URL document security, and an audit trail.
 
 ---
 
-## ✨ Feature Overview!
+## Features
 
 ```mermaid
 mindmap
@@ -41,33 +41,33 @@ mindmap
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Framework** | TanStack Start (React 19 + TypeScript) | Full-stack SSR, type-safe routing |
-| **Styling** | Tailwind CSS v4 | CSS-first utility engine |
-| **Animations** | Framer Motion | Spring transitions, micro-animations |
-| **UI Components** | Shadcn/UI + Radix UI | Accessible, headless component library |
-| **Database & Auth** | Firebase Firestore + Firebase Auth | Real-time database, custom claims RBAC |
-| **File Storage** | Firebase Storage (Blaze Plan) | Secure file hosting with signed URLs |
-| **Backend APIs** | Vercel Serverless Functions (TypeScript) | Auth, upload, download, role management |
-| **Charts** | Recharts | Responsive SVG charts |
-| **QR Engine** | HTML5-QRCode | Camera-based QR scanning |
+| Framework | TanStack Start (React 19 + TypeScript) | Full-stack SSR and routing |
+| Styling | Tailwind CSS v4 | Utility CSS |
+| Animations | Framer Motion | Transitions and animations |
+| UI Components | Shadcn/UI + Radix UI | Headless component library |
+| Database & Auth | Firebase Firestore + Firebase Auth | Database and custom claims RBAC |
+| File Storage | Firebase Storage (Blaze Plan) | File hosting with signed URLs |
+| Backend APIs | Vercel Serverless Functions (TypeScript) | Auth, upload, download, and role management |
+| Charts | Recharts | SVG charts |
+| QR Engine | HTML5-QRCode | Camera-based QR scanning |
 
 ---
 
-## 📱 Mobile-First Optimizations
+## Mobile Optimizations
 
-The KRMU IMS is fully optimized for mobile devices, ensuring a flawless experience for students registering or marking attendance on the go:
-- **Responsive Typography & Layouts**: Scaled hero text, adaptive grid systems, and fluid container padding.
-- **Touch-Friendly Controls**: Full-width CTAs, oversized touch targets for buttons, and dynamic dropdown widths.
-- **Performance Optimized**: Achieved 95+ desktop / 85-90+ mobile Lighthouse scores via lazy-loaded admin chunks, WebP image conversion, preloaded critical fonts, and GPU-accelerated CSS animations (`transform` instead of layout thrashing properties) with scalable `backdrop-filter` thresholds.
-- **Vercel API Compatibility**: Full support for ESM (`.js` extensions) and precise glob routing configurations.
+The application is built for mobile devices so students can register or mark attendance on their phones.
+- **Responsive Layouts:** Scaled hero text, adaptive grid systems, and fluid container padding.
+- **Touch Controls:** Full-width buttons, oversized touch targets, and dynamic dropdown widths.
+- **Performance:** Achieved 95+ desktop and 85-90+ mobile Lighthouse scores using lazy-loaded admin chunks, WebP images, preloaded fonts, and GPU-accelerated CSS animations. Backdrop filter thresholds scale down on mobile devices.
+- **Vercel API:** Support for ESM (.js extensions) and glob routing configurations.
 
 ---
 
-## 🔑 Role-Based Access Control
+## Role-Based Access Control
 
 ```mermaid
 graph TD
@@ -76,15 +76,15 @@ graph TD
     B -->|role: super_admin| D[Super Admin]
     B -->|roles: both| E[Coordinator + Super Admin]
 
-    C --> C1[📤 Upload Documents]
-    C --> C2[📷 Upload Images\nGeo-tagged / Non Geo-tagged]
+    C --> C1[Upload Documents]
+    C --> C2[Upload Images\nGeo-tagged / Non Geo-tagged]
 
-    D --> D1[📤 Upload Documents & Images]
-    D --> D2[👁️ View & Download Files]
-    D --> D3[🗑️ Trash / Restore / Hard Delete]
-    D --> D4[👥 Manage Users & Roles]
-    D --> D5[📊 Analytics & Audit Logs]
-    D --> D6[🎓 Student & Club Management]
+    D --> D1[Upload Documents & Images]
+    D --> D2[View & Download Files]
+    D --> D3[Trash / Restore / Hard Delete]
+    D --> D4[Manage Users & Roles]
+    D --> D5[Analytics & Audit Logs]
+    D --> D6[Student & Club Management]
 
     E --> C1
     E --> D2
@@ -94,7 +94,7 @@ graph TD
 
 ---
 
-## 🗄️ Document Vault — Security Flow
+## Document Vault Security Flow
 
 ```mermaid
 sequenceDiagram
@@ -118,7 +118,7 @@ sequenceDiagram
     FE->>FS: Save document metadata
     U->>FE: Request download
     FE->>API: POST /vault-download (Bearer token)
-    API->>FB: verifyIdToken() — super_admin only
+    API->>FB: verifyIdToken() (super_admin only)
     API->>GCS: Generate 30-sec signed GET URL
     API->>FS: Log DOWNLOAD audit
     API-->>FE: { url }
@@ -127,34 +127,34 @@ sequenceDiagram
 
 ---
 
-## 🗂️ Storage Architecture
+## Storage Architecture
 
 ```mermaid
 graph LR
-    Root["🪣 Firebase Storage"] --> Docs["📁 documents/"]
-    Root --> Images["📁 images/"]
+    Root["Firebase Storage"] --> Docs["documents/"]
+    Root --> Images["images/"]
 
-    Docs --> DY["📅 2026/"]
-    DY --> DC1["📂 orientation/"]
-    DY --> DC2["📂 induction-day-1/"]
-    DY --> DC3["📂 induction-day-2/ ..."]
-    DC1 --> DF["📄 timestamp_file.pdf"]
+    Docs --> DY["2026/"]
+    DY --> DC1["orientation/"]
+    DY --> DC2["induction-day-1/"]
+    DY --> DC3["induction-day-2/ ..."]
+    DC1 --> DF["timestamp_file.pdf"]
 
-    Images --> Geo["📁 geo-tagged/"]
-    Images --> NonGeo["📁 non-geo-tagged/"]
+    Images --> Geo["geo-tagged/"]
+    Images --> NonGeo["non-geo-tagged/"]
 
-    Geo --> GY["📅 2026/"]
-    GY --> GC["📂 orientation/"]
-    GC --> GF["🖼️ timestamp_photo.jpg"]
+    Geo --> GY["2026/"]
+    GY --> GC["orientation/"]
+    GC --> GF["timestamp_photo.jpg"]
 
-    NonGeo --> NY["📅 2026/"]
-    NY --> NC["📂 induction-day-1/"]
-    NC --> NF["🖼️ timestamp_photo.png"]
+    NonGeo --> NY["2026/"]
+    NY --> NC["induction-day-1/"]
+    NC --> NF["timestamp_photo.png"]
 ```
 
 ---
 
-## 🏛️ Firestore Data Model
+## Firestore Data Model
 
 ```mermaid
 erDiagram
@@ -211,7 +211,7 @@ erDiagram
 
 ---
 
-## 📡 API Overview
+## API Overview
 
 ```mermaid
 graph LR
@@ -232,25 +232,24 @@ graph LR
 
 ---
 
-## 🎨 Design System — Liquid Glass & Dynamic Motion
+## Design System
 
-The entire platform uses a **Liquid Glass** aesthetic combined with highly interactive micro-animations inspired by modern premium interfaces:
+The platform uses a glass aesthetic with interactive animations.
 
 ```mermaid
 graph TD
-    DS[Design System & Motion] --> Cards["🪟 Glass Cards\nbg-white/40 + backdrop-blur-xl"]
-    DS --> Panels["🔲 Glass Panels\nbg-white/30 + backdrop-blur-md"]
-    DS --> Motion["✨ Dynamic Motion\nShimmer sweeps & hover scaling"]
-    DS --> Ambience["🌟 Ambient Glow\nReactive blur gradients & orbs"]
-    DS --> Radius["📐 Modern Geometry\nRounded 24px-40px throughout"]
-    DS --> Colors["🎨 KRMU Brand Palette\n#8a2c14 · #5a2c14 · #2c1208"]
-    DS --> Mobile["📱 Mobile-First\nFlawless responsive layouts"]
+    DS[Design System & Motion] --> Cards["Glass Cards (bg-white/40 + backdrop-blur-xl)"]
+    DS --> Panels["Glass Panels (bg-white/30 + backdrop-blur-md)"]
+    DS --> Motion["Dynamic Motion (Shimmer sweeps & hover scaling)"]
+    DS --> Ambience["Ambient Glow (Reactive blur gradients & orbs)"]
+    DS --> Radius["Modern Geometry (Rounded 24px-40px throughout)"]
+    DS --> Colors["KRMU Brand Palette (#8a2c14, #5a2c14, #2c1208)"]
+    DS --> Mobile["Mobile-First (Responsive layouts)"]
 ```
 
 ---
 
+## License
 
-## 📄 License
-
-This project is proprietary software built for **K.R. Mangalam University** internal use.  
+This project is proprietary software built for K.R. Mangalam University internal use.
 © 2026 KRMU. All rights reserved.
