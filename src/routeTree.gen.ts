@@ -92,12 +92,14 @@ const ScanTokenRoute = ScanTokenRouteImport.update({
   id: '/scan/$token',
   path: '/scan/$token',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/scan.$token.lazy').then((d) => d.Route))
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin.students.lazy').then((d) => d.Route),
+)
 const AdminScheduleRoute = AdminScheduleRouteImport.update({
   id: '/admin/schedule',
   path: '/admin/schedule',
@@ -107,7 +109,7 @@ const AdminScannerRoute = AdminScannerRouteImport.update({
   id: '/admin/scanner',
   path: '/admin/scanner',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() => import('./routes/admin.scanner.lazy').then((d) => d.Route))
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -122,12 +124,16 @@ const AdminDocumentsRoute = AdminDocumentsRouteImport.update({
   id: '/admin/documents',
   path: '/admin/documents',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin.documents.lazy').then((d) => d.Route),
+)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
   id: '/admin/dashboard',
   path: '/admin/dashboard',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin.dashboard.lazy').then((d) => d.Route),
+)
 const AdminClubsRoute = AdminClubsRouteImport.update({
   id: '/admin/clubs',
   path: '/admin/clubs',
@@ -142,7 +148,9 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/admin/analytics',
   path: '/admin/analytics',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/admin.analytics.lazy').then((d) => d.Route),
+)
 const AdminActivityRoute = AdminActivityRouteImport.update({
   id: '/admin/activity',
   path: '/admin/activity',

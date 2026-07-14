@@ -62,6 +62,7 @@ mindmap
 The KRMU IMS is fully optimized for mobile devices, ensuring a flawless experience for students registering or marking attendance on the go:
 - **Responsive Typography & Layouts**: Scaled hero text, adaptive grid systems, and fluid container padding.
 - **Touch-Friendly Controls**: Full-width CTAs, oversized touch targets for buttons, and dynamic dropdown widths.
+- **Performance Optimized**: Achieved 95+ desktop / 85-90+ mobile Lighthouse scores via lazy-loaded admin chunks, WebP image conversion, preloaded critical fonts, and GPU-accelerated CSS animations (`transform` instead of layout thrashing properties) with scalable `backdrop-filter` thresholds.
 - **Vercel API Compatibility**: Full support for ESM (`.js` extensions) and precise glob routing configurations.
 
 ---

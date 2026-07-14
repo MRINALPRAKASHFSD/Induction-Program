@@ -204,20 +204,22 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
     rgba(255, 255, 255, 0.35),
     transparent
   );
-  transition: all 0.6s ease;
+  transition: transform 0.6s ease;
+  will-change: transform;
 }
 
 .btn-liquid-glass:hover::before {
-  left: 100%;
+  transform: translateX(100%);
 }
 
 .btn-liquid-glass-white {
@@ -247,20 +249,22 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
     rgba(255, 255, 255, 0.5),
     transparent
   );
-  transition: all 0.6s ease;
+  transition: transform 0.6s ease;
+  will-change: transform;
 }
 
 .btn-liquid-glass-white:hover::before {
-  left: 100%;
+  transform: translateX(100%);
 }
 
 .btn-liquid-glass-dark {
@@ -289,20 +293,22 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
     rgba(255, 255, 255, 0.3),
     transparent
   );
-  transition: all 0.6s ease;
+  transition: transform 0.6s ease;
+  will-change: transform;
 }
 
 .btn-liquid-glass-dark:hover::before {
-  left: 100%;
+  transform: translateX(100%);
 }
 
 .btn-liquid-glass-maroon {
@@ -332,20 +338,22 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
     rgba(255, 255, 255, 0.3),
     transparent
   );
-  transition: all 0.6s ease;
+  transition: transform 0.6s ease;
+  will-change: transform;
 }
 
 .btn-liquid-glass-maroon:hover::before {
-  left: 100%;
+  transform: translateX(100%);
 }
 
 /* Premium Liquid Glass Panel Styles (Navbar, Footer) */
@@ -353,11 +361,18 @@
   position: relative !important;
   overflow: hidden !important;
   background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(20px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  backdrop-filter: blur(12px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05),
               inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+@media (min-width: 640px) {
+  .panel-liquid-glass {
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  }
 }
 
 .dark .panel-liquid-glass {
@@ -371,9 +386,10 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
+  left: 0;
   width: 100%;
   height: 100%;
+  transform: translateX(-100%);
   background: linear-gradient(
     90deg,
     transparent,
@@ -382,6 +398,7 @@
   );
   animation: liquid-panel-sweep 8s infinite ease-in-out;
   pointer-events: none;
+  will-change: transform;
 }
 
 .dark .panel-liquid-glass::before {
@@ -394,9 +411,9 @@
 }
 
 @keyframes liquid-panel-sweep {
-  0% { left: -100%; }
-  30% { left: 100%; }
-  100% { left: 100%; }
+  0% { transform: translateX(-100%); }
+  30% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ─── Aarambh 2026 Hero ─────────────────────────────────────── */
@@ -430,19 +447,21 @@
 .aarambh-wordmark-wrap::after {
   content: '';
   position: absolute;
-  top: 0; left: -80%;
+  top: 0; left: 0;
   width: 55%;
   height: 100%;
+  transform: translateX(-150%);
   background: linear-gradient(105deg, transparent 20%, rgba(255,220,160,0.55) 50%, transparent 80%);
   animation: wordmark-shimmer 5s ease-in-out 2s infinite;
   pointer-events: none;
+  will-change: transform;
 }
 @keyframes wordmark-shimmer {
-  0%   { left: -80%; opacity: 0; }
+  0%   { transform: translateX(-150%); opacity: 0; }
   8%   { opacity: 1; }
-  55%  { left: 130%; opacity: 1; }
+  55%  { transform: translateX(250%); opacity: 1; }
   56%  { opacity: 0; }
-  100% { left: 130%; opacity: 0; }
+  100% { transform: translateX(250%); opacity: 0; }
 }
 
 /* Year / eyebrow text */
@@ -480,12 +499,18 @@
 /* Glass stat strip — white frosted glass */
 .glass-card-hero {
   background: rgba(255, 255, 255, 0.48);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow: 0 8px 40px rgba(100, 45, 12, 0.08),
               inset 0 1px 0 rgba(255, 255, 255, 0.92);
   border-radius: 1.25rem;
+}
+@media (min-width: 640px) {
+  .glass-card-hero {
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+  }
 }
 
 /* Floating orbs — deep rich colors forming a mesh gradient */

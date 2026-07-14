@@ -115,7 +115,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 w-full panel-liquid-glass">
       <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-3 font-semibold">
-          <img src="/krmu-emblem.jpg" alt="KRMU Emblem" className="h-11 w-auto mix-blend-multiply object-contain" />
+          <img src="/krmu-emblem.webp" alt="KRMU Emblem" className="h-11 w-auto mix-blend-multiply object-contain" />
           <span className="text-xl tracking-tight text-[#6b3517] hidden sm:inline-block">KRMU Induction</span>
         </Link>
         <nav className="flex items-center gap-2">

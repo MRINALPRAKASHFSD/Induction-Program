@@ -4,7 +4,7 @@ import { QrCode, Users, Calendar, ArrowRight, Activity, Clock, ShieldCheck, Scan
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 
 export const Route = createFileRoute("/")({
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function Countdown({ targetDate }: { targetDate: string }) {
+const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: string }) {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -82,7 +82,7 @@ function Countdown({ targetDate }: { targetDate: string }) {
       ))}
     </div>
   );
-}
+});
 
 function Landing() {
   const [stats, setStats] = useState<{ students: number | null, attendance: number | null, clubs: number | null }>({
@@ -205,12 +205,12 @@ function Landing() {
               className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3"
               variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { ease: [0.16, 1, 0.3, 1], duration: 0.85 } } }}
             >
-              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold w-full sm:w-auto">
+              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
                 <Link to="/register">
                   Register now <ArrowRight className="ml-1.5 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium w-full sm:w-auto">
+              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium w-full sm:w-auto" aria-label="Lodge Attendance">
                 <Link to="/attendance">
                   <QrCode className="mr-2 h-4 w-4" />
                   Lodge Attendance
@@ -385,7 +385,7 @@ function Landing() {
             <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group flex flex-col sm:flex-row items-center gap-3 sm:gap-5 bg-white border border-[#8a4a22]/20 rounded-2xl sm:rounded-full px-6 sm:px-8 py-3.5 hover:shadow-xl hover:shadow-[#8a4a22]/5 hover:border-[#8a4a22]/40 transition-all text-center">
               <span className="text-[13px] font-bold text-[#7a4020]/90 uppercase tracking-[0.2em] leading-none">Engineered & Co-powered by</span>
               <div className="w-[1px] h-8 bg-[#8a4a22]/20 group-hover:bg-[#8a4a22]/40 transition-colors"></div>
-              <img src="/eozka-logo.jpg" alt="eOzka" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform" />
+              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform" />
             </a>
           </div>
         </div>
