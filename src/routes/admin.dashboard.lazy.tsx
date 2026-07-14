@@ -9,9 +9,6 @@ import { db } from "@/lib/firebase/config";
 import { Button } from "@/components/ui/button";
 
 export const Route = createLazyFileRoute("/admin/dashboard")({
-  head: () => ({
-    meta: [{ title: "Dashboard · KRMU Admin" }, { name: "robots", content: "noindex" }],
-  }),
   component: AdminDashboard,
 });
 

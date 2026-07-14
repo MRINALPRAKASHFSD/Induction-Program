@@ -22,7 +22,6 @@ import { localDb, ROOM_CONFIG, getTotalStudentCapacity, getRoomCapacity, generat
 import { listStudents, updateStudentsBatch } from "@/lib/admin.functions";
 
 export const Route = createLazyFileRoute("/admin/students")({
-  head: () => ({ meta: [{ title: "Students · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminStudents,
 });
 

@@ -10,13 +10,6 @@ import { SuccessBurst } from "@/components/success-burst";
 import { auth } from "@/lib/firebase/config";
 
 export const Route = createLazyFileRoute("/scan/$token")({
-  head: () => ({
-    meta: [
-      { title: "Mark Attendance · KRMU" },
-      { name: "description", content: "Scan QR to mark attendance for KRMU induction events." },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
   component: ScanPage,
 });
 

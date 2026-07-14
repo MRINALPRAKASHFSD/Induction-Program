@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getAnalytics } from "@/lib/admin.functions";
 
 export const Route = createLazyFileRoute("/admin/analytics")({
-  head: () => ({ meta: [{ title: "Analytics · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminAnalytics,
 });
 

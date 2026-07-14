@@ -12,12 +12,6 @@ import { listEvents } from "@/lib/admin.functions";
 import { recordScan } from "@/lib/attendance.functions";
 
 export const Route = createLazyFileRoute("/admin/scanner")({
-  head: () => ({
-    meta: [
-      { title: "QR Scanner · KRMU Admin" },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
   component: ScannerPage,
 });
 
