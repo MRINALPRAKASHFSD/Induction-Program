@@ -192,7 +192,7 @@ function AdminDashboard() {
       </div>
 
       {/* Live feed + export */}
-      <section className="mt-8 rounded-2xl glass-card-hero p-5 shadow-sm">
+      <section className="mt-8 rounded-2xl glass-premium-v2 p-5 shadow-sm">
         {/* Header row */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -291,14 +291,14 @@ function AdminDashboard() {
 
 function Kpi({ icon: Icon, label, value, accent }: { icon: typeof Profile2User; label: string; value: number | null; accent: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl glass-card-hero p-5 shadow-sm">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl glass-premium-v2 p-5 shadow-sm hover:scale-[1.02] transition-transform">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-[#5a2c14]">{label}</span>
-        <span className={`grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br ${accent} text-primary-foreground shadow-sm`}>
+        <span className="text-caption text-secondary font-medium">{label}</span>
+        <span className={`grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br ${accent} text-primary-foreground shadow-sm`}>
           <Icon variant="TwoTone" className="h-4 w-4" />
         </span>
       </div>
-      <div className="mt-3 text-3xl font-bold tabular-nums">{value ?? "—"}</div>
+      <div className="mt-3 text-page-heading text-primary font-bold tabular-nums">{value ?? "—"}</div>
     </motion.div>
   );
 }

@@ -72,8 +72,8 @@ function ClubsPage() {
       <main className="relative container mx-auto max-w-6xl px-4 py-8 sm:py-12">
         {/* Header */}
         <div className="max-w-2xl animate-slide-up stagger-1">
-          <h1 className="heading-xl">Clubs & Societies</h1>
-          <p className="subtitle mt-3">Find your people. Join as many as you like — registration is one tap.</p>
+          <h1 className="text-hero-heading text-primary font-bold">Clubs & Societies</h1>
+          <p className="text-body-primary text-secondary mt-3">Find your people. Join as many as you like — registration is one tap.</p>
         </div>
 
         {/* Loading skeleton */}
@@ -105,7 +105,7 @@ function ClubsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="feature-card group"
+                className="glass-premium-v2 p-6 rounded-3xl group transition-transform hover:scale-[1.01]"
               >
                 {/* Club icon */}
                 <div className="feature-card-icon relative z-10">
@@ -113,14 +113,14 @@ function ClubsPage() {
                 </div>
                 
                 <div className="relative z-10">
-                  <h3 className="heading-md !text-[1.125rem]">{c.name}</h3>
-                  <p className="mt-2 text-sm text-[#7a4020]/70 line-clamp-2 leading-relaxed">{c.description}</p>
+                  <h3 className="text-card-title text-primary font-bold">{c.name}</h3>
+                  <p className="mt-2 text-body-secondary text-[#7a4020]/70 line-clamp-2 leading-relaxed">{c.description}</p>
                 </div>
 
                 {/* Tags */}
                 <div className="mt-3 flex flex-wrap gap-1.5 relative z-10">
                   {c.tags.map((t) => (
-                    <span key={t} className="text-[10px] font-bold text-[#8a4a22]/60 bg-[#8a4a22]/6 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <span key={t} className="text-caption font-bold text-[#8a4a22]/60 bg-[#8a4a22]/6 px-2 py-0.5 rounded-full uppercase tracking-wider">
                       {t}
                     </span>
                   ))}
@@ -133,10 +133,10 @@ function ClubsPage() {
                   </DialogTrigger>
                   <DialogContent className="!rounded-3xl bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl">
                     <DialogHeader>
-                      <DialogTitle className="heading-md">Join {c.name}</DialogTitle>
+                      <DialogTitle className="text-section-heading text-primary font-bold">Join {c.name}</DialogTitle>
                     </DialogHeader>
                     <div className="grid gap-3">
-                      <Label className="label-premium !mt-0">Your enrollment number</Label>
+                      <Label className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Your enrollment number</Label>
                       <Input
                         autoFocus value={enroll}
                         onChange={(e) => setEnroll(e.target.value.toUpperCase())}

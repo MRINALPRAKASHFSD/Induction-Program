@@ -8,7 +8,7 @@ export const Route = createFileRoute('/privacy')({
 function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-[#faf8f6] flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md border-b border-[#8a4a22]/10 sticky top-0 z-40 flex-none">
+      <header className="glass-premium-v2 rounded-none border-x-0 border-t-0 border-b border-[#8a4a22]/10 sticky top-0 z-40 flex-none">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2 text-[#7a4020] hover:text-[#8a4a22] transition-colors">
@@ -26,17 +26,17 @@ function PrivacyPolicy() {
       </header>
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-[#8a4a22]/10 p-8 md:p-12 mb-8">
-          <h1 className="text-3xl font-bold text-[#2c1208] mb-2">Privacy Policy</h1>
+        <div className="glass-premium-v2 rounded-3xl p-8 md:p-12 mb-8">
+          <h1 className="text-hero-heading text-primary font-bold mb-2">Privacy Policy</h1>
           <p className="text-sm text-[#7a4020]/60 mb-8">Last Updated: {new Date().toLocaleDateString()}</p>
           
-          <div className="prose prose-orange max-w-none text-[#5a2c14] space-y-6">
+          <div className="prose prose-orange max-w-none text-body-primary text-secondary space-y-6">
             <p>At EOZKA, we are deeply committed to protecting your privacy and personal data. This Privacy Policy outlines our practices regarding data collection, protection, and usage in strict alignment with privacy-first principles, the <strong>Information Technology Act, 2000</strong>, the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act)</strong>, and university guidelines.</p>
             
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">1. Information Collected</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">1. Information Collected</h2>
             <p>To provide a seamless and secure induction experience, we collect specific categories of information.</p>
             
-            <h3 className="text-lg font-semibold text-[#2c1208] mt-6 mb-3">Personal Information</h3>
+            <h3 className="text-card-title text-primary font-bold mt-6 mb-3">Personal Information</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li>Name</li>
               <li>Email Address</li>
@@ -47,7 +47,7 @@ function PrivacyPolicy() {
               <li>Semester</li>
             </ul>
 
-            <h3 className="text-lg font-semibold text-[#2c1208] mt-6 mb-3">Technical Information</h3>
+            <h3 className="text-card-title text-primary font-bold mt-6 mb-3">Technical Information</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li>Browser type and version</li>
               <li>Device identifiers and characteristics</li>
@@ -58,7 +58,7 @@ function PrivacyPolicy() {
               <li>User Agent strings</li>
             </ul>
 
-            <h3 className="text-lg font-semibold text-[#2c1208] mt-6 mb-3">Usage Information</h3>
+            <h3 className="text-card-title text-primary font-bold mt-6 mb-3">Usage Information</h3>
             <ul className="list-disc pl-5 space-y-2">
               <li>Attendance records (events attended, timestamps)</li>
               <li>Announcements viewed and interaction metrics</li>
@@ -67,7 +67,7 @@ function PrivacyPolicy() {
               <li>QR scans (including timestamp and location context)</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">2. Why We Collect Data</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">2. Why We Collect Data</h2>
             <p>We operate on a principle of minimal data collection. The data we collect is utilized strictly for the following purposes:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Authentication:</strong> Verifying user identity via secure OTP protocols.</li>
@@ -80,7 +80,7 @@ function PrivacyPolicy() {
               <li><strong>Fraud prevention:</strong> Detecting and mitigating proxy attendance or abuse.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">3. Data Protection</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">3. Data Protection</h2>
             <p>We treat your data with the highest level of security. Our enterprise-grade protection mechanisms include:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Encryption:</strong> Data is encrypted both in transit (TLS) and at rest.</li>
@@ -93,7 +93,7 @@ function PrivacyPolicy() {
               <li><strong>Minimal data collection:</strong> We only collect what is strictly necessary to run the platform.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">4. Data Sharing</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">4. Data Sharing</h2>
             <p><strong>EOZKA does NOT sell student data to any third parties, advertisers, or external brokers.</strong></p>
             <p>Your information is tightly controlled and is only accessible to:</p>
             <ul className="list-disc pl-5 space-y-2">
@@ -103,7 +103,7 @@ function PrivacyPolicy() {
               <li>Legal authorities, only when explicitly required by applicable law or a valid court order</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">5. Student Rights</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">5. Student Rights</h2>
             <p>We respect your rights regarding your personal data. As a student, you have the right to:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Update your profile information to ensure accuracy</li>
@@ -112,10 +112,10 @@ function PrivacyPolicy() {
               <li>Contact platform administrators regarding privacy concerns</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">6. Cookies</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">6. Cookies</h2>
             <p>We respect your digital footprint. The EOZKA platform utilizes <strong>only essential cookies</strong> required for the core functionality and security of the application. <strong>We do not use advertising cookies, nor do we employ third-party tracking cookies.</strong> For detailed information, please review our <Link to="/cookies" className="text-[#8a4a22] hover:underline">Cookie Policy</Link>.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">7. Data Retention</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">7. Data Retention</h2>
             <p>Data is retained only as long as necessary to fulfill its intended purpose and in compliance with university directives. Specific retention periods include:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Attendance records:</strong> Retained for academic compliance.</li>
@@ -124,7 +124,7 @@ function PrivacyPolicy() {
               <li><strong>Documents:</strong> Retained according to specific university policy and academic calendar requirements.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">8. Contact</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">8. Contact</h2>
             <p>For any questions regarding this Privacy Policy, your data, or security concerns, please contact:</p>
             <p><strong>Support Email:</strong> privacy@eozka.com</p>
             <p><strong>Organization:</strong> EOZKA in partnership with K.R. Mangalam University</p>

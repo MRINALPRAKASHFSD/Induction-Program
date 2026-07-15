@@ -285,15 +285,15 @@ function AttendancePage() {
               initial={{ opacity: 0, y: 16 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: -16 }}
-              className="rounded-3xl border bg-card shadow-elegant overflow-hidden"
+              className="glass-premium-v2 rounded-3xl overflow-hidden shadow-sm"
             >
               <div className="h-2 bg-hero" />
               <div className="p-6 sm:p-8 text-center">
                 <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
                   <User className="h-8 w-8" />
                 </div>
-                <h2 className="text-xl font-bold">Registration Required</h2>
-                <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
+                <h2 className="text-page-heading text-primary font-bold">Registration Required</h2>
+                <p className="mt-2 text-body-secondary max-w-xs mx-auto">
                   You need to set up your profile first before you can lodge attendance for induction sessions.
                 </p>
                 <div className="mt-6 flex flex-col gap-2">
@@ -319,17 +319,17 @@ function AttendancePage() {
               {/* Header profile block */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight">Lodge Attendance</h1>
-                  <p className="text-sm text-muted-foreground">Induction Program &middot; KRMU 2026</p>
+                  <h1 className="text-hero-heading text-primary font-bold">Lodge Attendance</h1>
+                  <p className="text-label text-secondary uppercase font-bold tracking-wider mt-1">Induction Program &middot; KRMU 2026</p>
                 </div>
               </div>
 
               {/* Student detail card */}
-              <div className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm relative overflow-hidden">
+              <div className="glass-premium-v2 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-hero" />
                 <div className="flex flex-col gap-2">
-                  <h3 className="font-bold text-lg text-foreground leading-tight">{profile.full_name}</h3>
-                  <div className="flex flex-col gap-1 text-sm text-muted-foreground font-medium">
+                  <h3 className="text-page-heading text-primary font-bold leading-tight">{profile.full_name}</h3>
+                  <div className="flex flex-col gap-1 text-body-secondary font-medium">
                     <div className="flex items-center gap-2"><User className="h-4 w-4 shrink-0 text-primary/60"/> {profile.enrollment_no}</div>
                     <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 shrink-0 text-primary/60"/> {profile.branch}</div>
                   </div>
@@ -337,8 +337,8 @@ function AttendancePage() {
               </div>
 
               {/* Attendance Lodge Form */}
-              <div className="rounded-3xl border bg-card p-5 sm:p-6 shadow-elegant space-y-4">
-                <h3 className="text-base font-bold flex items-center gap-2 mb-2">
+              <div className="glass-premium-v2 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+                <h3 className="text-section-heading text-primary font-bold flex items-center gap-2 mb-2">
                   <QrCode className="h-5 w-5 text-primary" /> Setup Session Selection
                 </h3>
 
@@ -414,7 +414,7 @@ function AttendancePage() {
                   <motion.div 
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl bg-muted/40 p-4 text-xs space-y-1.5 border border-border/50 text-muted-foreground"
+                    className="glass-premium-v2 rounded-2xl p-4 text-caption space-y-1.5 border-[#8a4a22]/10 text-secondary font-medium"
                   >
                     <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-primary/60 shrink-0" /><span className="font-semibold text-foreground">{currentSelectedSession.venue}</span></div>
                     <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary/60 shrink-0" />{new Date(currentSelectedSession.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr; {new Date(currentSelectedSession.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -426,12 +426,12 @@ function AttendancePage() {
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center gap-3 p-5 bg-card border rounded-2xl shadow-inner mt-4"
+                    className="flex flex-col items-center gap-3 p-5 glass-premium-v2 rounded-2xl mt-4"
                   >
                     <div className="rounded-2xl bg-[oklch(0.99_0.005_80)] p-3 border shadow-sm">
                       <img src={qrCodeUrl} alt="Session QR" className="h-44 w-44 object-contain" draggable={false} />
                     </div>
-                    <p className="text-xs text-muted-foreground text-center font-medium max-w-xs">
+                    <p className="text-caption text-secondary text-center font-medium max-w-xs">
                       Session QR Code. Show this to the class coordinator or scan it using the scanner button below!
                     </p>
                   </motion.div>
@@ -496,19 +496,19 @@ function AttendancePage() {
                initial={{ opacity: 0, scale: 0.9 }} 
                animate={{ opacity: 1, scale: 1 }} 
                exit={{ opacity: 0 }}
-               className="flex flex-col items-center justify-center py-12 sm:py-20 text-center space-y-4 rounded-3xl border bg-card p-6 sm:p-8 shadow-elegant"
+               className="flex flex-col items-center justify-center py-12 sm:py-20 text-center space-y-4 glass-premium-v2 rounded-3xl p-6 sm:p-8 shadow-sm"
              >
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
                   {phase === "success" && <CheckCircle2 className="h-20 w-20 text-success drop-shadow-lg" />}
                   {phase === "duplicate" && <AlertTriangle className="h-20 w-20 text-yellow-500 drop-shadow-lg" />}
                   {phase === "error" && <XCircle className="h-20 w-20 text-destructive drop-shadow-lg" />}
                 </motion.div>
-                <h2 className="text-2xl font-bold">
+                <h2 className="text-page-heading text-primary font-bold">
                   {phase === "success" && "Attendance Marked!"}
                   {phase === "duplicate" && "Already Marked"}
                   {phase === "error" && "Check-in Failed"}
                 </h2>
-                <p className="text-muted-foreground text-sm max-w-xs">{feedbackMsg}</p>
+                <p className="text-body-secondary max-w-xs">{feedbackMsg}</p>
                 
                 {(phase === "success" || phase === "duplicate") && (
                   <div className="pt-4 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full">

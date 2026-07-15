@@ -8,7 +8,7 @@ export const Route = createFileRoute('/terms')({
 function TermsOfService() {
   return (
     <div className="min-h-screen bg-[#faf8f6] flex flex-col">
-      <header className="bg-white/80 backdrop-blur-md border-b border-[#8a4a22]/10 sticky top-0 z-40 flex-none">
+      <header className="glass-premium-v2 rounded-none border-x-0 border-t-0 border-b border-[#8a4a22]/10 sticky top-0 z-40 flex-none">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2 text-[#7a4020] hover:text-[#8a4a22] transition-colors">
@@ -26,18 +26,18 @@ function TermsOfService() {
       </header>
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-[#8a4a22]/10 p-8 md:p-12">
-          <h1 className="text-3xl font-bold text-[#2c1208] mb-2">Terms of Service</h1>
+        <div className="glass-premium-v2 rounded-3xl p-8 md:p-12">
+          <h1 className="text-hero-heading text-primary font-bold mb-2">Terms of Service</h1>
           <p className="text-sm text-[#7a4020]/60 mb-8">Last Updated: {new Date().toLocaleDateString()}</p>
           
-          <div className="prose prose-orange max-w-none text-[#5a2c14] space-y-6">
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">1. Introduction</h2>
+          <div className="prose prose-orange max-w-none text-body-primary text-secondary space-y-6">
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">1. Introduction</h2>
             <p>Welcome to the EOZKA Induction Management Platform. EOZKA is a comprehensive, secure system developed for K.R. Mangalam University to streamline the student induction process, manage digital attendance, distribute official documents, and facilitate university communications.</p>
             
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">2. Eligibility</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">2. Eligibility</h2>
             <p>Access to this platform is restricted to authorized individuals. Students must use their official university credentials where required to register and access platform features. All accounts created on this platform are personal, non-transferable, and strictly tied to the individual student's identity.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">3. User Responsibilities</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">3. User Responsibilities</h2>
             <p>By accessing and using this platform, students agree to adhere to the following responsibilities:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Provide accurate and truthful information during registration and profile updates.</li>
@@ -51,7 +51,7 @@ function TermsOfService() {
               <li>Maintain discipline and professional conduct while engaging with platform features.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">4. Platform Usage</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">4. Platform Usage</h2>
             <p>The EOZKA platform exists solely to facilitate university operations. Permitted uses include:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Induction program management and participation</li>
@@ -63,7 +63,7 @@ function TermsOfService() {
             </ul>
             <p><strong>No commercial usage:</strong> Any commercial, promotional, or unauthorized use of this platform is strictly prohibited.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">5. Attendance Policy</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">5. Attendance Policy</h2>
             <p>Digital attendance tracking is a core component of this platform. Please note:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>QR attendance can only be marked during the designated official session windows.</li>
@@ -71,7 +71,7 @@ function TermsOfService() {
               <li>The system actively logs multiple scans, anomalies, and spoofing attempts to maintain integrity.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">6. Documents</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">6. Documents</h2>
             <p>The platform hosts sensitive administrative and academic documents.</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>All documents available on the platform remain the exclusive intellectual property of the university.</li>
@@ -79,10 +79,10 @@ function TermsOfService() {
               <li>Redistribution, publication, or unauthorized sharing of these documents without explicit permission is strictly prohibited.</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">7. Announcements</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">7. Announcements</h2>
             <p>All official announcements broadcasted through the EOZKA platform are considered valid and binding university communications. Students are solely responsible for checking their notifications regularly to stay informed about schedules, updates, and requirements.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">8. Security</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">8. Security</h2>
             <p>EOZKA employs enterprise-grade security measures to protect the platform and its users. These include, but are not limited to:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>End-to-end data encryption</li>
@@ -94,10 +94,10 @@ function TermsOfService() {
               <li>Secure, robust cloud storage infrastructure</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">9. Reporting Security Issues</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">9. Reporting Security Issues</h2>
             <p>If you discover a security vulnerability, please report it responsibly to EOZKA. Do not publicly disclose vulnerabilities before they are investigated.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">10. Prohibited Activities</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">10. Prohibited Activities</h2>
             <p>Users are strictly prohibited from engaging in the following activities:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Reverse engineering, decompiling, or disassembling platform software</li>
@@ -112,11 +112,11 @@ function TermsOfService() {
               <li>Bypassing authentication or authorization mechanisms</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">11. Intellectual Property</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">11. Intellectual Property</h2>
             <p><strong>EOZKA owns:</strong> The platform infrastructure, UI/UX design, branding, software architecture, and source code.</p>
             <p><strong>The University owns:</strong> All official documents, event schedules, administrative announcements, and academic material hosted on the platform.</p>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">12. Limitation of Liability</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">12. Limitation of Liability</h2>
             <p>While EOZKA provides a highly secure and reliable infrastructure, we are not responsible or liable for:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Internet outages, connectivity issues, or carrier disruptions</li>
@@ -125,7 +125,7 @@ function TermsOfService() {
               <li>Student negligence resulting in missed deadlines or attendance</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">13. Account Suspension</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">13. Account Suspension</h2>
             <p>EOZKA and authorized university administrators reserve the right to suspend or terminate accounts immediately for the following reasons:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Academic or behavioral misconduct</li>
@@ -135,7 +135,7 @@ function TermsOfService() {
               <li>Any violation of these Terms or broader university policies</li>
             </ul>
 
-            <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">14. Changes to Terms</h2>
+            <h2 className="text-heading text-primary font-bold mt-8 mb-4">14. Changes to Terms</h2>
             <p>EOZKA reserves the right to update or modify these policies at any time to reflect changes in legal requirements or platform functionality. Continued use of the platform after any such updates constitutes formal acceptance of the revised Terms.</p>
           </div>
         </div>

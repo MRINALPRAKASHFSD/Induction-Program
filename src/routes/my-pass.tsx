@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   User, Award, CalendarDays, Zap, ArrowRight, ShieldCheck, Bell, Check,
   Copy, TrendingUp, Percent, Trophy, Flame, Star, MapPin, Users, Clock,
-  Wallet, ScanLine, ChevronRight,
+  Wallet, ScanLine, ChevronRight, Compass, Sunrise, Handshake, Globe, Landmark, Library
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
@@ -51,20 +51,12 @@ function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
 
 /* ─── Badge Data (UI shells — connect to backend later) ──────────── */
 const BADGES = [
-  { id: "explorer", name: "Explorer", emoji: "🧭", color: "badge-icon-blue", desc: "Visit 3 campus zones", unlocked: false },
-  { id: "early-bird", name: "Early Bird", emoji: "🌅", color: "badge-icon-amber", desc: "First scan of the day", unlocked: true },
-  { id: "social", name: "Social Butterfly", emoji: "🦋", color: "badge-icon-purple", desc: "Join 3+ clubs", unlocked: false },
-  { id: "perfect", name: "Perfect Week", emoji: "⭐", color: "badge-icon-gold", desc: "100% attendance for 5 days", unlocked: false },
-  { id: "helper", name: "Helping Hand", emoji: "🤝", color: "badge-icon-emerald", desc: "Help a peer register", unlocked: false },
-  { id: "champion", name: "Champion", emoji: "🏆", color: "badge-icon-rose", desc: "Top 10 leaderboard", unlocked: false },
-];
-
-/* ─── Activity Data (placeholder — connect to backend later) ─────── */
-const ACTIVITY_PLACEHOLDER = [
-  { text: "Scanned attendance for Day 1 Session 2", time: "Today, 10:30 AM", dot: "activity-dot-green" },
-  { text: "Joined Tech Club", time: "Today, 9:15 AM", dot: "activity-dot-blue" },
-  { text: "Earned Early Bird badge", time: "Today, 8:45 AM", dot: "activity-dot-amber" },
-  { text: "Registered for Aarambh 2026", time: "Yesterday", dot: "activity-dot-purple" },
+  { id: "explorer", name: "Explorer", icon: Compass, color: "text-blue-500", bg: "bg-blue-500/10", desc: "Visit 3 campus zones", unlocked: false },
+  { id: "early-bird", name: "Early Bird", icon: Sunrise, color: "text-amber-500", bg: "bg-amber-500/10", desc: "First scan of the day", unlocked: true },
+  { id: "social", name: "Social Butterfly", icon: Users, color: "text-purple-500", bg: "bg-purple-500/10", desc: "Join 3+ clubs", unlocked: false },
+  { id: "perfect", name: "Perfect Week", icon: Star, color: "text-yellow-500", bg: "bg-yellow-500/10", desc: "100% attendance", unlocked: false },
+  { id: "helper", name: "Helping Hand", icon: Handshake, color: "text-emerald-500", bg: "bg-emerald-500/10", desc: "Help a peer register", unlocked: false },
+  { id: "champion", name: "Champion", icon: Trophy, color: "text-rose-500", bg: "bg-rose-500/10", desc: "Top 10 leaderboard", unlocked: false },
 ];
 
 function MyPassPage() {
@@ -182,8 +174,8 @@ function MyPassPage() {
         >
           {/* Page header */}
           <div className="text-center space-y-1.5 animate-slide-up stagger-1">
-            <h1 className="heading-xl">Student Wallet</h1>
-            <p className="label-premium">Aarambh 2026 · K.R. Mangalam University</p>
+            <h1 className="text-hero-heading text-primary font-bold">Student Wallet</h1>
+            <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Aarambh 2026 · K.R. Mangalam University</p>
           </div>
 
           {/* ── Apple Wallet Card ────────────────────────────────── */}
@@ -257,24 +249,28 @@ function MyPassPage() {
           {/* ── Streak + Points Row ─────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3 animate-slide-up stagger-3">
             {/* Attendance Streak */}
-            <div className="streak-card">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <div className="streak-value">3</div>
-                  <div className="streak-label">Day Streak</div>
+            <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="flex items-center justify-between w-full relative z-10">
+                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 mb-2">
+                  <Flame className="w-4 h-4" />
                 </div>
-                <div className="streak-fire">🔥</div>
+              </div>
+              <div className="relative z-10">
+                <div className="text-hero-heading text-primary">3</div>
+                <div className="text-label text-tertiary">Day Streak</div>
               </div>
             </div>
             
             {/* Reward Points */}
-            <div className="streak-card">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <div className="streak-value">{livePoints !== null ? livePoints : "..."}</div>
-                  <div className="streak-label">Points</div>
+            <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="flex items-center justify-between w-full relative z-10">
+                <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 mb-2">
+                  <Star className="w-4 h-4" />
                 </div>
-                <div className="streak-fire">⭐</div>
+              </div>
+              <div className="relative z-10">
+                <div className="text-hero-heading text-primary">{livePoints !== null ? livePoints : "..."}</div>
+                <div className="text-label text-tertiary">Points</div>
               </div>
             </div>
           </div>
@@ -282,20 +278,20 @@ function MyPassPage() {
           {/* ── KPI Stats Grid ──────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { value: "—", label: "Attendance", icon: Percent, variant: "kpi-emerald" },
-              { value: "—", label: "Events Done", icon: Zap, variant: "kpi-purple" },
-              { value: "TBD", label: "Global Rank", icon: Trophy, variant: "kpi-blue" },
-              { value: "TBD", label: "Dept Rank", icon: TrendingUp, variant: "kpi-yellow" },
+              { value: "—", label: "Attendance", icon: Percent, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+              { value: "—", label: "Events Done", icon: Zap, color: "text-purple-600", bg: "bg-purple-500/10" },
+              { value: "Soon", label: "Global Rank", icon: Trophy, color: "text-blue-600", bg: "bg-blue-500/10" },
+              { value: "Soon", label: "Dept Rank", icon: TrendingUp, color: "text-yellow-600", bg: "bg-yellow-500/10" },
             ].map((kpi, i) => (
               <div
                 key={kpi.label}
-                className={`kpi-card ${kpi.variant} animate-slide-up stagger-${i + 3}`}
+                className={`glass-premium-v2 p-3.5 rounded-2xl flex flex-col items-start hover:scale-[1.02] transition-transform animate-slide-up stagger-${i + 3}`}
               >
-                <div className="kpi-icon">
-                  <kpi.icon className="w-5 h-5" />
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center mb-2 ${kpi.bg} ${kpi.color}`}>
+                  <kpi.icon className="w-3.5 h-3.5" />
                 </div>
-                <div className="kpi-value">{kpi.value}</div>
-                <div className="kpi-label">{kpi.label}</div>
+                <div className="text-card-title text-primary font-bold">{kpi.value}</div>
+                <div className="text-caption text-secondary font-medium">{kpi.label}</div>
               </div>
             ))}
           </div>
@@ -303,7 +299,7 @@ function MyPassPage() {
           {/* ── Achievement Badges ──────────────────────────────── */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between px-1">
-              <p className="label-premium">Achievements</p>
+              <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Achievements</p>
               <p className="text-[10px] font-bold text-[#8a4a22]/40 uppercase tracking-wider">
                 {BADGES.filter(b => b.unlocked).length}/{BADGES.length}
               </p>
@@ -313,13 +309,13 @@ function MyPassPage() {
               {BADGES.map((badge) => (
                 <div
                   key={badge.id}
-                  className={`badge-card ${badge.unlocked ? '' : 'locked'}`}
+                  className={`glass-premium-v2 p-3 rounded-2xl flex flex-col items-center text-center transition-all ${badge.unlocked ? 'hover:scale-[1.04]' : 'opacity-60 grayscale'}`}
                 >
-                  <div className={`badge-icon ${badge.color}`}>
-                    {badge.emoji}
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${badge.unlocked ? badge.bg : 'bg-black/5 dark:bg-white/5'} ${badge.unlocked ? badge.color : 'text-tertiary'}`}>
+                    <badge.icon className="w-5 h-5" />
                   </div>
-                  <div className="badge-name">{badge.name}</div>
-                  <div className="badge-desc">{badge.desc}</div>
+                  <div className="text-[11px] font-bold text-primary leading-tight mb-0.5">{badge.name}</div>
+                  <div className="text-[9px] text-tertiary leading-tight line-clamp-2">{badge.desc}</div>
                 </div>
               ))}
             </div>
@@ -327,45 +323,29 @@ function MyPassPage() {
 
           {/* ── Rankings ────────────────────────────────────────── */}
           <div className="space-y-2.5 pt-2">
-            <p className="label-premium px-1">Rankings</p>
+            <p className="text-label text-tertiary px-1">Rankings</p>
             {[
-              { label: "Global Rank", value: "TBD", icon: "🌍" },
-              { label: "Department Rank", value: "TBD", icon: "🏛️" },
-              { label: "Semester Rank", value: "TBD", icon: "📚" },
+              { label: "Global Rank", value: "Available after induction", icon: Globe, color: "text-blue-500", bg: "bg-blue-500/10" },
+              { label: "Department Rank", value: "Available after induction", icon: Landmark, color: "text-rose-500", bg: "bg-rose-500/10" },
+              { label: "Semester Rank", value: "Available after induction", icon: Library, color: "text-purple-500", bg: "bg-purple-500/10" },
             ].map((rank) => (
-              <div key={rank.label} className="rank-card">
+              <div key={rank.label} className="glass-premium-v2 p-4 rounded-2xl flex items-center justify-between hover:scale-[1.01] transition-transform">
                 <div className="flex items-center gap-3">
-                  <span className="text-lg">{rank.icon}</span>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${rank.bg} ${rank.color}`}>
+                    <rank.icon className="w-4 h-4" />
+                  </div>
                   <div>
-                    <div className="rank-label">{rank.label}</div>
+                    <div className="text-sm font-bold text-primary">{rank.label}</div>
                   </div>
                 </div>
-                <div className="rank-value">{rank.value}</div>
+                <div className="text-xs font-semibold text-tertiary text-right max-w-[40%] leading-tight">{rank.value}</div>
               </div>
             ))}
           </div>
 
-          {/* ── Wallet Activity ─────────────────────────────────── */}
-          <div className="space-y-2.5 pt-2">
-            <p className="label-premium px-1">Recent Activity</p>
-            <div className="glass-premium !rounded-2xl !p-4">
-              <div className="relative z-10">
-                {ACTIVITY_PLACEHOLDER.map((item, i) => (
-                  <div key={i} className="activity-item">
-                    <div className={`activity-dot ${item.dot}`} />
-                    <div>
-                      <div className="activity-text">{item.text}</div>
-                      <div className="activity-time">{item.time}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* ── Quick Actions ───────────────────────────────────── */}
           <div className="space-y-2.5 pt-2">
-            <p className="label-premium px-1">Quick Actions</p>
+            <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0 px-1">Quick Actions</p>
             
             {[
               { to: "/attendance", icon: ScanLine, title: "Scan Attendance", subtitle: "Lodge your session scan" },

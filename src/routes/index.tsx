@@ -61,7 +61,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
         { value: timeLeft.seconds, label: "Secs" },
       ].map((s) => (
         <div key={s.label} className="text-center min-w-[56px] sm:min-w-[64px] flex flex-col items-center">
-          <div className="glass-premium rounded-xl w-full h-[48px] sm:h-[56px] flex items-center justify-center !p-0 !overflow-hidden">
+          <div className="glass-premium-v2 rounded-xl w-full h-[48px] sm:h-[56px] flex items-center justify-center !p-0 overflow-hidden border-0">
             <AnimatePresence>
               <m.span
                 key={s.value}
@@ -75,7 +75,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
               </m.span>
             </AnimatePresence>
           </div>
-          <div className="label-premium mt-2">
+          <div className="text-label text-secondary uppercase font-bold tracking-wider mt-2">
             {s.label}
           </div>
         </div>
@@ -207,7 +207,7 @@ function Landing() {
             </div>
 
             {/* Countdown timer */}
-            <div className="mt-12 glass-premium-deep px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 !rounded-[2rem] css-animate-fade-in-up css-delay-3">
+            <div className="mt-12 glass-premium-v2 px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up css-delay-3">
               <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15 relative z-10">
                 <div className="relative hidden sm:block">
                   <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
@@ -246,10 +246,10 @@ function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c87038] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#a84a25]"></span>
             </span>
-            <span className="label-premium !mt-0 !text-[#8a4a22]">Live Updates</span>
+            <span className="text-label text-[#8a4a22] uppercase font-bold tracking-wider mt-0">Live Updates</span>
           </div>
-          <h2 className="heading-xl">Real-time Impact</h2>
-          <p className="subtitle mt-4 max-w-lg mx-auto">
+          <h2 className="text-hero-heading text-primary font-bold">Real-time Impact</h2>
+          <p className="text-body-primary text-secondary mt-4 max-w-lg mx-auto">
             Watch our community grow instantly as new students register, scan in, and join clubs.
           </p>
         </div>
@@ -279,9 +279,9 @@ function Landing() {
       {/* Features */}
       <section className="container mx-auto max-w-6xl px-4 py-24">
         <div className="mx-auto max-w-2xl text-center mb-16 relative">
-          <h2 className="heading-xl">Built for the rush.</h2>
+          <h2 className="text-hero-heading text-primary font-bold">Built for the rush.</h2>
           <div className="h-1 w-24 bg-gradient-to-r from-[#a84a25] to-[#c87038] mx-auto mt-6 rounded-full opacity-80" />
-          <p className="subtitle mt-7 max-w-xl mx-auto">
+          <p className="text-body-primary text-secondary mt-7 max-w-xl mx-auto">
             Everything you need to onboard thousands of students without lines, paper, or chaos.
           </p>
         </div>
@@ -291,13 +291,13 @@ function Landing() {
             { icon: Activity, title: "Realtime dashboards", body: "Admins watch registrations flow in live — no refresh, no waiting." },
             { icon: Users, title: "Clubs in one tap", body: "Browse 30+ clubs and societies. Join your tribe before classes start." },
           ].map((f, i) => (
-            <div key={f.title} className={`feature-card animate-slide-up stagger-${i + 1}`}>
+            <div key={f.title} className={`glass-premium-v2 p-6 rounded-3xl group transition-transform hover:scale-[1.01] animate-slide-up stagger-${i + 1}`}>
               <div className="feature-card-icon relative z-10">
                 <f.icon className="h-7 w-7 stroke-[1.5]" />
               </div>
               <div className="relative z-10">
-                <h3 className="heading-md !text-[1.125rem] transition-colors">{f.title}</h3>
-                <p className="mt-2.5 text-sm text-[#7a4020]/75 leading-relaxed">{f.body}</p>
+                <h3 className="text-card-title text-primary font-bold transition-colors">{f.title}</h3>
+                <p className="mt-2.5 text-body-secondary text-[#7a4020]/75 leading-relaxed">{f.body}</p>
               </div>
               {/* Hover arrow */}
               <div className="mt-4 relative z-10">
@@ -311,7 +311,7 @@ function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="glass-premium !rounded-none border-t border-[#8a4a22]/10 pt-20 pb-10 mt-16 relative overflow-hidden">
+      <footer className="glass-premium-v2 rounded-none border-t border-[#8a4a22]/10 pt-20 pb-10 mt-16 relative overflow-hidden">
         <div className="container mx-auto max-w-6xl px-4 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 lg:gap-12 mb-16">
             
@@ -323,15 +323,15 @@ function Landing() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl font-bold text-[#2c1208] tracking-tight leading-none">Aarambh</span>
-                  <span className="label-premium mt-1.5">Induction 2026</span>
+                  <span className="text-label text-secondary uppercase font-bold tracking-wider mt-1.5">Induction 2026</span>
                 </div>
               </div>
               
-              <p className="subtitle text-sm max-w-md">
+              <p className="text-body-secondary max-w-md">
                 The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the incoming class of 2026.
               </p>
 
-              <div className="flex items-start gap-4 glass-premium !rounded-2xl !p-5 max-w-md hover-lift">
+              <div className="flex items-start gap-4 glass-premium-v2 rounded-2xl p-5 max-w-md hover-lift">
                 <ShieldCheck className="h-6 w-6 text-[#8a4a22] shrink-0 mt-0.5 relative z-10" />
                 <p className="text-xs text-[#7a4020] leading-relaxed relative z-10">
                   <strong className="block mb-1 text-sm text-[#2c1208] tracking-tight">Enterprise Security</strong> 
@@ -342,7 +342,7 @@ function Landing() {
 
             {/* Quick Links */}
             <div className="md:col-span-3 lg:col-span-3 md:col-start-7 lg:col-start-8 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="label-premium !text-[#2c1208] !font-bold">Platform</h4>
+              <h4 className="text-label text-[#2c1208] uppercase font-bold tracking-wider">Platform</h4>
               <nav className="flex flex-col gap-4">
                 <Link to="/attendance" className="group text-sm text-[#7a4020]/80 hover:text-[#8a4a22] transition-all inline-flex items-center gap-3">
                   <QrCode className="h-4 w-4 transition-transform group-hover:scale-110" /> <span className="transition-transform group-hover:translate-x-1">Attendance</span>
@@ -358,7 +358,7 @@ function Landing() {
 
             {/* Support / Legal */}
             <div className="md:col-span-3 lg:col-span-2 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="label-premium !text-[#2c1208] !font-bold">Resources</h4>
+              <h4 className="text-label text-[#2c1208] uppercase font-bold tracking-wider">Resources</h4>
               <nav className="flex flex-col gap-4">
                 <Link to="/help" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Help Center</Link>
                 <Link to="/privacy" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Privacy Policy</Link>
@@ -375,11 +375,11 @@ function Landing() {
 
           {/* Bottom Bar */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-[#8a4a22]/10">
-            <div className="text-[13px] text-[#7a4020]/70 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
-              &copy; 2024 EOZKA. <span className="mx-3 text-[#7a4020]/30 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
+            <div className="text-caption text-[#7a4020]/70 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
+              &copy; 2026 EOZKA. <span className="mx-3 text-[#7a4020]/30 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
             </div>
-            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group glass-premium !rounded-full !px-6 sm:!px-8 !py-3.5 flex flex-col sm:flex-row items-center gap-3 sm:gap-5 hover-lift text-center">
-              <span className="label-premium !mt-0 relative z-10">Engineered & Co-powered by</span>
+            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group glass-premium-v2 rounded-full px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row items-center gap-3 sm:gap-5 hover-lift text-center">
+              <span className="text-label text-secondary uppercase font-bold tracking-wider mt-0 relative z-10">Engineered & powered by</span>
               <div className="w-[1px] h-8 bg-[#8a4a22]/15 group-hover:bg-[#8a4a22]/30 transition-colors relative z-10"></div>
               <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform relative z-10" />
             </a>

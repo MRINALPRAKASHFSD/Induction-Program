@@ -117,25 +117,25 @@ function SchedulePage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           
           {/* Header */}
-          <div className="glass-premium !rounded-2xl !p-4 animate-slide-up stagger-1">
+          <div className="glass-premium-v2 rounded-2xl p-4 animate-slide-up stagger-1">
             <div className="flex items-center justify-between gap-3 relative z-10">
               <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" asChild className="rounded-full bg-white/40 hover:bg-white/60 border border-[#8a4a22]/5">
                   <Link to="/my-pass"><ArrowLeft className="h-5 w-5 text-[#5a2c14]" /></Link>
                 </Button>
                 <div>
-                  <h1 className="heading-lg !text-xl flex items-center gap-2">
+                  <h1 className="text-page-heading text-primary font-bold flex items-center gap-2">
                     <Compass className="w-5 h-5 text-[#8a4a22] animate-spin-slow" style={{ animationDuration: '20s' }} />
                     Schedule
                   </h1>
-                  <p className="label-premium">{isMasterView ? "Master View" : profile.branch}</p>
+                  <p className="text-label text-secondary uppercase font-bold tracking-wider">{isMasterView ? "Master View" : profile.branch}</p>
                 </div>
               </div>
               
               <div className="flex flex-col items-end gap-1">
-                <div className="flex items-center gap-2 glass-premium !rounded-full !px-3 !py-1.5 !border-[#8a4a22]/8">
+                <div className="flex items-center gap-2 glass-premium-v2 rounded-full px-3 py-1.5 border-[#8a4a22]/8">
                   <Switch id="master-view" checked={isMasterView} onCheckedChange={toggleMasterView} />
-                  <Label htmlFor="master-view" className="text-[10px] font-bold cursor-pointer uppercase tracking-wider text-[#8a4a22]/60 relative z-10">Master</Label>
+                  <Label htmlFor="master-view" className="text-caption font-bold cursor-pointer uppercase tracking-wider text-[#8a4a22]/60 relative z-10">Master</Label>
                 </div>
               </div>
             </div>
@@ -151,12 +151,12 @@ function SchedulePage() {
                   className={`snap-start shrink-0 flex flex-col items-center justify-center w-20 h-24 rounded-[1.5rem] transition-all relative overflow-hidden ${
                     activeDay === d 
                     ? "bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] text-white shadow-lg shadow-[#8a4a22]/25" 
-                    : "glass-premium hover:scale-[1.03]"
+                    : "glass-premium-v2 hover:scale-[1.03]"
                   }`}
                   style={{ willChange: 'transform' }}
                 >
-                  <span className={`text-[10px] uppercase font-bold tracking-wider mb-0.5 ${activeDay === d ? 'text-white/80' : 'text-[#8a4a22]/50'} relative z-10`}>Day</span>
-                  <span className={`text-3xl font-black relative z-10 ${activeDay === d ? '' : 'text-[#2c1208]'}`}>{d}</span>
+                  <span className={`text-caption uppercase font-bold tracking-wider mb-0.5 ${activeDay === d ? 'text-white/80' : 'text-[#8a4a22]/50'} relative z-10`}>Day</span>
+                  <span className={`text-card-title font-black relative z-10 ${activeDay === d ? '' : 'text-primary'}`}>{d}</span>
                 </button>
               ))}
             </div>
@@ -204,7 +204,7 @@ function SchedulePage() {
                       </div>
 
                       {/* Session Card */}
-                      <div className="flex-1 glass-premium !rounded-2xl !p-5 group-hover:!shadow-lg transition-shadow">
+                      <div className="flex-1 glass-premium-v2 rounded-2xl p-5 group-hover:shadow-lg transition-shadow">
                         <div className="relative z-10">
                           {/* Time badge */}
                           <div className="flex items-center gap-2 mb-3">
@@ -214,13 +214,13 @@ function SchedulePage() {
                             </span>
                           </div>
                           
-                          <h3 className="heading-md !text-lg leading-tight mb-2">{s.title}</h3>
+                          <h3 className="text-section-heading text-primary font-bold leading-tight mb-2">{s.title}</h3>
                           
                           {s.description && (
-                            <p className="text-sm text-[#7a4020]/70 mb-4 line-clamp-2 leading-relaxed">{s.description}</p>
+                            <p className="text-body-secondary text-[#7a4020]/70 mb-4 line-clamp-2 leading-relaxed">{s.description}</p>
                           )}
                           
-                          <div className="flex items-center gap-2 text-sm text-[#8a4a22] font-semibold glass-premium !rounded-xl !px-3 !py-2 !border-[#8a4a22]/6">
+                          <div className="flex items-center gap-2 text-label text-[#8a4a22] font-semibold glass-premium-v2 rounded-xl px-3 py-2 border-[#8a4a22]/6">
                             <MapPin className="h-4 w-4 shrink-0 relative z-10" />
                             <span className="relative z-10">{s.venue}</span>
                           </div>
