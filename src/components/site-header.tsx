@@ -271,7 +271,7 @@ export function SiteHeader() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2"
+                  className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 glass-premium-v2 border-none shadow-2xl rounded-2xl overflow-hidden mt-2"
                 >
                   {/* Notification Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
@@ -382,53 +382,58 @@ export function SiteHeader() {
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="nav-profile-dropdown w-56 mt-2">
+              <DropdownMenuContent align="end" className="glass-premium-v2 w-64 mt-2 p-3 rounded-2xl border-none shadow-2xl">
                 {user ? (
                   <>
                     {/* Profile header */}
-                    <div className="px-3 py-2.5 mb-1">
-                      <div className="flex items-center gap-2.5">
-                        <span className="nav-avatar text-xs">{profileInitial}</span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#2c1208] truncate">{profile?.full_name || user.email}</p>
-                          <p className="text-[10px] font-medium text-[#8a4a22]/60 uppercase tracking-wider">
+                    <div className="px-2 py-2 mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="nav-avatar text-sm font-bold shrink-0">{profileInitial}</span>
+                        <div className="min-w-0 flex flex-col justify-center">
+                          <p className="text-body-primary text-primary font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
+                          <p className="text-label text-tertiary mt-0.5 truncate">
                             {isRegistered ? profile?.branch : "Student"}
                           </p>
                         </div>
                       </div>
                     </div>
-                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
+                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 mb-2" />
                     {isRegistered && (
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 text-[#5a2c14] font-medium focus:bg-[#8a4a22]/5 focus:text-[#2c1208]">
-                        <Link to="/my-pass" className="flex items-center gap-2 w-full">
-                          <Wallet className="w-4 h-4 opacity-60" /> Student Wallet
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                        <Link to="/my-pass" className="flex items-center gap-3 w-full">
+                          <Wallet className="w-4 h-4 opacity-70" /> 
+                          <span>Student Wallet</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 text-[#5a2c14] font-medium focus:bg-[#8a4a22]/5 focus:text-[#2c1208]">
-                      <Link to="/admin/login" className="flex items-center gap-2 w-full">
-                        <Shield className="w-4 h-4 opacity-60" /> Admin Panel
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                      <Link to="/admin/login" className="flex items-center gap-3 w-full">
+                        <Shield className="w-4 h-4 opacity-70" /> 
+                        <span>Admin Panel</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
+                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
                     <DropdownMenuItem
                       onClick={handleLogout}
-                      className="cursor-pointer rounded-lg mx-1 text-red-600 font-medium focus:bg-red-50 focus:text-red-700"
+                      className="cursor-pointer rounded-xl px-2 py-2 text-red-600 font-medium focus:bg-red-500/10 focus:text-red-700 transition-colors"
                     >
-                      <LogOut className="mr-2 h-4 w-4" /> Log out
+                      <LogOut className="w-4 h-4 mr-3 opacity-70" /> 
+                      <span>Log out</span>
                     </DropdownMenuItem>
                   </>
                 ) : (
                   <>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 font-medium focus:bg-[#8a4a22]/5">
-                      <Link to="/register" className="flex items-center gap-2 w-full text-[#5a2c14]">
-                        <User className="w-4 h-4 opacity-60" /> Register now
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                      <Link to="/register" className="flex items-center gap-3 w-full">
+                        <User className="w-4 h-4 opacity-70" /> 
+                        <span>Register now</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 font-medium focus:bg-[#8a4a22]/5">
-                      <Link to="/admin/login" className="flex items-center gap-2 w-full text-[#5a2c14]">
-                        <Shield className="w-4 h-4 opacity-60" /> Admin Panel
+                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                      <Link to="/admin/login" className="flex items-center gap-3 w-full">
+                        <Shield className="w-4 h-4 opacity-70" /> 
+                        <span>Admin Panel</span>
                       </Link>
                     </DropdownMenuItem>
                   </>
