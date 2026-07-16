@@ -75,6 +75,7 @@ function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // ── Email verification states ──────────────────────────────────────────────
   const [emailVerified, setEmailVerified] = useState(false);
@@ -86,6 +87,7 @@ function RegisterPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAlreadyRegistered(!!user);
+      setLoadingAuth(false);
     });
     return () => unsubscribe();
   }, []);
@@ -233,6 +235,9 @@ function RegisterPage() {
       setSubmitting(false);
     }
   };
+
+  // ── Prevent flickering while checking auth ──────────────────────────────────
+  if (loadingAuth) return null;
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (done === "success") {
@@ -392,9 +397,9 @@ function RegisterPage() {
                  <p className="mt-3 text-[15px] text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
                </motion.div>
 
-               <form onSubmit={onSubmitForm} className="rounded-[2rem] panel-liquid-glass p-6 sm:p-10 shadow-glow border border-primary/10 relative z-10 bg-background/70 backdrop-blur-2xl">
+               <form onSubmit={onSubmitForm} className="rounded-3xl sm:rounded-[2rem] panel-liquid-glass p-5 sm:p-10 shadow-glow border border-primary/10 relative z-10 bg-background/70 backdrop-blur-2xl">
                  
-                 <div className="space-y-10">
+                 <div className="space-y-8 sm:space-y-10">
                     {/* Section 1: Personal Identity */}
                     <div className="space-y-6">
                       <div className="flex items-center gap-3 border-b border-border/30 pb-3">
