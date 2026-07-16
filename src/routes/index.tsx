@@ -238,7 +238,7 @@ function Landing() {
 
 
       {/* Live Stats — Animated KPI Cards */}
-      <section className="container mx-auto max-w-5xl px-4 py-16 pt-24">
+      <section className="content-below-fold container mx-auto max-w-5xl px-4 py-16 pt-24">
         {/* Section header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8a4a22]/8 border border-[#8a4a22]/12 mb-5">
@@ -277,7 +277,7 @@ function Landing() {
       </section>
 
       {/* Features */}
-      <section className="container mx-auto max-w-6xl px-4 py-24">
+      <section className="content-below-fold container mx-auto max-w-6xl px-4 py-24">
         <div className="mx-auto max-w-2xl text-center mb-16 relative">
           <h2 className="text-hero-heading text-primary font-bold">Built for the rush.</h2>
           <div className="h-1 w-24 bg-gradient-to-r from-[#a84a25] to-[#c87038] mx-auto mt-6 rounded-full opacity-80" />
@@ -381,7 +381,7 @@ function Landing() {
             <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group glass-premium-v2 rounded-full px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row items-center gap-3 sm:gap-5 hover-lift text-center">
               <span className="text-label text-secondary uppercase font-bold tracking-wider mt-0 relative z-10">Engineered & powered by</span>
               <div className="w-[1px] h-8 bg-[#8a4a22]/15 group-hover:bg-[#8a4a22]/30 transition-colors relative z-10"></div>
-              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform relative z-10" />
+              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" width="120" height="40" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform relative z-10" />
             </a>
           </div>
         </div>

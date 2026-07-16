@@ -82,18 +82,29 @@ export default defineConfig(({ command, mode }) => {
       strictPort: true,
     },
     build: {
+      target: "esnext",
+      minify: "esbuild",
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('framer-motion')) return 'vendor-motion';
-              if (id.includes('lucide-react')) return 'vendor-lucide';
-              if (id.includes('@tanstack/react-router') || id.includes('@tanstack/react-query')) return 'vendor-tanstack';
-              if (id.includes('firebase/app') || id.includes('firebase/auth') || id.includes('firebase/firestore') || id.includes('firebase/storage')) return 'vendor-firebase';
-            }
-          }
-        }
-      }
-    }
+            if (!id.includes("node_modules")) return;
+            if (id.includes("framer-motion")) return "vendor-motion";
+            if (id.includes("lucide-react")) return "vendor-lucide";
+            if (id.includes("firebase/auth")) return "vendor-firebase-auth";
+            if (id.includes("firebase/firestore")) return "vendor-firebase-firestore";
+            if (id.includes("firebase/storage")) return "vendor-firebase-storage";
+            if (id.includes("firebase")) return "vendor-firebase-core";
+            if (
+              id.includes("@tanstack/react-router") ||
+              id.includes("@tanstack/react-query") ||
+              id.includes("@tanstack/react-start")
+            )
+              return "vendor-tanstack";
+            if (id.includes("react-dom")) return "vendor-react";
+            return "vendor";
+          },
+        },
+      },
+    },
   };
 });
