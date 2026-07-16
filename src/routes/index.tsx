@@ -211,19 +211,12 @@ function Landing() {
               <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15 relative z-10">
                 <div className="relative hidden sm:block">
                   <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
-                    <m.div 
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-                    >
+                    <div className="[animation:spin_10s_linear_infinite]">
                       <Clock className="h-6 w-6 text-[#8a4a22]" />
-                    </m.div>
+                    </div>
                   </div>
                   {/* Subtle pulse ring */}
-                  <m.div 
-                    className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
-                  />
+                  <div className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0 animate-ping opacity-30" />
                 </div>
                 <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left relative z-10">
                   Induction<br/>Begins In

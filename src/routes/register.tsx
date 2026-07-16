@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
 import { SuccessBurst } from "@/components/success-burst";
@@ -242,83 +242,88 @@ function RegisterPage() {
   // ── Success screen ──────────────────────────────────────────────────────────
   if (done === "success") {
     return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-          <div className="orb orb-4" />
+      <LazyMotion features={domAnimation}>
+        <div className="min-h-screen bg-background relative overflow-hidden">
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            <div className="orb orb-1" />
+            <div className="orb orb-2" />
+            <div className="orb orb-3" />
+            <div className="orb orb-4" />
+          </div>
+          <div className="relative z-10">
+            <SiteHeader />
+            <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
+              <m.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
+                <SuccessBurst
+                  title="Registration Complete!"
+                  subtitle="Your email has been verified and your profile is ready."
+                />
+                <div className="mt-8 grid gap-3">
+                  <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
+                    <Link to="/my-pass">View Digital Pass</Link>
+                  </Button>
+                  <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium h-12">
+                    <Link to="/">Back to home</Link>
+                  </Button>
+                </div>
+              </m.div>
+            </main>
+          </div>
         </div>
-        <div className="relative z-10">
-          <SiteHeader />
-          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
-              <SuccessBurst
-                title="Registration Complete!"
-                subtitle="Your email has been verified and your profile is ready."
-              />
-              <div className="mt-8 grid gap-3">
-                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Digital Pass</Link>
-                </Button>
-                <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium h-12">
-                  <Link to="/">Back to home</Link>
-                </Button>
-              </div>
-            </motion.div>
-          </main>
-        </div>
-      </div>
+      </LazyMotion>
     );
   }
 
   // ── Already registered screen ───────────────────────────────────────────────
   if (alreadyRegistered) {
     return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-          <div className="orb orb-4" />
+      <LazyMotion features={domAnimation}>
+        <div className="min-h-screen bg-background relative overflow-hidden">
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            <div className="orb orb-1" />
+            <div className="orb orb-2" />
+            <div className="orb orb-3" />
+            <div className="orb orb-4" />
+          </div>
+          <div className="relative z-10">
+            <SiteHeader />
+            <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
+              <m.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                </div>
+                <h1 className="text-3xl font-bold text-foreground mb-3">Already Registered</h1>
+                <p className="text-muted-foreground mb-8">
+                  You are currently logged in. To register a new account, you must log out first.
+                </p>
+                <div className="mt-4 grid gap-3">
+                  <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
+                    <Link to="/my-pass">View Digital Pass</Link>
+                  </Button>
+                  <Button
+                    variant="liquidGlassDark"
+                    size="lg"
+                    className="rounded-full font-medium h-12"
+                    onClick={async () => {
+                      await signOut(auth);
+                      localStorage.clear();
+                      window.location.reload();
+                    }}
+                  >
+                    Log out
+                  </Button>
+                </div>
+              </m.div>
+            </main>
+          </div>
         </div>
-        <div className="relative z-10">
-          <SiteHeader />
-          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-              </div>
-              <h1 className="text-3xl font-bold text-foreground mb-3">Already Registered</h1>
-              <p className="text-muted-foreground mb-8">
-                You are currently logged in. To register a new account, you must log out first.
-              </p>
-              <div className="mt-4 grid gap-3">
-                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Digital Pass</Link>
-                </Button>
-                <Button
-                  variant="liquidGlassDark"
-                  size="lg"
-                  className="rounded-full font-medium h-12"
-                  onClick={async () => {
-                    await signOut(auth);
-                    localStorage.clear();
-                    window.location.reload();
-                  }}
-                >
-                  Log out
-                </Button>
-              </div>
-            </motion.div>
-          </main>
-        </div>
-      </div>
+      </LazyMotion>
     );
   }
 
   // ── Main registration form ──────────────────────────────────────────────────
   return (
+    <LazyMotion features={domAnimation}>
     <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="orb orb-1" />
@@ -336,9 +341,9 @@ function RegisterPage() {
             {/* Left Column - Value Prop */}
             <div className="lg:col-span-5 lg:sticky lg:top-32 hidden lg:flex flex-col gap-8 rounded-[2rem] p-10 shadow-2xl border border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 backdrop-blur-xl relative overflow-hidden">
                {/* Decorative background meshes */}
-               <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-               <div className="absolute top-1/2 -left-32 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
-               <div className="absolute -bottom-20 right-0 w-72 h-72 bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
+               <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/20 rounded-full blur-[60px] pointer-events-none" />
+               <div className="absolute top-1/2 -left-32 w-64 h-64 bg-purple-500/10 rounded-full blur-[50px] pointer-events-none" />
+               <div className="absolute -bottom-20 right-0 w-72 h-72 bg-primary/10 rounded-full blur-[50px] pointer-events-none" />
                
                {/* Subtle grid pattern overlay */}
                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMTgyLCAzNCwgNTEsIDAuMDUpIi8+PC9zdmc+')] [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none" />
@@ -392,10 +397,10 @@ function RegisterPage() {
             {/* Right Column - Form */}
             <div className="lg:col-span-7">
                {/* Mobile Header (Hidden on LG) */}
-               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center lg:hidden mb-8">
+               <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center lg:hidden mb-8">
                  <h1 className="text-3xl font-extrabold tracking-tight">Claim Your Identity</h1>
                  <p className="mt-3 text-[15px] text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
-               </motion.div>
+               </m.div>
 
                <form onSubmit={onSubmitForm} className="rounded-3xl sm:rounded-[2rem] panel-liquid-glass p-5 sm:p-10 shadow-glow border border-primary/10 relative z-10 bg-background/70 backdrop-blur-2xl">
                  
@@ -432,14 +437,14 @@ function RegisterPage() {
                         <div className="flex items-center justify-between">
                           <Label className="text-sm font-semibold text-foreground/90">Email Address</Label>
                           {emailVerified && (
-                            <motion.span
+                            <m.span
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full"
                             >
                               <ShieldCheck className="w-3.5 h-3.5" />
                               Verified
-                            </motion.span>
+                            </m.span>
                           )}
                         </div>
                         
@@ -486,7 +491,7 @@ function RegisterPage() {
                         {/* Inline OTP entry */}
                         <AnimatePresence>
                           {verifyingEmail && (
-                            <motion.div
+                            <m.div
                               initial={{ opacity: 0, height: 0, marginTop: 0 }}
                               animate={{ opacity: 1, height: "auto", marginTop: 12 }}
                               exit={{ opacity: 0, height: 0, marginTop: 0 }}
@@ -530,7 +535,7 @@ function RegisterPage() {
                                   Change email address
                                 </button>
                               </div>
-                            </motion.div>
+                            </m.div>
                           )}
                         </AnimatePresence>
                       </div>
@@ -632,6 +637,7 @@ function RegisterPage() {
         </main>
       </div>
     </div>
+    </LazyMotion>
   );
 }
 
