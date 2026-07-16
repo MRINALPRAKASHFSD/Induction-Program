@@ -66,10 +66,134 @@ export default async function handler(req: any, res: any) {
         from: fromEmail,
         to: email,
         replyTo: 'induction@mrinalprakash.com',
-        subject: 'Your Verification Code — Aarambh 2026',
-        text: `Your Verification Code is: ${otp}\n\nExpires in 5 minutes.\nDo not share this code.`,
-        html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html dir="ltr" lang="en"><head><meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/><meta name="x-apple-disable-message-reformatting"/></head><body style="background-color:#f8f4ef;padding:0"><!--\$--><!--html--><!--head--><div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">Your Verification Code — Aarambh 2026<div> ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿</div></div><!--body--><table border="0" width="100%" cellPadding="0" cellSpacing="0" role="presentation" align="center"><tbody><tr><td style="background-color:#f8f4ef;font-family:&#x27;Segoe UI&#x27;,Roboto,Arial,sans-serif;padding:40px 16px"><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="max-width:520px;margin:0 auto;width:100%"><tbody><tr style="width:100%"><td><div style="height:6px;background:linear-gradient(90deg,#5a1018,#8b2c1a,#c87038,#d4a254);border-radius:8px 8px 0 0"></div><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="background-color:#ffffff;padding:40px 36px 36px;border-left:1px solid #ede4d8;border-right:1px solid #ede4d8"><tbody><tr><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center"><tbody><tr><td><h1 style="font-family:&#x27;Georgia&#x27;,serif;font-size:28px;font-weight:700;color:#5a1018;letter-spacing:2px;margin:0;padding-bottom:8px">AARAMBH</h1><p style="font-size:11px;line-height:24px;letter-spacing:3px;text-transform:uppercase;color:#b08850;font-weight:600;margin:0;padding-bottom:28px;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">KR Mangalam University • 2026</p></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;padding-bottom:28px"><tbody><tr><td><div style="width:60px;height:2px;background:linear-gradient(90deg,transparent,#c87038,transparent);margin:0 auto"></div></td></tr></tbody></table><p style="font-size:16px;line-height:1.7;color:#2d0d12;margin:0;padding-bottom:12px;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">Hello there,</p><p style="font-size:15px;line-height:1.7;color:#555;margin:0;padding-bottom:32px;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">Use the code below to verify your email and complete your registration for the KRMU Induction program.</p><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="text-align:center;padding-bottom:32px"><tbody><tr><td><div style="background:linear-gradient(135deg,#5a1018 0%,#7b2018 50%,#5a1018 100%);border-radius:16px;padding:28px 48px;display:inline-block"><p style="font-size:42px;line-height:24px;font-weight:800;letter-spacing:14px;color:#ffffff;font-family:&#x27;SF Mono&#x27;,&#x27;Fira Code&#x27;,&#x27;Courier New&#x27;,monospace;text-shadow:0 2px 8px rgba(0,0,0,0.3);margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">${otp}</p></div></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="padding-bottom:28px"><tbody><tr><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody style="width:100%"><tr style="width:100%"><td data-id="__react-email-column" style="width:16px;padding-right:8px"><div style="width:8px;height:8px;border-radius:50%;background-color:#c87038;display:inline-block;margin-top:4px"></div></td><td data-id="__react-email-column"><p style="font-size:13px;line-height:24px;color:#888;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">This code expires in <span style="color:#5a1018;font-weight:600">5 minutes</span></p></td></tr></tbody></table></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="background-color:#fdf8f2;border:1px solid #ede4d8;border-radius:12px;padding:16px 20px"><tbody><tr><td><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation"><tbody style="width:100%"><tr style="width:100%"><td data-id="__react-email-column" style="width:20px;vertical-align:top;padding-right:12px"><p style="font-size:16px;line-height:24px;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">🔒</p></td><td data-id="__react-email-column"><p style="font-size:12px;line-height:1.6;color:#8c6239;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">If you didn&#x27;t request this code, you can safely ignore this email. Someone may have entered your email by mistake.</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table><table align="center" width="100%" border="0" cellPadding="0" cellSpacing="0" role="presentation" style="background-color:#2d0d12;padding:24px 36px;border-radius:0 0 8px 8px;text-align:center"><tbody><tr><td><p style="font-size:13px;line-height:24px;color:#d4a254;font-weight:600;letter-spacing:1px;margin:0;padding-bottom:8px;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">KRMU Induction 2026</p><p style="font-size:11px;line-height:1.6;color:#8b6e55;margin:0;margin-top:0;margin-bottom:0;margin-left:0;margin-right:0">KR Mangalam University, Sohna Road, Gurugram, Haryana<br/>© 2026 All rights reserved</p></td></tr></tbody></table></td></tr></tbody></table></td></tr></tbody></table><!--/\$--></body></html>
+        subject: 'Your AARAMBH 2026 Verification Code',
+        text: `We received a request to verify your email for AARAMBH 2026.
+
+Your Verification Code is: ${otp}
+
+This code expires in 5 minutes. Never share this code. Our team will never ask for it.
+If this wasn't you, you can safely ignore this email.
+
+AARAMBH 2026
+K.R. Mangalam University • Student Induction Platform
 `,
+        html: `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+<head>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Your AARAMBH 2026 Verification Code</title>
+<style>
+  @media only screen and (max-width: 600px) {
+    .container { width: 100% !important; padding: 24px 16px !important; }
+    .inner-card { padding: 32px 24px !important; }
+    .otp-container { padding: 24px 16px !important; }
+    .otp-text { font-size: 36px !important; letter-spacing: 12px !important; }
+  }
+</style>
+</head>
+<body style="background-color:#FDFBF7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin:0; padding:0; -webkit-text-size-adjust:none;">
+
+<!-- Preheader -->
+<div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">
+Your verification code is ready. Valid for 5 minutes.
+&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+</div>
+
+<table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="background-color:#FDFBF7;">
+  <tr>
+    <td align="center" style="padding:48px 16px;">
+      
+      <!-- Main Content Card -->
+      <table class="container" border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="max-width:520px; width:100%; background-color:#ffffff; border:1px solid #F4EFE6; border-radius:16px; box-shadow:0 8px 30px rgba(90, 16, 24, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);">
+        
+        <!-- Gradient Top Accent -->
+        <tr>
+          <td>
+            <div style="height:6px; background:linear-gradient(90deg, #5A1018, #8B2C1A, #C87038, #DDA7A5); border-radius:16px 16px 0 0; width:100%;"></div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="inner-card" style="padding:48px 40px 40px;">
+            
+            <!-- Header -->
+            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="text-align:center;">
+              <tr>
+                <td>
+                  <h1 style="font-family:'Georgia', serif; font-size:26px; font-weight:700; color:#5A1018; letter-spacing:3px; margin:0 0 4px 0;">AARAMBH</h1>
+                  <p style="font-size:12px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; color:#C87038; font-weight:600; margin:0 0 32px 0;">Student Induction Portal &bull; 2026</p>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Elegant Divider -->
+            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:32px;">
+              <tr>
+                <td align="center">
+                  <div style="width:48px; height:2px; background:linear-gradient(90deg, transparent, #DDA7A5, transparent);"></div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Body -->
+            <p style="font-size:18px; line-height:1.6; color:#5A1018; font-weight:600; margin:0 0 16px 0;">Hello,</p>
+            <p style="font-size:16px; line-height:1.6; color:#4A4A4A; margin:0 0 32px 0;">
+              We received a request to verify your email for AARAMBH 2026. Use the verification code below to continue your registration.
+            </p>
+
+            <!-- OTP Hero Card -->
+            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:32px;">
+              <tr>
+                <td align="center">
+                  <div class="otp-container" style="background-color:#FDFBF7; border:1px solid #F4EFE6; border-radius:12px; padding:32px 24px; text-align:center; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
+                    <p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#8B2C1A; font-weight:700; margin:0 0 16px 0;">Verification Code</p>
+                    <p class="otp-text" style="font-family:'SF Mono', 'Fira Code', 'Courier New', monospace; font-size:44px; font-weight:800; letter-spacing:18px; color:#5A1018; margin:0 0 0 18px; display:inline-block;">${otp}</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Security Info Card -->
+            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#FFF9F7; border:1px solid #F4EFE6; border-radius:12px; padding:20px;">
+              <tr>
+                <td width="32" style="vertical-align:top; padding-right:12px;">
+                  <img src="https://cdn-icons-png.flaticon.com/512/8207/8207869.png" width="24" height="24" alt="Security Shield" style="display:block; max-width:100%; height:auto;" />
+                </td>
+                <td style="vertical-align:top;">
+                  <p style="font-size:13px; line-height:1.6; color:#8B2C1A; font-weight:600; margin:0 0 4px 0;">Security Information</p>
+                  <p style="font-size:13px; line-height:1.6; color:#6B4E47; margin:0;">
+                    This code expires in <strong>5 minutes</strong>. Never share this code. Our team will never ask for it. If this wasn't you, you can safely ignore this email.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+      </table>
+
+      <!-- Footer -->
+      <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="max-width:520px; width:100%; margin-top:32px; text-align:center;">
+        <tr>
+          <td>
+            <p style="font-size:14px; line-height:1.6; color:#5A1018; font-weight:600; margin:0 0 8px 0;">AARAMBH 2026</p>
+            <p style="font-size:12px; line-height:1.6; color:#8A7A75; margin:0 0 16px 0;">K.R. Mangalam University &bull; Student Induction Platform</p>
+            <p style="font-size:11px; line-height:1.6; color:#B0A39C; margin:0 0 4px 0;">This is an automated email. Please do not reply.</p>
+            <p style="font-size:11px; line-height:1.6; color:#B0A39C; margin:0 0 16px 0;">
+              Need help? Contact <a href="mailto:induction@mrinalprakash.com" style="color:#C87038; text-decoration:none; font-weight:500;">Support</a> or visit our <a href="https://mrinalprakash.com" style="color:#C87038; text-decoration:none; font-weight:500;">Official Website</a>.
+            </p>
+            <p style="font-size:11px; line-height:1.6; color:#C4B9B5; margin:0;">&copy; 2026 K.R. Mangalam University. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>`,
       });
       emailPromise = emailPromise.then((res: any) => {
         if (res.error) {
