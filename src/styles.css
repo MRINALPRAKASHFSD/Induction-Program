@@ -585,7 +585,7 @@
 .orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
+  filter: blur(90px);
   pointer-events: none;
   will-change: transform;
   backface-visibility: hidden;
@@ -1617,7 +1617,7 @@
 .ambient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(70px);
+  filter: blur(100px);
   will-change: transform;
   backface-visibility: hidden;
 }
@@ -2274,22 +2274,12 @@ body.menu-open > #root > :not(.nav-mobile-overlay):not(.nav-mobile-sheet):not(he
   .ambient-blob,
   .streak-fire,
   .nav-scanner-btn-ring,
-  .skeleton-glass,
-  .orb,
-  .hero-ring,
-  .hero-particle {
+  .skeleton-glass {
     animation: none !important;
-    transition: none !important;
   }
   .hover-lift:hover,
   .badge-card:hover,
   .rank-card:hover {
     transform: none !important;
   }
-}
-
-/* ─── Content Visibility: Skip rendering off-screen sections ────────── */
-.content-below-fold {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 500px;
 }
