@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
-import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap, Megaphone, QrCode, ArrowRight } from "lucide-react";
+import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap, Megaphone, QrCode, ArrowRight, Award, TrendingUp } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
@@ -61,7 +61,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
         { value: timeLeft.seconds, label: "Secs" },
       ].map((s) => (
         <div key={s.label} className="text-center min-w-[56px] sm:min-w-[64px] flex flex-col items-center">
-          <div className="bg-white/40 border border-white/50 shadow-sm rounded-xl w-full h-[48px] sm:h-[56px] backdrop-blur-md relative overflow-hidden flex items-center justify-center">
+          <div className="glass-premium rounded-xl w-full h-[48px] sm:h-[56px] flex items-center justify-center !p-0 !overflow-hidden">
             <AnimatePresence>
               <m.span
                 key={s.value}
@@ -75,7 +75,7 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
               </m.span>
             </AnimatePresence>
           </div>
-          <div className="text-[#8a4a22]/70 text-[0.6rem] sm:text-[0.65rem] font-bold uppercase tracking-widest mt-2">
+          <div className="label-premium mt-2">
             {s.label}
           </div>
         </div>
@@ -120,6 +120,14 @@ function Landing() {
     <LazyMotion features={domAnimation}>
       <div className="min-h-screen bg-background">
       <SiteHeader />
+
+      {/* Ambient Background */}
+      <div className="ambient-bg" aria-hidden="true">
+        <div className="ambient-blob ambient-blob-1" />
+        <div className="ambient-blob ambient-blob-2" />
+        <div className="ambient-blob ambient-blob-3" />
+        <div className="watermark">AARAMBH 2026</div>
+      </div>
 
       {/* Hero */}
       <section className="relative overflow-hidden min-h-[92svh] flex items-center">
@@ -199,8 +207,8 @@ function Landing() {
             </div>
 
             {/* Countdown timer */}
-            <div className="mt-12 glass-card-hero px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up css-delay-3">
-              <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15">
+            <div className="mt-12 glass-premium-deep px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 !rounded-[2rem] css-animate-fade-in-up css-delay-3">
+              <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15 relative z-10">
                 <div className="relative hidden sm:block">
                   <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
                     <m.div 
@@ -217,7 +225,7 @@ function Landing() {
                     transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
                   />
                 </div>
-                <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left">
+                <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left relative z-10">
                   Induction<br/>Begins In
                 </span>
               </div>
@@ -229,45 +237,51 @@ function Landing() {
 
 
 
-      {/* Live Stats Section */}
+      {/* Live Stats — Animated KPI Cards */}
       <section className="container mx-auto max-w-5xl px-4 py-16 pt-24">
-        <div className="glass-card-hero p-6 sm:p-12 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 sm:gap-10 relative overflow-hidden group border-[#8a4a22]/20 hover:border-[#8a4a22]/30 transition-colors">
-          <div className="absolute top-0 bottom-0 left-[-100%] w-[100%] bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:left-[100%] transition-all duration-[1500ms] ease-in-out z-0" />
-          <div className="max-w-md text-center md:text-left relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8a4a22]/10 border border-[#8a4a22]/20 mb-5 shadow-sm">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c87038] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#a84a25]"></span>
-              </span>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8a4a22] leading-none mt-[1px]">Live Updates</span>
-            </div>
-            <h2 className="text-3xl font-bold sm:text-4xl text-[#2c1208] tracking-tight">Real-time Impact</h2>
-            <p className="mt-4 text-[#7a4020]/80 leading-relaxed text-base">
-              Watch our community grow instantly as new students register, scan in, and join clubs across campus.
-            </p>
+        {/* Section header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8a4a22]/8 border border-[#8a4a22]/12 mb-5">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c87038] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#a84a25]"></span>
+            </span>
+            <span className="label-premium !mt-0 !text-[#8a4a22]">Live Updates</span>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-6 sm:gap-x-14 gap-y-8 sm:gap-y-10 relative z-10">
-            {[
-              { value: students ?? "—", label: "Registered" },
-              { value: scans ?? "—",   label: "QR Scans"   },
-              { value: clubs ?? "—",   label: "Club Joins" },
-              { value: "5",            label: "Days"       },
-            ].map((s) => (
-              <div key={s.label} className="text-center min-w-[72px] group/stat">
-                <div className="font-black text-4xl sm:text-5xl tabular-nums leading-none bg-gradient-to-br from-[#2c1208] via-[#5a2c14] to-[#8a4a22] bg-clip-text text-transparent group-hover/stat:scale-105 transition-transform origin-bottom">{s.value}</div>
-                <div className="text-[#8a4a22]/70 text-[11px] font-bold uppercase tracking-[0.2em] mt-4">{s.label}</div>
+          <h2 className="heading-xl">Real-time Impact</h2>
+          <p className="subtitle mt-4 max-w-lg mx-auto">
+            Watch our community grow instantly as new students register, scan in, and join clubs.
+          </p>
+        </div>
+
+        {/* KPI Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { value: students ?? "—", label: "Registered", icon: Users, variant: "kpi-yellow" },
+            { value: scans ?? "—", label: "QR Scans", icon: ScanLine, variant: "kpi-emerald" },
+            { value: clubs ?? "—", label: "Club Joins", icon: UsersRound, variant: "kpi-blue" },
+            { value: "5", label: "Days", icon: Calendar, variant: "kpi-purple" },
+          ].map((kpi, i) => (
+            <div
+              key={kpi.label}
+              className={`kpi-card ${kpi.variant} animate-slide-up stagger-${i + 1}`}
+            >
+              <div className="kpi-icon">
+                <kpi.icon className="w-5 h-5" />
               </div>
-            ))}
-          </div>
+              <div className="kpi-value">{kpi.value}</div>
+              <div className="kpi-label">{kpi.label}</div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Features */}
       <section className="container mx-auto max-w-6xl px-4 py-24">
         <div className="mx-auto max-w-2xl text-center mb-16 relative">
-          <h2 className="text-4xl font-black sm:text-5xl text-[#2c1208] tracking-tight">Built for the rush.</h2>
+          <h2 className="heading-xl">Built for the rush.</h2>
           <div className="h-1 w-24 bg-gradient-to-r from-[#a84a25] to-[#c87038] mx-auto mt-6 rounded-full opacity-80" />
-          <p className="mt-7 text-[#7a4020]/80 text-lg leading-relaxed max-w-xl mx-auto">
+          <p className="subtitle mt-7 max-w-xl mx-auto">
             Everything you need to onboard thousands of students without lines, paper, or chaos.
           </p>
         </div>
@@ -276,25 +290,28 @@ function Landing() {
             { icon: QrCode, title: "Instant QR attendance", body: "Scan a poster, mark attendance in under a second. Duplicates blocked automatically." },
             { icon: Activity, title: "Realtime dashboards", body: "Admins watch registrations flow in live — no refresh, no waiting." },
             { icon: Users, title: "Clubs in one tap", body: "Browse 30+ clubs and societies. Join your tribe before classes start." },
-          ].map((f) => (
-            <div key={f.title} className="group relative rounded-[1.5rem] border border-[#8a4a22]/15 bg-white/60 p-8 shadow-sm transition-all duration-700 hover:shadow-elegant hover:-translate-y-2 overflow-hidden backdrop-blur-md">
-              <div className="absolute inset-0 bg-gradient-to-br from-[#8a4a22]/[0.05] to-transparent opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
-              <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br from-[#c87038]/30 to-[#a84a25]/0 blur-3xl opacity-0 transition-all duration-700 group-hover:opacity-100 group-hover:scale-150 mix-blend-multiply" />
-              <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent group-hover:left-[100%] transition-all duration-1000 ease-in-out z-0" />
-              
+          ].map((f, i) => (
+            <div key={f.title} className={`feature-card animate-slide-up stagger-${i + 1}`}>
+              <div className="feature-card-icon relative z-10">
+                <f.icon className="h-7 w-7 stroke-[1.5]" />
+              </div>
               <div className="relative z-10">
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#8a4a22]/10 to-[#8a4a22]/5 text-[#8a4a22] shadow-sm ring-1 ring-inset ring-[#8a4a22]/20 mb-6 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-md group-hover:ring-[#8a4a22]/40">
-                  <f.icon className="h-7 w-7 stroke-[1.5]" />
-                </div>
-                <h3 className="text-lg font-bold text-[#2c1208] transition-colors group-hover:text-[#8a4a22]">{f.title}</h3>
-                <p className="mt-2 text-sm text-[#7a4020]/80 leading-relaxed">{f.body}</p>
+                <h3 className="heading-md !text-[1.125rem] transition-colors">{f.title}</h3>
+                <p className="mt-2.5 text-sm text-[#7a4020]/75 leading-relaxed">{f.body}</p>
+              </div>
+              {/* Hover arrow */}
+              <div className="mt-4 relative z-10">
+                <span className="inline-flex items-center text-xs font-semibold text-[#8a4a22]/50 opacity-0 translate-x-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" style={{ opacity: 'var(--hover-opacity, 0)' }}>
+                  Learn more <ArrowRight className="w-3 h-3 ml-1" />
+                </span>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <footer className="bg-white/80 border-t border-[#8a4a22]/15 pt-20 pb-10 mt-16 relative overflow-hidden backdrop-blur-xl">
+      {/* Footer */}
+      <footer className="glass-premium !rounded-none border-t border-[#8a4a22]/10 pt-20 pb-10 mt-16 relative overflow-hidden">
         <div className="container mx-auto max-w-6xl px-4 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 lg:gap-12 mb-16">
             
@@ -306,17 +323,17 @@ function Landing() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-2xl font-bold text-[#2c1208] tracking-tight leading-none">Aarambh</span>
-                  <span className="text-[0.7rem] font-bold text-[#8a4a22] uppercase tracking-[0.2em] mt-1.5">Induction 2026</span>
+                  <span className="label-premium mt-1.5">Induction 2026</span>
                 </div>
               </div>
               
-              <p className="text-sm text-[#7a4020]/80 leading-relaxed max-w-md">
+              <p className="subtitle text-sm max-w-md">
                 The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the incoming class of 2026.
               </p>
 
-              <div className="flex items-start gap-4 bg-gradient-to-br from-[#8a4a22]/5 to-transparent p-5 rounded-2xl border border-[#8a4a22]/15 mt-2 max-w-md transition-colors hover:border-[#8a4a22]/30 hover:bg-[#8a4a22]/10">
-                <ShieldCheck className="h-6 w-6 text-[#8a4a22] shrink-0 mt-0.5" />
-                <p className="text-xs text-[#7a4020] leading-relaxed">
+              <div className="flex items-start gap-4 glass-premium !rounded-2xl !p-5 max-w-md hover-lift">
+                <ShieldCheck className="h-6 w-6 text-[#8a4a22] shrink-0 mt-0.5 relative z-10" />
+                <p className="text-xs text-[#7a4020] leading-relaxed relative z-10">
                   <strong className="block mb-1 text-sm text-[#2c1208] tracking-tight">Enterprise Security</strong> 
                   End-to-end encrypted and strictly for university onboarding. We never track location or share data.
                 </p>
@@ -325,7 +342,7 @@ function Landing() {
 
             {/* Quick Links */}
             <div className="md:col-span-3 lg:col-span-3 md:col-start-7 lg:col-start-8 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-widest mb-1">Platform</h4>
+              <h4 className="label-premium !text-[#2c1208] !font-bold">Platform</h4>
               <nav className="flex flex-col gap-4">
                 <Link to="/attendance" className="group text-sm text-[#7a4020]/80 hover:text-[#8a4a22] transition-all inline-flex items-center gap-3">
                   <QrCode className="h-4 w-4 transition-transform group-hover:scale-110" /> <span className="transition-transform group-hover:translate-x-1">Attendance</span>
@@ -341,28 +358,30 @@ function Landing() {
 
             {/* Support / Legal */}
             <div className="md:col-span-3 lg:col-span-2 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="text-sm font-bold text-[#2c1208] uppercase tracking-widest mb-1">Resources</h4>
+              <h4 className="label-premium !text-[#2c1208] !font-bold">Resources</h4>
               <nav className="flex flex-col gap-4">
                 <Link to="/help" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Help Center</Link>
                 <Link to="/privacy" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Privacy Policy</Link>
                 <Link to="/terms" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Terms of Service</Link>
-                <Link to="/admin/login" className="mt-4 flex items-center justify-between bg-gradient-to-r from-[#8a4a22]/5 to-transparent border border-[#8a4a22]/15 rounded-xl p-3.5 hover:bg-[#8a4a22]/10 hover:border-[#8a4a22]/30 transition-all group">
-                  <span className="text-[13px] font-bold text-[#5a2c14] leading-tight">Admin<br />Portal</span>
-                  <ArrowRight className="h-4 w-4 text-[#8a4a22] group-hover:translate-x-1 transition-transform" />
+                <Link to="/admin/login" className="mt-4 action-card !p-3.5">
+                  <div className="action-card-content">
+                    <span className="action-card-title !text-[13px]">Admin Portal</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 action-card-arrow" />
                 </Link>
               </nav>
             </div>
           </div>
 
           {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-[#8a4a22]/15">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-[#8a4a22]/10">
             <div className="text-[13px] text-[#7a4020]/70 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
               &copy; 2024 EOZKA. <span className="mx-3 text-[#7a4020]/30 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
             </div>
-            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group flex flex-col sm:flex-row items-center gap-3 sm:gap-5 bg-white border border-[#8a4a22]/20 rounded-2xl sm:rounded-full px-6 sm:px-8 py-3.5 hover:shadow-xl hover:shadow-[#8a4a22]/5 hover:border-[#8a4a22]/40 transition-all text-center">
-              <span className="text-[13px] font-bold text-[#7a4020]/90 uppercase tracking-[0.2em] leading-none">Engineered & Co-powered by</span>
-              <div className="w-[1px] h-8 bg-[#8a4a22]/20 group-hover:bg-[#8a4a22]/40 transition-colors"></div>
-              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform" />
+            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group glass-premium !rounded-full !px-6 sm:!px-8 !py-3.5 flex flex-col sm:flex-row items-center gap-3 sm:gap-5 hover-lift text-center">
+              <span className="label-premium !mt-0 relative z-10">Engineered & Co-powered by</span>
+              <div className="w-[1px] h-8 bg-[#8a4a22]/15 group-hover:bg-[#8a4a22]/30 transition-colors relative z-10"></div>
+              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform relative z-10" />
             </a>
           </div>
         </div>

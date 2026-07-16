@@ -1,25 +1,101 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, setDoc } from "firebase/firestore";
+import { localDb } from "@/lib/local-db";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight, CheckCircle2 } from "lucide-react";
+import {
+  AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight,
+  CheckCircle2, ScanLine, MapPin, Ticket, Megaphone, Menu,
+  UsersRound, Shield, HelpCircle, Settings, Wallet, X,
+} from "lucide-react";
+
+/* ─── Nav Items ─────────────────────────────────────────────────── */
+
+type NavItem = {
+  to: string;
+  label: string;
+  icon: typeof Calendar;
+  comingSoon?: boolean;
+  requiresAuth?: boolean;
+  guestOnly?: boolean;
+};
+
+// Items shown BEFORE registration
+const GUEST_NAV_ITEMS: NavItem[] = [
+  { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/clubs", label: "Clubs", icon: UsersRound },
+  { to: "/campus", label: "Campus", icon: MapPin, comingSoon: true },
+];
+
+// Items shown AFTER registration
+const AUTH_NAV_ITEMS: NavItem[] = [
+  { to: "/my-pass", label: "Wallet", icon: Wallet },
+  { to: "/schedule", label: "Schedule", icon: Calendar },
+  { to: "/announcements", label: "Announcements", icon: Megaphone },
+  { to: "/clubs", label: "Clubs", icon: UsersRound },
+  { to: "/campus", label: "Campus", icon: MapPin, comingSoon: true },
+];
+
+/* ─── Exported Spacer ───────────────────────────────────────────── */
+
+export function NavSpacer() {
+  return <div className="nav-spacer" />;
+}
+
+/* ─── Main Header ───────────────────────────────────────────────── */
 
 export function SiteHeader() {
   const [user, setUser] = useState<any>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [isOpen, setIsOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
+  const path = useRouterState({ select: (s) => s.location.pathname });
+
+  // Check if user has registered (has a student profile)
+  const profile = useMemo(() => localDb.getStudentProfile(), [user]);
+  const isRegistered = !!profile;
+
+  // Determine which nav items to show
+  const navItems = isRegistered ? AUTH_NAV_ITEMS : GUEST_NAV_ITEMS;
+
+  /* ── Scroll listener ──────────────────────────────────────────── */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* ── Lock body scroll + add page-scale class when mobile menu is open */
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("menu-open");
+    } else {
+      document.body.style.overflow = "";
+      document.body.classList.remove("menu-open");
+    }
+    return () => {
+      document.body.style.overflow = "";
+      document.body.classList.remove("menu-open");
+    };
+  }, [mobileOpen]);
+
+  /* ── Auth listener ────────────────────────────────────────────── */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -27,8 +103,8 @@ export function SiteHeader() {
     return () => unsubscribe();
   }, []);
 
+  /* ── Announcements listener ───────────────────────────────────── */
   useEffect(() => {
-    // Listen to active announcements for everyone
     const qAnnouncements = query(
       collection(db, "announcements"),
       where("status", "==", "active")
@@ -47,9 +123,9 @@ export function SiteHeader() {
     return () => unsubAnnouncements();
   }, []);
 
+  /* ── Read-state listener ──────────────────────────────────────── */
   useEffect(() => {
     if (user) {
-      // Listen to user's read states from Firestore
       const qReads = collection(db, `user_notifications/${user.uid}/reads`);
       const unsubReads = onSnapshot(qReads, (snap) => {
         const reads = new Set(snap.docs.map(d => d.id));
@@ -57,12 +133,12 @@ export function SiteHeader() {
       });
       return () => unsubReads();
     } else {
-      // Load read states from localStorage for anonymous users
       const localReads = JSON.parse(localStorage.getItem('read_announcements') || '[]');
       setReadIds(new Set(localReads));
     }
   }, [user]);
 
+  /* ── Handlers ─────────────────────────────────────────────────── */
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -74,7 +150,7 @@ export function SiteHeader() {
     }
   };
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
     if (readIds.has(id)) return;
     
     if (user) {
@@ -86,13 +162,12 @@ export function SiteHeader() {
         console.error("Failed to mark read", e);
       }
     } else {
-      // Update localStorage for anonymous users
       const newReads = new Set(readIds);
       newReads.add(id);
       setReadIds(newReads);
       localStorage.setItem('read_announcements', JSON.stringify(Array.from(newReads)));
     }
-  };
+  }, [readIds, user]);
 
   const markAllAsRead = async () => {
     const unread = announcements.filter(a => !readIds.has(a.id));
@@ -110,156 +185,403 @@ export function SiteHeader() {
 
   const unreadCount = announcements.filter(a => !readIds.has(a.id)).length;
   const displayCount = unreadCount > 99 ? "99+" : unreadCount;
+  const userInitial = user?.email?.[0]?.toUpperCase() || "?";
+  const profileInitial = profile?.full_name?.[0]?.toUpperCase() || userInitial;
+
+  const isActive = (to: string) => {
+    if (to === "/") return path === "/";
+    return path.startsWith(to);
+  };
 
   return (
-    <header className="sticky top-0 z-40 w-full panel-liquid-glass">
-      <div className="container mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-3 font-semibold">
-          <img src="/krmu-emblem.webp" alt="KRMU Emblem" className="h-11 w-auto mix-blend-multiply object-contain" />
-          <span className="text-xl tracking-tight text-[#6b3517] hidden sm:inline-block">KRMU Induction</span>
-        </Link>
-        <nav className="flex items-center gap-2">
+    <>
+      {/* ── Floating Nav Bar ─────────────────────────────────────── */}
+      <header
+        className="nav-floating"
+        data-scrolled={scrolled ? "true" : "false"}
+      >
+        <div className="nav-inner flex items-center justify-between px-4 md:px-5">
           
-          {/* Notification Bell */}
-          <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative rounded-full text-amber-500 hover:bg-white/50 hover:text-amber-600">
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white shadow-sm ring-2 ring-white/50">
-                    {displayCount}
-                  </span>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-[#2c1208]">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <span className="text-xs font-bold text-[#8a4a22] bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">
-                      {unreadCount} new
-                    </span>
-                  )}
-                </div>
-                {unreadCount > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={markAllAsRead} 
-                    className="h-6 px-2 text-[10px] uppercase font-bold text-[#8a4a22] hover:bg-[#8a4a22]/10 rounded-full transition-colors"
-                  >
-                    <CheckCircle2 className="w-3 h-3 mr-1" /> Mark all read
-                  </Button>
-                )}
-              </div>
-              <div className="max-h-[60vh] overflow-y-auto hide-scrollbar bg-gradient-to-b from-[#fdfbf9] to-[#faf6f3]">
-                {announcements.length === 0 ? (
-                  <div className="p-10 text-center text-[#7a4020]/60">
-                    <div className="w-12 h-12 rounded-full bg-[#8a4a22]/5 flex items-center justify-center mx-auto mb-3">
-                      <Bell className="h-6 w-6 opacity-40" />
-                    </div>
-                    <p className="text-sm font-bold text-[#5a2c14]/60">You're all caught up!</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col">
-                    <AnimatePresence>
-                      {announcements.map((a) => {
-                        const isRead = readIds.has(a.id);
-                        return (
-                          <motion.div
-                            key={a.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                          >
-                            <Link 
-                              to="/announcements" 
-                              onClick={() => { markAsRead(a.id); setIsOpen(false); }}
-                              className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/80 relative group ${!isRead ? "bg-white" : "bg-transparent opacity-80"}`}
-                            >
-                              {!isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 rounded-r-full" />}
-                              <div className="flex items-start justify-between gap-2 mb-1.5">
-                                <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
-                                  {a.title}
-                                </h4>
-                                {a.isImportant && (
-                                  <span className="absolute top-3 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 shadow-sm">
-                                    <AlertCircle className="w-2.5 h-2.5" /> Urgent
-                                  </span>
-                                )}
-                              </div>
-                              <p className={`text-xs line-clamp-2 leading-relaxed mb-3 ${!isRead ? "text-[#5a2c14]" : "text-[#7a4020]"}`}>
-                                {a.content}
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1 bg-[#8a4a22]/5 px-1.5 py-0.5 rounded-md">
-                                  <Clock className="w-3 h-3" />
-                                  {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                                </div>
-                                {!isRead && (
-                                  <button onClick={(e) => {
-                                      e.preventDefault();
-                                      markAsRead(a.id);
-                                    }} 
-                                    className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 px-2 py-0.5 rounded-full transition-all flex items-center gap-1 z-10 relative">
-                                    <CheckCircle2 className="w-3 h-3" /> Mark read
-                                  </button>
-                                )}
-                              </div>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
-              <div className="p-2 border-t border-[#8a4a22]/10 bg-white/80">
-                <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-[#8a4a22]/5" asChild>
-                  <Link to="/announcements" onClick={() => setIsOpen(false)}>
-                    View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block opacity-70" />
-                  </Link>
-                </Button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Left: Logo */}
+          <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setMobileOpen(false)}>
+            <img src="/krmu-emblem.webp" alt="KRMU Emblem" className="h-9 w-auto mix-blend-multiply object-contain" />
+            <span className="text-base font-semibold tracking-tight text-[#6b3517] hidden sm:inline-block">
+              KRMU Induction
+            </span>
+          </Link>
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full text-[#5a2c14] hover:bg-white/50 hover:text-[#2c1208]">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-md border-white/20">
-              {user ? (
-                <>
-                  <DropdownMenuItem className="text-muted-foreground text-xs pointer-events-none">
-                    {user.email}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 cursor-pointer mt-1 font-medium">
-                    <LogOut className="mr-2 h-4 w-4 inline-block" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </>
+          {/* Center: Desktop Nav Links (hidden on mobile) */}
+          <nav className="hidden md:flex items-center gap-0.5 mx-4">
+            {navItems.map((item) => (
+              item.comingSoon ? (
+                <button
+                  key={item.label}
+                  className={`nav-link`}
+                  onClick={() => toast.info(`${item.label} is coming soon!`, { description: "We're building something special." })}
+                >
+                  <item.icon className="w-3.5 h-3.5 opacity-60" />
+                  {item.label}
+                </button>
               ) : (
-                <DropdownMenuItem asChild className="cursor-pointer font-medium">
-                  <Link to="/register" className="flex items-center w-full">
-                    <span>Register now</span>
-                  </Link>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Link
+                  key={item.to}
+                  to={item.to as any}
+                  className={`nav-link ${isActive(item.to) ? "active" : ""}`}
+                >
+                  <item.icon className="w-3.5 h-3.5 opacity-60" />
+                  {item.label}
+                </Link>
+              )
+            ))}
+          </nav>
 
-          <Button asChild variant="liquidGlassDark" className="h-9 px-5 rounded-full font-medium text-xs">
-            <Link to="/admin/login">
-              Admin Panel
-            </Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+
+            {/* Scanner CTA — only show when registered */}
+            {isRegistered && (
+              <Link
+                to="/attendance"
+                className="nav-scanner-btn nav-scanner-btn-compact md:nav-scanner-btn-compact-off relative"
+              >
+                <ScanLine className="w-4 h-4" />
+                <span className="hidden sm:inline">Scan</span>
+                <span className="sm:hidden">Scan</span>
+                <span className="nav-scanner-btn-ring" />
+              </Link>
+            )}
+
+            {/* Register CTA for guests */}
+            {!isRegistered && !user && (
+              <Button variant="liquidGlassMaroon" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold hidden sm:flex">
+                <Link to="/register">Register</Link>
+              </Button>
+            )}
+
+            {/* Notification Bell — only show when registered */}
+            {isRegistered && (
+              <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
+                <DropdownMenuTrigger asChild>
+                  <button className="nav-icon-btn" aria-label="Notifications">
+                    <Bell className="w-[18px] h-[18px]" />
+                    {unreadCount > 0 && (
+                      <span className="nav-badge">{displayCount}</span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 bg-[#fffdfc]/95 backdrop-blur-2xl border-[#8a4a22]/10 shadow-2xl rounded-2xl overflow-hidden mt-2"
+                >
+                  {/* Notification Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-[#2c1208] text-sm">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold text-[#8a4a22] bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={markAllAsRead} 
+                        className="h-6 px-2 text-[10px] uppercase font-bold text-[#8a4a22] hover:bg-[#8a4a22]/10 rounded-full transition-colors"
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Mark all read
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="max-h-[60vh] overflow-y-auto hide-scrollbar bg-gradient-to-b from-[#fdfbf9] to-[#faf6f3]">
+                    {announcements.length === 0 ? (
+                      <div className="p-10 text-center text-[#7a4020]/60">
+                        <div className="w-12 h-12 rounded-full bg-[#8a4a22]/5 flex items-center justify-center mx-auto mb-3">
+                          <Bell className="h-6 w-6 opacity-40" />
+                        </div>
+                        <p className="text-sm font-bold text-[#5a2c14]/60">You're all caught up!</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col">
+                        <AnimatePresence>
+                          {announcements.map((a) => {
+                            const isRead = readIds.has(a.id);
+                            return (
+                              <motion.div
+                                key={a.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                              >
+                                <Link 
+                                  to="/announcements" 
+                                  onClick={() => { markAsRead(a.id); setNotifOpen(false); }}
+                                  className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/80 relative group ${!isRead ? "bg-white" : "bg-transparent opacity-80"}`}
+                                >
+                                  {!isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 rounded-r-full" />}
+                                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                                    <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
+                                      {a.title}
+                                    </h4>
+                                    {a.isImportant && (
+                                      <span className="absolute top-3 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 shadow-sm">
+                                        <AlertCircle className="w-2.5 h-2.5" /> Urgent
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className={`text-xs line-clamp-2 leading-relaxed mb-3 ${!isRead ? "text-[#5a2c14]" : "text-[#7a4020]"}`}>
+                                    {a.content}
+                                  </p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1 bg-[#8a4a22]/5 px-1.5 py-0.5 rounded-md">
+                                      <Clock className="w-3 h-3" />
+                                      {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                                    </div>
+                                    {!isRead && (
+                                      <button onClick={(e) => {
+                                          e.preventDefault();
+                                          markAsRead(a.id);
+                                        }} 
+                                        className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 px-2 py-0.5 rounded-full transition-all flex items-center gap-1 z-10 relative">
+                                        <CheckCircle2 className="w-3 h-3" /> Mark read
+                                      </button>
+                                    )}
+                                  </div>
+                                </Link>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-2 border-t border-[#8a4a22]/10 bg-white/80">
+                    <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-[#8a4a22]/5" asChild>
+                      <Link to="/announcements" onClick={() => setNotifOpen(false)}>
+                        View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block opacity-70" />
+                      </Link>
+                    </Button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Profile Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="nav-icon-btn" aria-label="User menu">
+                  {user ? (
+                    <span className="nav-avatar">{profileInitial}</span>
+                  ) : (
+                    <User className="w-[18px] h-[18px]" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="nav-profile-dropdown w-56 mt-2">
+                {user ? (
+                  <>
+                    {/* Profile header */}
+                    <div className="px-3 py-2.5 mb-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="nav-avatar text-xs">{profileInitial}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#2c1208] truncate">{profile?.full_name || user.email}</p>
+                          <p className="text-[10px] font-medium text-[#8a4a22]/60 uppercase tracking-wider">
+                            {isRegistered ? profile?.branch : "Student"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
+                    {isRegistered && (
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 text-[#5a2c14] font-medium focus:bg-[#8a4a22]/5 focus:text-[#2c1208]">
+                        <Link to="/my-pass" className="flex items-center gap-2 w-full">
+                          <Wallet className="w-4 h-4 opacity-60" /> Student Wallet
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 text-[#5a2c14] font-medium focus:bg-[#8a4a22]/5 focus:text-[#2c1208]">
+                      <Link to="/admin/login" className="flex items-center gap-2 w-full">
+                        <Shield className="w-4 h-4 opacity-60" /> Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      className="cursor-pointer rounded-lg mx-1 text-red-600 font-medium focus:bg-red-50 focus:text-red-700"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" /> Log out
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 font-medium focus:bg-[#8a4a22]/5">
+                      <Link to="/register" className="flex items-center gap-2 w-full text-[#5a2c14]">
+                        <User className="w-4 h-4 opacity-60" /> Register now
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#8a4a22]/8" />
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-lg mx-1 font-medium focus:bg-[#8a4a22]/5">
+                      <Link to="/admin/login" className="flex items-center gap-2 w-full text-[#5a2c14]">
+                        <Shield className="w-4 h-4 opacity-60" /> Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile Hamburger (visible < md) */}
+            <button
+              className="nav-icon-btn md:hidden"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Menu"
+            >
+              <div className="nav-hamburger" data-open={mobileOpen}>
+                <span />
+                <span />
+                <span />
+              </div>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Mobile Bottom Sheet ──────────────────────────────────── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              className="nav-mobile-overlay md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setMobileOpen(false)}
+            />
+
+            {/* Sheet */}
+            <motion.nav
+              className="nav-mobile-sheet md:hidden"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            >
+              {/* Profile Card (if registered) */}
+              {isRegistered && profile && (
+                <Link to="/my-pass" onClick={() => setMobileOpen(false)} className="mobile-profile-card">
+                  <div className="mobile-profile-avatar">{profileInitial}</div>
+                  <div className="min-w-0">
+                    <div className="mobile-profile-name truncate">{profile.full_name}</div>
+                    <div className="mobile-profile-sub">{profile.enrollment_no}</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#8a4a22]/30 ml-auto shrink-0" />
+                </Link>
+              )}
+
+              {/* Quick Action Pills (if registered) */}
+              {isRegistered && (
+                <div className="mobile-quick-actions">
+                  <Link to="/my-pass" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
+                    <div className="mobile-quick-action-icon bg-[#8a4a22]/8">
+                      <Wallet className="w-4 h-4 text-[#8a4a22]" />
+                    </div>
+                    Wallet
+                  </Link>
+                  <Link to="/attendance" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
+                    <div className="mobile-quick-action-icon bg-emerald-500/10">
+                      <ScanLine className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    Scanner
+                  </Link>
+                  <Link to="/help" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
+                    <div className="mobile-quick-action-icon bg-blue-500/10">
+                      <HelpCircle className="w-4 h-4 text-blue-600" />
+                    </div>
+                    Help
+                  </Link>
+                </div>
+              )}
+
+              {/* Scanner CTA (for guests, prominent) */}
+              {!isRegistered && (
+                <Link
+                  to="/register"
+                  className="nav-mobile-scanner mb-4"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <User className="w-5 h-5" />
+                  Register Now
+                </Link>
+              )}
+
+              {/* Nav Links */}
+              <div className="flex flex-col gap-0.5">
+                {navItems.map((item) => (
+                  item.comingSoon ? (
+                    <button
+                      key={item.label}
+                      className="nav-mobile-link"
+                      onClick={() => {
+                        toast.info(`${item.label} is coming soon!`, { description: "We're building something special." });
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <item.icon className="w-5 h-5 opacity-50" />
+                      <span>{item.label}</span>
+                      <span className="ml-auto text-[10px] font-bold text-[#8a4a22]/40 bg-[#8a4a22]/5 px-2 py-0.5 rounded-full">Soon</span>
+                    </button>
+                  ) : (
+                    <Link
+                      key={item.to}
+                      to={item.to as any}
+                      className={`nav-mobile-link ${isActive(item.to) ? "active" : ""}`}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <item.icon className="w-5 h-5 opacity-50" />
+                      <span>{item.label}</span>
+                      {isActive(item.to) && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#5a1a25]" />
+                      )}
+                    </Link>
+                  )
+                ))}
+              </div>
+
+              {/* Divider + secondary actions */}
+              <div className="mt-4 pt-4 border-t border-[#8a4a22]/8">
+                <Link
+                  to="/admin/login"
+                  className="nav-mobile-link text-[#8a4a22]/70"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Shield className="w-5 h-5 opacity-40" />
+                  <span>Admin Panel</span>
+                </Link>
+                {user && (
+                  <button
+                    className="nav-mobile-link text-red-600/80 w-full"
+                    onClick={() => { handleLogout(); setMobileOpen(false); }}
+                  >
+                    <LogOut className="w-5 h-5 opacity-50" />
+                    <span>Log out</span>
+                  </button>
+                )}
+              </div>
+            </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Spacer ───────────────────────────────────────────────── */}
+      <div className="nav-spacer" />
+    </>
   );
 }
