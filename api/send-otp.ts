@@ -93,7 +93,7 @@ K.R. Mangalam University • Student Induction Platform
   }
 </style>
 </head>
-<body style="background-color:#FDFBF7; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin:0; padding:0; -webkit-text-size-adjust:none;">
+<body style="background-color:#16090B; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; margin:0; padding:0; -webkit-text-size-adjust:none;">
 
 <!-- Preheader -->
 <div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">
@@ -101,17 +101,17 @@ Your verification code is ready. Valid for 5 minutes.
 &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
 </div>
 
-<table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="background-color:#FDFBF7;">
+<table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="background-color:#16090B;">
   <tr>
-    <td align="center" style="padding:48px 16px;">
+    <td align="center" style="padding:64px 16px;">
       
       <!-- Main Content Card -->
-      <table class="container" border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="max-width:520px; width:100%; background-color:#ffffff; border:1px solid #F4EFE6; border-radius:16px; box-shadow:0 8px 30px rgba(90, 16, 24, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);">
+      <table class="container" border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="max-width:520px; width:100%; background-color:#ffffff; border:1px solid #331A1E; border-radius:16px; box-shadow:0 24px 48px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);">
         
         <!-- Gradient Top Accent -->
         <tr>
           <td>
-            <div style="height:6px; background:linear-gradient(90deg, #5A1018, #8B2C1A, #C87038, #DDA7A5); border-radius:16px 16px 0 0; width:100%;"></div>
+            <div style="height:8px; background:linear-gradient(90deg, #5A1018, #8B2C1A, #C87038, #E2B9A1); border-radius:16px 16px 0 0; width:100%;"></div>
           </td>
         </tr>
 
@@ -122,8 +122,8 @@ Your verification code is ready. Valid for 5 minutes.
             <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="text-align:center;">
               <tr>
                 <td>
-                  <h1 style="font-family:'Georgia', serif; font-size:26px; font-weight:700; color:#5A1018; letter-spacing:3px; margin:0 0 4px 0;">AARAMBH</h1>
-                  <p style="font-size:12px; line-height:1.5; letter-spacing:2px; text-transform:uppercase; color:#C87038; font-weight:600; margin:0 0 32px 0;">Student Induction Portal &bull; 2026</p>
+                  <h1 style="font-family:'Georgia', serif; font-size:32px; font-weight:700; color:#5A1018; letter-spacing:4px; margin:0 0 4px 0;">AARAMBH</h1>
+                  <p style="font-size:11px; line-height:1.5; letter-spacing:3px; text-transform:uppercase; color:#C87038; font-weight:700; margin:0 0 32px 0;">Student Induction Portal &bull; 2026</p>
                 </td>
               </tr>
             </table>
@@ -132,24 +132,24 @@ Your verification code is ready. Valid for 5 minutes.
             <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:32px;">
               <tr>
                 <td align="center">
-                  <div style="width:48px; height:2px; background:linear-gradient(90deg, transparent, #DDA7A5, transparent);"></div>
+                  <div style="width:64px; height:2px; background:linear-gradient(90deg, transparent, #DDA7A5, transparent);"></div>
                 </td>
               </tr>
             </table>
 
             <!-- Body -->
             <p style="font-size:18px; line-height:1.6; color:#5A1018; font-weight:600; margin:0 0 16px 0;">Hello,</p>
-            <p style="font-size:16px; line-height:1.6; color:#4A4A4A; margin:0 0 32px 0;">
-              We received a request to verify your email for AARAMBH 2026. Use the verification code below to continue your registration.
+            <p style="font-size:16px; line-height:1.6; color:#4A4A4A; margin:0 0 36px 0;">
+              We received a request to verify your email for AARAMBH 2026. Use the verification code below to securely access your account.
             </p>
 
-            <!-- OTP Hero Card -->
-            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:32px;">
+            <!-- OTP Hero Card (Ticket Style) -->
+            <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:36px;">
               <tr>
                 <td align="center">
-                  <div class="otp-container" style="background-color:#FDFBF7; border:1px solid #F4EFE6; border-radius:12px; padding:32px 24px; text-align:center; box-shadow:inset 0 2px 4px rgba(0,0,0,0.02);">
-                    <p style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#8B2C1A; font-weight:700; margin:0 0 16px 0;">Verification Code</p>
-                    <p class="otp-text" style="font-family:'SF Mono', 'Fira Code', 'Courier New', monospace; font-size:44px; font-weight:800; letter-spacing:18px; color:#5A1018; margin:0 0 0 18px; display:inline-block;">${otp}</p>
+                  <div class="otp-container" style="background-color:#FDFBF7; border:2px dashed #DDA7A5; border-radius:12px; padding:32px 24px; text-align:center; box-shadow:inset 0 4px 12px rgba(90, 16, 24, 0.03);">
+                    <p style="font-size:11px; text-transform:uppercase; letter-spacing:3px; color:#8B2C1A; font-weight:700; margin:0 0 16px 0;">Verification Code</p>
+                    <p class="otp-text" style="font-family:'SF Mono', 'Fira Code', 'Courier New', monospace; font-size:48px; font-weight:800; letter-spacing:18px; color:#5A1018; margin:0 0 0 18px; display:inline-block; text-shadow: 0 2px 4px rgba(90, 16, 24, 0.1);">${otp}</p>
                   </div>
                 </td>
               </tr>
@@ -159,10 +159,10 @@ Your verification code is ready. Valid for 5 minutes.
             <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#FFF9F7; border:1px solid #F4EFE6; border-radius:12px; padding:20px;">
               <tr>
                 <td width="32" style="vertical-align:top; padding-right:12px;">
-                  <img src="https://cdn-icons-png.flaticon.com/512/8207/8207869.png" width="24" height="24" alt="Security Shield" style="display:block; max-width:100%; height:auto;" />
+                  <div style="width:24px; height:24px; border-radius:12px; background-color:#8B2C1A; color:white; text-align:center; line-height:24px; font-weight:bold; font-size:14px;">!</div>
                 </td>
                 <td style="vertical-align:top;">
-                  <p style="font-size:13px; line-height:1.6; color:#8B2C1A; font-weight:600; margin:0 0 4px 0;">Security Information</p>
+                  <p style="font-size:13px; line-height:1.6; color:#8B2C1A; font-weight:700; margin:0 0 4px 0;">Security Information</p>
                   <p style="font-size:13px; line-height:1.6; color:#6B4E47; margin:0;">
                     This code expires in <strong>5 minutes</strong>. Never share this code. Our team will never ask for it. If this wasn't you, you can safely ignore this email.
                   </p>
@@ -178,13 +178,13 @@ Your verification code is ready. Valid for 5 minutes.
       <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center" style="max-width:520px; width:100%; margin-top:32px; text-align:center;">
         <tr>
           <td>
-            <p style="font-size:14px; line-height:1.6; color:#5A1018; font-weight:600; margin:0 0 8px 0;">AARAMBH 2026</p>
-            <p style="font-size:12px; line-height:1.6; color:#8A7A75; margin:0 0 16px 0;">K.R. Mangalam University &bull; Student Induction Platform</p>
-            <p style="font-size:11px; line-height:1.6; color:#B0A39C; margin:0 0 4px 0;">This is an automated email. Please do not reply.</p>
-            <p style="font-size:11px; line-height:1.6; color:#B0A39C; margin:0 0 16px 0;">
+            <p style="font-family:'Georgia', serif; font-size:16px; line-height:1.6; color:#DDA7A5; font-weight:600; letter-spacing:1px; margin:0 0 8px 0;">AARAMBH 2026</p>
+            <p style="font-size:12px; line-height:1.6; color:#A88D8F; margin:0 0 16px 0;">K.R. Mangalam University &bull; Student Induction Platform</p>
+            <p style="font-size:11px; line-height:1.6; color:#785A5E; margin:0 0 4px 0;">This is an automated email. Please do not reply.</p>
+            <p style="font-size:11px; line-height:1.6; color:#785A5E; margin:0 0 16px 0;">
               Need help? Contact <a href="mailto:induction@mrinalprakash.com" style="color:#C87038; text-decoration:none; font-weight:500;">Support</a> or visit our <a href="https://mrinalprakash.com" style="color:#C87038; text-decoration:none; font-weight:500;">Official Website</a>.
             </p>
-            <p style="font-size:11px; line-height:1.6; color:#C4B9B5; margin:0;">&copy; 2026 K.R. Mangalam University. All rights reserved.</p>
+            <p style="font-size:11px; line-height:1.6; color:#5D4448; margin:0;">&copy; 2026 K.R. Mangalam University. All rights reserved.</p>
           </td>
         </tr>
       </table>
