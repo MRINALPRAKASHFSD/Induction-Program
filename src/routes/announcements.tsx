@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { db, auth } from "@/lib/firebase/config";
 import { Button } from "@/components/ui/button";
 import { onAuthStateChanged } from "firebase/auth";
+import { localDb } from "@/lib/local-db";
 
 export const Route = createFileRoute("/announcements")({
   component: AnnouncementsPage,
@@ -17,6 +18,7 @@ function AnnouncementsPage() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [profile] = useState<any>(() => localDb.getStudentProfile());
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -26,6 +28,10 @@ function AnnouncementsPage() {
   }, []);
 
   useEffect(() => {
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
     const qAnnouncements = query(
       collection(db, "announcements"),
       where("status", "==", "active")
@@ -90,7 +96,28 @@ function AnnouncementsPage() {
       </div>
 
       <main className="relative container mx-auto max-w-2xl px-4 py-8 z-10">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+        {!profile && !loading ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center py-16"
+          >
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Megaphone className="h-7 w-7" />
+              </div>
+              <div className="empty-state-title">Announcements Locked</div>
+              <div className="empty-state-text">
+                You need to register for AARAMBH 2026 to view official announcements and updates.
+              </div>
+              <Button asChild variant="liquidGlassMaroon" size="lg" className="rounded-full px-8">
+                <Link to="/register">Register Now</Link>
+              </Button>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-slide-up stagger-1">
@@ -99,8 +126,8 @@ function AnnouncementsPage() {
                 <Link to="/"><ArrowLeft className="h-5 w-5 text-[#5a2c14]" /></Link>
               </Button>
               <div>
-                <h1 className="heading-xl !text-3xl">Announcements</h1>
-                <p className="label-premium">Official updates from KRMU Induction</p>
+                <h1 className="text-hero-heading text-primary font-bold">Announcements</h1>
+                <p className="text-label text-secondary uppercase font-bold tracking-wider">Official updates from KRMU Induction</p>
               </div>
             </div>
             {user && announcements.filter(a => !readIds.has(a.id)).length > 0 && (
@@ -141,7 +168,7 @@ function AnnouncementsPage() {
                       transition={{ delay: idx * 0.05 }}
                       key={a.id}
                       onClick={() => markAsRead(a.id)}
-                      className={`glass-premium !rounded-2xl !p-6 sm:!p-8 cursor-pointer transition-all duration-300 hover:!shadow-lg group ${
+                      className={`glass-premium-v2 rounded-2xl p-6 sm:p-8 cursor-pointer transition-all duration-300 hover:shadow-lg group ${
                         a.isImportant 
                           ? "!bg-red-50/60 !border-red-200/50" 
                           : ""
@@ -159,15 +186,15 @@ function AnnouncementsPage() {
                           </div>
                         )}
                         
-                        <h3 className={`font-bold text-xl sm:text-2xl leading-tight mb-3 pr-10 ${!isRead ? 'text-[#2c1208]' : 'text-[#4a2412]'}`}>{a.title}</h3>
-                        <p className={`text-base whitespace-pre-wrap leading-relaxed mb-6 ${!isRead ? 'text-[#4a2412]' : 'text-[#7a4020]'}`}>{a.content}</p>
+                        <h3 className={`text-card-title font-bold leading-tight mb-3 pr-10 ${!isRead ? 'text-[#2c1208]' : 'text-[#4a2412]'}`}>{a.title}</h3>
+                        <p className={`text-body-primary whitespace-pre-wrap leading-relaxed mb-6 ${!isRead ? 'text-[#4a2412]' : 'text-[#7a4020]'}`}>{a.content}</p>
                         
-                        <div className="flex flex-wrap items-center justify-between gap-4 text-xs font-bold text-[#7a4020] pt-4 border-t border-[#8a4a22]/8">
-                          <div className="flex items-center gap-2 glass-premium !rounded-xl !px-3 !py-1.5 !border-[#8a4a22]/5">
+                        <div className="flex flex-wrap items-center justify-between gap-4 text-caption font-bold text-[#7a4020] pt-4 border-t border-[#8a4a22]/8">
+                          <div className="flex items-center gap-2 glass-premium-v2 rounded-xl px-3 py-1.5 border-[#8a4a22]/5">
                             <Calendar className="h-4 w-4 text-[#8a4a22] relative z-10" />
                             <span className="relative z-10">{new Date(a.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                           </div>
-                          <div className="flex items-center gap-2 glass-premium !rounded-xl !px-3 !py-1.5 !border-[#8a4a22]/5">
+                          <div className="flex items-center gap-2 glass-premium-v2 rounded-xl px-3 py-1.5 border-[#8a4a22]/5">
                             <Clock className="h-4 w-4 text-[#8a4a22] relative z-10" />
                             <span className="relative z-10">{new Date(a.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
@@ -181,6 +208,7 @@ function AnnouncementsPage() {
           </div>
 
         </motion.div>
+        )}
       </main>
     </div>
   );
