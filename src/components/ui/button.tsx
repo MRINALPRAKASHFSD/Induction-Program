@@ -20,6 +20,7 @@ const buttonVariants = cva(
         liquidGlassWhite: "btn-liquid-glass-white",
         liquidGlassDark: "btn-liquid-glass-dark",
         liquidGlassMaroon: "btn-liquid-glass-maroon",
+        liquidGlassDestructive: "btn-liquid-glass-destructive",
       },
       size: {
         default: "h-9 px-4 py-2",

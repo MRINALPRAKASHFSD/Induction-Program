@@ -108,23 +108,23 @@ function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; o
   const toggle = async () => {
     try { 
       await updateEvent({ data: { id: row.id, is_active: !row.is_active } }); 
-      toast.success(`Event ${!row.is_active ? "activated" : "deactivated"}`); 
+      toast.success(`Event ${!row.is_active ? "activated" : "paused"}`); 
       onChanged();
     }
     catch (e: any) {
-      console.warn("Supabase event update failed", e);
+      console.warn("Event update failed", e);
       toast.error("Failed to update event");
     }
   };
   const remove = async () => {
-    if (!confirm(`Delete "${row.title}"? This removes related attendance.`)) return;
+    if (!confirm(`Permanently delete "${row.title}"?\n\nThis will also remove related attendance records.`)) return;
     try { 
       await deleteEvent({ data: { id: row.id } }); 
-      toast.success("Deleted"); 
+      toast.success("Event deleted"); 
       onChanged();
     }
     catch (e: any) {
-      console.warn("Supabase event delete failed", e);
+      console.warn("Event delete failed", e);
       toast.error("Failed to delete event");
     }
   };
@@ -132,34 +132,51 @@ function EventCard({ row, onChanged, onOpenQr, departments }: { row: EventRow; o
   const deptName = departments.find(d => d.id === row.department_id)?.name || "All Schools";
 
   return (
-    <div className="rounded-xl border glass-card-hero p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium">Day {row.day_number}</span>
-            {row.is_active
-              ? <span className="rounded-md bg-success/15 px-2 py-0.5 text-xs font-medium text-success">LIVE</span>
-              : <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">paused</span>}
-            <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{deptName}</span>
-          </div>
-          <h3 className="mt-1 truncate font-semibold">{row.title}</h3>
-          <p className="text-xs text-muted-foreground">
-            {row.venue} &middot; {new Date(row.starts_at).toLocaleString()} &rarr; {new Date(row.ends_at).toLocaleTimeString()}
-          </p>
-          {row.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{row.description}</p>}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="liquidGlassWhite" className="rounded-full" onClick={onOpenQr}>
-            <QrIcon className="mr-1 h-4 w-4" /> QR
-          </Button>
-          <Button size="sm" variant="liquidGlassWhite" className="rounded-full" onClick={toggle}>
-            {row.is_active ? <><PowerOff className="mr-1 h-4 w-4" /> Pause</> : <><Power className="mr-1 h-4 w-4" /> Activate</>}
-          </Button>
-          <EventDialog row={row} onSaved={onChanged} departments={departments} />
-          <Button size="sm" variant="liquidGlass" className="text-destructive rounded-full" onClick={remove}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="glass-premium-v2 rounded-2xl p-4 sm:p-5 border border-[#8a4a22]/8 shadow-sm hover:shadow-md transition-shadow">
+      {/* Top row: badges */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <span className="rounded-lg bg-[#8a4a22]/10 px-2.5 py-1 text-xs font-bold text-[#5a2c14] tracking-wide">
+          Day {row.day_number}
+        </span>
+        {row.is_active
+          ? <span className="rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-700">LIVE</span>
+          : <span className="rounded-lg bg-[#8a4a22]/8 px-2.5 py-1 text-xs font-semibold text-[#8a4a22]/60">Paused</span>
+        }
+        <span className="rounded-lg bg-[#8a4a22]/8 px-2.5 py-1 text-xs font-semibold text-[#7a4020]/80 max-w-[200px] truncate">
+          {deptName}
+        </span>
+      </div>
+
+      {/* Title + meta */}
+      <h3 className="font-bold text-[#2c1208] text-base leading-snug mb-1">{row.title}</h3>
+      <p className="text-sm text-[#7a4020]/70 font-medium mb-1">
+        {row.venue} · {new Date(row.starts_at).toLocaleString()} → {new Date(row.ends_at).toLocaleTimeString()}
+      </p>
+      {row.description && (
+        <p className="mt-2 line-clamp-2 text-sm text-[#7a4020]/60 leading-relaxed">{row.description}</p>
+      )}
+
+      {/* Divider */}
+      <div className="mt-4 pt-3 border-t border-[#8a4a22]/8 flex flex-wrap items-center gap-2">
+        <Button size="sm" variant="liquidGlassWhite" className="rounded-full h-8 text-xs font-bold" onClick={onOpenQr}>
+          <QrIcon className="mr-1.5 h-3.5 w-3.5" /> QR Code
+        </Button>
+        <Button size="sm" variant="liquidGlassWhite" className="rounded-full h-8 text-xs font-bold" onClick={toggle}>
+          {row.is_active
+            ? <><PowerOff className="mr-1.5 h-3.5 w-3.5" /> Pause</>
+            : <><Power className="mr-1.5 h-3.5 w-3.5" /> Activate</>}
+        </Button>
+        <EventDialog row={row} onSaved={onChanged} departments={departments} />
+
+        {/* Delete — clearly labeled, destructive red */}
+        <Button
+          size="sm"
+          variant="liquidGlassDestructive"
+          className="rounded-full h-8 text-xs font-bold ml-auto"
+          onClick={remove}
+        >
+          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+        </Button>
       </div>
     </div>
   );

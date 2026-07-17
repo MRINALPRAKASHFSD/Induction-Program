@@ -424,6 +424,51 @@
   transform: translateX(100%);
 }
 
+.btn-liquid-glass-destructive {
+  position: relative !important;
+  overflow: hidden !important;
+  background: rgba(220, 38, 38, 0.08) !important; /* light red tint */
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(220, 38, 38, 0.3) !important;
+  color: #dc2626 !important; /* red-600 */
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 12px 0 rgba(220, 38, 38, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+.btn-liquid-glass-destructive:hover {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border-color: rgba(220, 38, 38, 0.5) !important;
+  box-shadow: 0 8px 20px -5px rgba(220, 38, 38, 0.2),
+              0 0 15px rgba(220, 38, 38, 0.2), /* red glow */
+              inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  color: #b91c1c !important; /* red-700 on hover */
+}
+
+.btn-liquid-glass-destructive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(220, 38, 38, 0.15),
+    transparent
+  );
+  transition: transform 0.6s ease;
+  will-change: transform;
+}
+
+.btn-liquid-glass-destructive:hover::before {
+  transform: translateX(100%);
+}
+
 /* Premium Liquid Glass Panel Styles (Navbar, Footer) */
 .panel-liquid-glass {
   position: relative !important;
