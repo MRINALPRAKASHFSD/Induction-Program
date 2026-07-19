@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -14,7 +14,7 @@ import {
 import { listClubs, registerForClub } from "@/lib/admin.functions";
 import type { LocalClub } from "@/lib/local-db";
 
-export const Route = createFileRoute("/clubs")({
+export const Route = createLazyFileRoute("/clubs")({
   head: () => ({
     meta: [
       { title: "Clubs & Societies · KRMU Induction" },

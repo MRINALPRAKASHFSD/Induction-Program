@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createLazyFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 
-export const Route = createFileRoute("/admin/login")({
+export const Route = createLazyFileRoute("/admin/login")({
   head: () => ({
     meta: [
       { title: "Admin Login · KRMU Induction" },

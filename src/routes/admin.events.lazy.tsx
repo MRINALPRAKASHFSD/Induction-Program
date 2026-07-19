@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -27,7 +27,7 @@ type EventRow = {
   departments?: { name: string };
 };
 
-export const Route = createFileRoute("/admin/events")({
+export const Route = createLazyFileRoute("/admin/events")({
   head: () => ({ meta: [{ title: "Events · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminEvents,
 });

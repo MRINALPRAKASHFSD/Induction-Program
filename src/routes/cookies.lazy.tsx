@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createLazyFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 
-export const Route = createFileRoute('/cookies')({
+export const Route = createLazyFileRoute('/cookies')({
   component: CookiePolicy,
 });
 

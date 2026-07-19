@@ -86,6 +86,9 @@ export default defineConfig(({ command, mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
+              if (id.includes('html5-qrcode')) return 'vendor-scanner';
+              if (id.includes('html2canvas') || id.includes('jspdf')) return 'vendor-pdf';
+              if (id.includes('xlsx')) return 'vendor-excel';
               if (id.includes('framer-motion')) return 'vendor-motion';
               if (id.includes('lucide-react')) return 'vendor-lucide';
               if (id.includes('@tanstack/react-router') || id.includes('@tanstack/react-query')) return 'vendor-tanstack';

@@ -19,10 +19,10 @@
  *   ✕ Write to Firestore directly
  */
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+
 import {
   ScanLine, CheckCircle2, XCircle, AlertTriangle,
   ArrowLeft, Clock, MapPin, Shield, History,
@@ -36,7 +36,7 @@ import { collection, query, where, orderBy, getDocs, limit } from "firebase/fire
 import { verifyInsideCampus, isInsideCampus, CAMPUS_CENTER, CAMPUS_RADIUS_METERS, type GeolocationResult } from "@/lib/geofence";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/attendance")({
+export const Route = createLazyFileRoute("/attendance")({
   head: () => ({
     meta: [
       { title: "Attendance · KRMU Induction" },
@@ -79,7 +79,7 @@ function AttendancePage() {
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [location, setLocation] = useState<GeolocationResult | null>(null);
 
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
   const scannerContainerId = "qr-scanner-container";
 
   // ── Load profile ──────────────────────────────────────────────────────────
@@ -133,6 +133,8 @@ function AttendancePage() {
     try {
       // Small delay to let DOM render the container
       await new Promise(r => setTimeout(r, 300));
+
+      const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import("html5-qrcode");
 
       const scanner = new Html5Qrcode(scannerContainerId, {
         formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],

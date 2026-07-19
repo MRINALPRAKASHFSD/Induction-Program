@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
-import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, BarChart3, UsersRound, Map, Zap, Megaphone, QrCode, ArrowRight, Award, TrendingUp } from "lucide-react";
+import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
@@ -112,6 +112,15 @@ function Landing() {
     return () => clearInterval(interval);
   }, []);
 
+  const [isBgLoaded, setIsBgLoaded] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Defer rendering of heavy background elements to prioritize LCP
+      setIsBgLoaded(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const students = stats.students;
   const scans = stats.attendance;
   const clubs = stats.clubs;
@@ -122,12 +131,14 @@ function Landing() {
       <SiteHeader />
 
       {/* Ambient Background */}
-      <div className="ambient-bg" aria-hidden="true">
-        <div className="ambient-blob ambient-blob-1" />
-        <div className="ambient-blob ambient-blob-2" />
-        <div className="ambient-blob ambient-blob-3" />
-        <div className="watermark">AARAMBH 2026</div>
-      </div>
+      {isBgLoaded && (
+        <div className="ambient-bg bg-deferred-fade-in" aria-hidden="true">
+          <div className="ambient-blob ambient-blob-1" />
+          <div className="ambient-blob ambient-blob-2" />
+          <div className="ambient-blob ambient-blob-3" />
+          <div className="watermark">AARAMBH 2026</div>
+        </div>
+      )}
 
       {/* Hero */}
       <section className="relative overflow-hidden min-h-[92svh] flex items-center">
@@ -157,26 +168,28 @@ function Landing() {
         </div>
 
         {/* Main Orbit System — GPU compositor only, zero paint cost */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="orbit-system">
-            <div className="orbit-ring orbit-ring-1"><div className="orbit-node node-1-a orbit-node-trail-cw node-secondary" /><div className="orbit-node node-1-b" /></div>
-            <div className="orbit-ring orbit-ring-2"><div className="orbit-node node-2-a orbit-node-trail-ccw node-primary living-node" /><div className="orbit-node node-2-b" /><div className="orbit-node node-2-c" /></div>
-            <div className="orbit-ring orbit-ring-3"><div className="orbit-node node-3-a orbit-node-trail-cw node-accent" /></div>
-            <div className="orbit-ring orbit-ring-4"><div className="orbit-node node-4-a orbit-node-trail-ccw node-accent living-node" /><div className="orbit-node node-4-b" /></div>
-            <div className="orbit-ring orbit-ring-5"><div className="orbit-node node-5-a" /><div className="orbit-node node-5-b" /><div className="orbit-node node-5-c orbit-node-trail-cw node-secondary" /></div>
-            <div className="orbit-ring orbit-ring-6"><div className="orbit-node node-6-a orbit-node-trail-ccw node-primary" /></div>
-            <div className="orbit-ring orbit-ring-7"><div className="orbit-node node-7-a" /><div className="orbit-node node-7-b" /></div>
-            <div className="orbit-ring orbit-ring-8"><div className="orbit-node node-8-a orbit-node-trail-ccw node-secondary living-node" /><div className="orbit-node node-8-b" /><div className="orbit-node node-8-c" /></div>
-            <div className="orbit-ring orbit-ring-9"><div className="orbit-node node-9-a orbit-node-trail-cw node-primary" /></div>
-            <div className="orbit-ring orbit-ring-10"><div className="orbit-node node-10-a orbit-node-trail-ccw node-primary" /><div className="orbit-node node-10-b" /></div>
-            
-            {/* Focal center */}
-            <div className="orbit-center">
-              <div className="orbit-center-halo" />
-              <div className="orbit-center-core" />
+        {isBgLoaded && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none bg-deferred-fade-in" aria-hidden="true">
+            <div className="orbit-system">
+              <div className="orbit-ring orbit-ring-1"><div className="orbit-node node-1-a orbit-node-trail-cw node-secondary" /><div className="orbit-node node-1-b" /></div>
+              <div className="orbit-ring orbit-ring-2"><div className="orbit-node node-2-a orbit-node-trail-ccw node-primary living-node" /><div className="orbit-node node-2-b" /><div className="orbit-node node-2-c" /></div>
+              <div className="orbit-ring orbit-ring-3"><div className="orbit-node node-3-a orbit-node-trail-cw node-accent" /></div>
+              <div className="orbit-ring orbit-ring-4"><div className="orbit-node node-4-a orbit-node-trail-ccw node-accent living-node" /><div className="orbit-node node-4-b" /></div>
+              <div className="orbit-ring orbit-ring-5"><div className="orbit-node node-5-a" /><div className="orbit-node node-5-b" /><div className="orbit-node node-5-c orbit-node-trail-cw node-secondary" /></div>
+              <div className="orbit-ring orbit-ring-6"><div className="orbit-node node-6-a orbit-node-trail-ccw node-primary" /></div>
+              <div className="orbit-ring orbit-ring-7"><div className="orbit-node node-7-a" /><div className="orbit-node node-7-b" /></div>
+              <div className="orbit-ring orbit-ring-8"><div className="orbit-node node-8-a orbit-node-trail-ccw node-secondary living-node" /><div className="orbit-node node-8-b" /><div className="orbit-node node-8-c" /></div>
+              <div className="orbit-ring orbit-ring-9"><div className="orbit-node node-9-a orbit-node-trail-cw node-primary" /></div>
+              <div className="orbit-ring orbit-ring-10"><div className="orbit-node node-10-a orbit-node-trail-ccw node-primary" /><div className="orbit-node node-10-b" /></div>
+              
+              {/* Focal center */}
+              <div className="orbit-center">
+                <div className="orbit-center-halo" />
+                <div className="orbit-center-core" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="container relative mx-auto max-w-6xl px-4 py-24 sm:py-32">
           <div className="max-w-3xl">

@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createLazyFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 
-export const Route = createFileRoute('/help')({
+export const Route = createLazyFileRoute('/help')({
   component: HelpCenter,
 });
 

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, ArrowLeft, Compass, Footprints, Map as MapIcon } from "lucide-react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-export const Route = createFileRoute("/schedule")({
+export const Route = createLazyFileRoute("/schedule")({
   component: SchedulePage,
 });
 

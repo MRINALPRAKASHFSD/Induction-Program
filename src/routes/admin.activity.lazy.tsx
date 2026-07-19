@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listActivityLogs } from "@/lib/admin.functions";
 import type { LocalActivityLog } from "@/lib/local-db";
 
-export const Route = createFileRoute("/admin/activity")({
+export const Route = createLazyFileRoute("/admin/activity")({
   head: () => ({ meta: [{ title: "Activity log · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminActivity,
 });

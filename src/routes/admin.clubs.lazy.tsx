@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { listClubs, listClubRegistrations, deleteClub, upsertClub } from "@/lib/admin.functions";
 import type { LocalClub } from "@/lib/local-db"; // Keep type or redefine locally
 
-export const Route = createFileRoute("/admin/clubs")({
+export const Route = createLazyFileRoute("/admin/clubs")({
   head: () => ({ meta: [{ title: "Clubs · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminClubs,
 });

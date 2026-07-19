@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
@@ -12,7 +12,7 @@ import { lookupStudent } from "@/lib/students.functions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/my-pass")({
+export const Route = createLazyFileRoute("/my-pass")({
   head: () => ({
     meta: [
       { title: "Student Wallet · KRMU Induction" },

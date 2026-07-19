@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import QRCode from "qrcode";
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { auth, db } from "@/lib/firebase/config";
 import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 
-export const Route = createFileRoute("/admin/attendance")({
+export const Route = createLazyFileRoute("/admin/attendance")({
   head: () => ({
     meta: [
       { title: "Attendance · KRMU Admin" },

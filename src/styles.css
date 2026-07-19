@@ -724,6 +724,7 @@
   height: 1000px;
   transform: translate3d(0, -50%, 0);
   pointer-events: none;
+  contain: strict;
 }
 .orbit-ring {
   position: absolute;
@@ -1782,17 +1783,26 @@
 
 /* ─── Ambient Background ─────────────────────────────────────────── */
 
+.bg-deferred-fade-in {
+  animation: deferred-fade-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes deferred-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 .ambient-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -1;
   overflow: hidden;
+  contain: strict;
 }
 .ambient-blob {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
   will-change: transform;
   backface-visibility: hidden;
 }

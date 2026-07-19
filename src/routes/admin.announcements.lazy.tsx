@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, onSnapshot, where } from "firebase/firestore";
 import { Trash2, Send, Bell, Edit, Archive, RotateCcw, Search, Clock, Users, Calendar, AlertCircle } from "lucide-react";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { AdminShell } from "@/components/admin-shell";
 import { motion, AnimatePresence } from "framer-motion";
 
-export const Route = createFileRoute("/admin/announcements")({
+export const Route = createLazyFileRoute("/admin/announcements")({
   component: AdminAnnouncementsPage,
 });
 

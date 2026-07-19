@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { collection, query, onSnapshot, where, doc, setDoc } from "firebase/firestore";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { onAuthStateChanged } from "firebase/auth";
 import { localDb } from "@/lib/local-db";
 
-export const Route = createFileRoute("/announcements")({
+export const Route = createLazyFileRoute("/announcements")({
   component: AnnouncementsPage,
 });
 

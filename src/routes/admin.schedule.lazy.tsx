@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, MapPin } from "lucide-react";
@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { listEvents, createEvent, updateEvent, deleteEvent } from "@/lib/admin.functions";
 
-export const Route = createFileRoute("/admin/schedule")({
+export const Route = createLazyFileRoute("/admin/schedule")({
   head: () => ({ meta: [{ title: "Schedule · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminSchedule,
 });

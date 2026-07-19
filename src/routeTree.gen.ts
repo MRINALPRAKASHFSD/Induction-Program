@@ -8,78 +8,83 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
+import { createFileRoute } from '@tanstack/react-router'
+
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as MyPassRouteImport } from './routes/my-pass'
-import { Route as HelpRouteImport } from './routes/help'
-import { Route as CookiesRouteImport } from './routes/cookies'
-import { Route as ClubsRouteImport } from './routes/clubs'
-import { Route as AttendanceRouteImport } from './routes/attendance'
-import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
-import { Route as AdminScheduleRouteImport } from './routes/admin.schedule'
-import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
-import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
-import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
-import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
-import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 
-const TermsRoute = TermsRouteImport.update({
+const TermsLazyRouteImport = createFileRoute('/terms')()
+const ScheduleLazyRouteImport = createFileRoute('/schedule')()
+const PrivacyLazyRouteImport = createFileRoute('/privacy')()
+const MyPassLazyRouteImport = createFileRoute('/my-pass')()
+const HelpLazyRouteImport = createFileRoute('/help')()
+const CookiesLazyRouteImport = createFileRoute('/cookies')()
+const ClubsLazyRouteImport = createFileRoute('/clubs')()
+const AttendanceLazyRouteImport = createFileRoute('/attendance')()
+const AnnouncementsLazyRouteImport = createFileRoute('/announcements')()
+const AdminScheduleLazyRouteImport = createFileRoute('/admin/schedule')()
+const AdminLoginLazyRouteImport = createFileRoute('/admin/login')()
+const AdminEventsLazyRouteImport = createFileRoute('/admin/events')()
+const AdminClubsLazyRouteImport = createFileRoute('/admin/clubs')()
+const AdminAttendanceLazyRouteImport = createFileRoute('/admin/attendance')()
+const AdminAnnouncementsLazyRouteImport = createFileRoute(
+  '/admin/announcements',
+)()
+const AdminActivityLazyRouteImport = createFileRoute('/admin/activity')()
+
+const TermsLazyRoute = TermsLazyRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
-} as any)
-const ScheduleRoute = ScheduleRouteImport.update({
+} as any).lazy(() => import('./routes/terms.lazy').then((d) => d.Route))
+const ScheduleLazyRoute = ScheduleLazyRouteImport.update({
   id: '/schedule',
   path: '/schedule',
   getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
+} as any).lazy(() => import('./routes/schedule.lazy').then((d) => d.Route))
+const PrivacyLazyRoute = PrivacyLazyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
-} as any)
-const MyPassRoute = MyPassRouteImport.update({
+} as any).lazy(() => import('./routes/privacy.lazy').then((d) => d.Route))
+const MyPassLazyRoute = MyPassLazyRouteImport.update({
   id: '/my-pass',
   path: '/my-pass',
   getParentRoute: () => rootRouteImport,
-} as any)
-const HelpRoute = HelpRouteImport.update({
+} as any).lazy(() => import('./routes/my-pass.lazy').then((d) => d.Route))
+const HelpLazyRoute = HelpLazyRouteImport.update({
   id: '/help',
   path: '/help',
   getParentRoute: () => rootRouteImport,
-} as any)
-const CookiesRoute = CookiesRouteImport.update({
+} as any).lazy(() => import('./routes/help.lazy').then((d) => d.Route))
+const CookiesLazyRoute = CookiesLazyRouteImport.update({
   id: '/cookies',
   path: '/cookies',
   getParentRoute: () => rootRouteImport,
-} as any)
-const ClubsRoute = ClubsRouteImport.update({
+} as any).lazy(() => import('./routes/cookies.lazy').then((d) => d.Route))
+const ClubsLazyRoute = ClubsLazyRouteImport.update({
   id: '/clubs',
   path: '/clubs',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AttendanceRoute = AttendanceRouteImport.update({
+} as any).lazy(() => import('./routes/clubs.lazy').then((d) => d.Route))
+const AttendanceLazyRoute = AttendanceLazyRouteImport.update({
   id: '/attendance',
   path: '/attendance',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AnnouncementsRoute = AnnouncementsRouteImport.update({
+} as any).lazy(() => import('./routes/attendance.lazy').then((d) => d.Route))
+const AnnouncementsLazyRoute = AnnouncementsLazyRouteImport.update({
   id: '/announcements',
   path: '/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/announcements.lazy').then((d) => d.Route))
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -87,6 +92,49 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminScheduleLazyRoute = AdminScheduleLazyRouteImport.update({
+  id: '/admin/schedule',
+  path: '/admin/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.schedule.lazy').then((d) => d.Route),
+)
+const AdminLoginLazyRoute = AdminLoginLazyRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.login.lazy').then((d) => d.Route))
+const AdminEventsLazyRoute = AdminEventsLazyRouteImport.update({
+  id: '/admin/events',
+  path: '/admin/events',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.events.lazy').then((d) => d.Route))
+const AdminClubsLazyRoute = AdminClubsLazyRouteImport.update({
+  id: '/admin/clubs',
+  path: '/admin/clubs',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.clubs.lazy').then((d) => d.Route))
+const AdminAttendanceLazyRoute = AdminAttendanceLazyRouteImport.update({
+  id: '/admin/attendance',
+  path: '/admin/attendance',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.attendance.lazy').then((d) => d.Route),
+)
+const AdminAnnouncementsLazyRoute = AdminAnnouncementsLazyRouteImport.update({
+  id: '/admin/announcements',
+  path: '/admin/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.announcements.lazy').then((d) => d.Route),
+)
+const AdminActivityLazyRoute = AdminActivityLazyRouteImport.update({
+  id: '/admin/activity',
+  path: '/admin/activity',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.activity.lazy').then((d) => d.Route),
+)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
@@ -94,21 +142,6 @@ const AdminStudentsRoute = AdminStudentsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.students.lazy').then((d) => d.Route),
 )
-const AdminScheduleRoute = AdminScheduleRouteImport.update({
-  id: '/admin/schedule',
-  path: '/admin/schedule',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/admin/login',
-  path: '/admin/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminEventsRoute = AdminEventsRouteImport.update({
-  id: '/admin/events',
-  path: '/admin/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminDocumentsRoute = AdminDocumentsRouteImport.update({
   id: '/admin/documents',
   path: '/admin/documents',
@@ -123,21 +156,6 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.dashboard.lazy').then((d) => d.Route),
 )
-const AdminClubsRoute = AdminClubsRouteImport.update({
-  id: '/admin/clubs',
-  path: '/admin/clubs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
-  id: '/admin/attendance',
-  path: '/admin/attendance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
-  id: '/admin/announcements',
-  path: '/admin/announcements',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/admin/analytics',
   path: '/admin/analytics',
@@ -145,89 +163,85 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.analytics.lazy').then((d) => d.Route),
 )
-const AdminActivityRoute = AdminActivityRouteImport.update({
-  id: '/admin/activity',
-  path: '/admin/activity',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
-  '/attendance': typeof AttendanceRoute
-  '/clubs': typeof ClubsRoute
-  '/cookies': typeof CookiesRoute
-  '/help': typeof HelpRoute
-  '/my-pass': typeof MyPassRoute
-  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
-  '/schedule': typeof ScheduleRoute
-  '/terms': typeof TermsRoute
-  '/admin/activity': typeof AdminActivityRoute
+  '/announcements': typeof AnnouncementsLazyRoute
+  '/attendance': typeof AttendanceLazyRoute
+  '/clubs': typeof ClubsLazyRoute
+  '/cookies': typeof CookiesLazyRoute
+  '/help': typeof HelpLazyRoute
+  '/my-pass': typeof MyPassLazyRoute
+  '/privacy': typeof PrivacyLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
+  '/terms': typeof TermsLazyRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/announcements': typeof AdminAnnouncementsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
-  '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
-  '/admin/events': typeof AdminEventsRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/activity': typeof AdminActivityLazyRoute
+  '/admin/announcements': typeof AdminAnnouncementsLazyRoute
+  '/admin/attendance': typeof AdminAttendanceLazyRoute
+  '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/events': typeof AdminEventsLazyRoute
+  '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
-  '/attendance': typeof AttendanceRoute
-  '/clubs': typeof ClubsRoute
-  '/cookies': typeof CookiesRoute
-  '/help': typeof HelpRoute
-  '/my-pass': typeof MyPassRoute
-  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
-  '/schedule': typeof ScheduleRoute
-  '/terms': typeof TermsRoute
-  '/admin/activity': typeof AdminActivityRoute
+  '/announcements': typeof AnnouncementsLazyRoute
+  '/attendance': typeof AttendanceLazyRoute
+  '/clubs': typeof ClubsLazyRoute
+  '/cookies': typeof CookiesLazyRoute
+  '/help': typeof HelpLazyRoute
+  '/my-pass': typeof MyPassLazyRoute
+  '/privacy': typeof PrivacyLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
+  '/terms': typeof TermsLazyRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/announcements': typeof AdminAnnouncementsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
-  '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
-  '/admin/events': typeof AdminEventsRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/activity': typeof AdminActivityLazyRoute
+  '/admin/announcements': typeof AdminAnnouncementsLazyRoute
+  '/admin/attendance': typeof AdminAttendanceLazyRoute
+  '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/events': typeof AdminEventsLazyRoute
+  '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/announcements': typeof AnnouncementsRoute
-  '/attendance': typeof AttendanceRoute
-  '/clubs': typeof ClubsRoute
-  '/cookies': typeof CookiesRoute
-  '/help': typeof HelpRoute
-  '/my-pass': typeof MyPassRoute
-  '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
-  '/schedule': typeof ScheduleRoute
-  '/terms': typeof TermsRoute
-  '/admin/activity': typeof AdminActivityRoute
+  '/announcements': typeof AnnouncementsLazyRoute
+  '/attendance': typeof AttendanceLazyRoute
+  '/clubs': typeof ClubsLazyRoute
+  '/cookies': typeof CookiesLazyRoute
+  '/help': typeof HelpLazyRoute
+  '/my-pass': typeof MyPassLazyRoute
+  '/privacy': typeof PrivacyLazyRoute
+  '/schedule': typeof ScheduleLazyRoute
+  '/terms': typeof TermsLazyRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
-  '/admin/announcements': typeof AdminAnnouncementsRoute
-  '/admin/attendance': typeof AdminAttendanceRoute
-  '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
-  '/admin/events': typeof AdminEventsRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/activity': typeof AdminActivityLazyRoute
+  '/admin/announcements': typeof AdminAnnouncementsLazyRoute
+  '/admin/attendance': typeof AdminAttendanceLazyRoute
+  '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/events': typeof AdminEventsLazyRoute
+  '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/register'
     | '/announcements'
     | '/attendance'
     | '/clubs'
@@ -235,23 +249,23 @@ export interface FileRouteTypes {
     | '/help'
     | '/my-pass'
     | '/privacy'
-    | '/register'
     | '/schedule'
     | '/terms'
-    | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/dashboard'
+    | '/admin/documents'
+    | '/admin/students'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
-    | '/admin/dashboard'
-    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
-    | '/admin/students'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/register'
     | '/announcements'
     | '/attendance'
     | '/clubs'
@@ -259,23 +273,23 @@ export interface FileRouteTypes {
     | '/help'
     | '/my-pass'
     | '/privacy'
-    | '/register'
     | '/schedule'
     | '/terms'
-    | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/dashboard'
+    | '/admin/documents'
+    | '/admin/students'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
-    | '/admin/dashboard'
-    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
-    | '/admin/students'
   id:
     | '__root__'
     | '/'
+    | '/register'
     | '/announcements'
     | '/attendance'
     | '/clubs'
@@ -283,45 +297,44 @@ export interface FileRouteTypes {
     | '/help'
     | '/my-pass'
     | '/privacy'
-    | '/register'
     | '/schedule'
     | '/terms'
-    | '/admin/activity'
     | '/admin/analytics'
+    | '/admin/dashboard'
+    | '/admin/documents'
+    | '/admin/students'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
-    | '/admin/dashboard'
-    | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
-    | '/admin/students'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnnouncementsRoute: typeof AnnouncementsRoute
-  AttendanceRoute: typeof AttendanceRoute
-  ClubsRoute: typeof ClubsRoute
-  CookiesRoute: typeof CookiesRoute
-  HelpRoute: typeof HelpRoute
-  MyPassRoute: typeof MyPassRoute
-  PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
-  ScheduleRoute: typeof ScheduleRoute
-  TermsRoute: typeof TermsRoute
-  AdminActivityRoute: typeof AdminActivityRoute
+  AnnouncementsLazyRoute: typeof AnnouncementsLazyRoute
+  AttendanceLazyRoute: typeof AttendanceLazyRoute
+  ClubsLazyRoute: typeof ClubsLazyRoute
+  CookiesLazyRoute: typeof CookiesLazyRoute
+  HelpLazyRoute: typeof HelpLazyRoute
+  MyPassLazyRoute: typeof MyPassLazyRoute
+  PrivacyLazyRoute: typeof PrivacyLazyRoute
+  ScheduleLazyRoute: typeof ScheduleLazyRoute
+  TermsLazyRoute: typeof TermsLazyRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
-  AdminAttendanceRoute: typeof AdminAttendanceRoute
-  AdminClubsRoute: typeof AdminClubsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentsRoute: typeof AdminDocumentsRoute
-  AdminEventsRoute: typeof AdminEventsRoute
-  AdminLoginRoute: typeof AdminLoginRoute
-  AdminScheduleRoute: typeof AdminScheduleRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminActivityLazyRoute: typeof AdminActivityLazyRoute
+  AdminAnnouncementsLazyRoute: typeof AdminAnnouncementsLazyRoute
+  AdminAttendanceLazyRoute: typeof AdminAttendanceLazyRoute
+  AdminClubsLazyRoute: typeof AdminClubsLazyRoute
+  AdminEventsLazyRoute: typeof AdminEventsLazyRoute
+  AdminLoginLazyRoute: typeof AdminLoginLazyRoute
+  AdminScheduleLazyRoute: typeof AdminScheduleLazyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -330,14 +343,63 @@ declare module '@tanstack/react-router' {
       id: '/terms'
       path: '/terms'
       fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
+      preLoaderRoute: typeof TermsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/schedule': {
       id: '/schedule'
       path: '/schedule'
       fullPath: '/schedule'
-      preLoaderRoute: typeof ScheduleRouteImport
+      preLoaderRoute: typeof ScheduleLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-pass': {
+      id: '/my-pass'
+      path: '/my-pass'
+      fullPath: '/my-pass'
+      preLoaderRoute: typeof MyPassLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clubs': {
+      id: '/clubs'
+      path: '/clubs'
+      fullPath: '/clubs'
+      preLoaderRoute: typeof ClubsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance': {
+      id: '/attendance'
+      path: '/attendance'
+      fullPath: '/attendance'
+      preLoaderRoute: typeof AttendanceLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -347,55 +409,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my-pass': {
-      id: '/my-pass'
-      path: '/my-pass'
-      fullPath: '/my-pass'
-      preLoaderRoute: typeof MyPassRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/help': {
-      id: '/help'
-      path: '/help'
-      fullPath: '/help'
-      preLoaderRoute: typeof HelpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cookies': {
-      id: '/cookies'
-      path: '/cookies'
-      fullPath: '/cookies'
-      preLoaderRoute: typeof CookiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clubs': {
-      id: '/clubs'
-      path: '/clubs'
-      fullPath: '/clubs'
-      preLoaderRoute: typeof ClubsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/attendance': {
-      id: '/attendance'
-      path: '/attendance'
-      fullPath: '/attendance'
-      preLoaderRoute: typeof AttendanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/announcements': {
-      id: '/announcements'
-      path: '/announcements'
-      fullPath: '/announcements'
-      preLoaderRoute: typeof AnnouncementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -403,32 +416,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/students': {
-      id: '/admin/students'
-      path: '/admin/students'
-      fullPath: '/admin/students'
-      preLoaderRoute: typeof AdminStudentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/schedule': {
       id: '/admin/schedule'
       path: '/admin/schedule'
       fullPath: '/admin/schedule'
-      preLoaderRoute: typeof AdminScheduleRouteImport
+      preLoaderRoute: typeof AdminScheduleLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
       id: '/admin/login'
       path: '/admin/login'
       fullPath: '/admin/login'
-      preLoaderRoute: typeof AdminLoginRouteImport
+      preLoaderRoute: typeof AdminLoginLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/events': {
       id: '/admin/events'
       path: '/admin/events'
       fullPath: '/admin/events'
-      preLoaderRoute: typeof AdminEventsRouteImport
+      preLoaderRoute: typeof AdminEventsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/clubs': {
+      id: '/admin/clubs'
+      path: '/admin/clubs'
+      fullPath: '/admin/clubs'
+      preLoaderRoute: typeof AdminClubsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/attendance': {
+      id: '/admin/attendance'
+      path: '/admin/attendance'
+      fullPath: '/admin/attendance'
+      preLoaderRoute: typeof AdminAttendanceLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/announcements': {
+      id: '/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AdminAnnouncementsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/activity': {
+      id: '/admin/activity'
+      path: '/admin/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AdminActivityLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/students': {
+      id: '/admin/students'
+      path: '/admin/students'
+      fullPath: '/admin/students'
+      preLoaderRoute: typeof AdminStudentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/documents': {
@@ -445,27 +486,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/clubs': {
-      id: '/admin/clubs'
-      path: '/admin/clubs'
-      fullPath: '/admin/clubs'
-      preLoaderRoute: typeof AdminClubsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/attendance': {
-      id: '/admin/attendance'
-      path: '/admin/attendance'
-      fullPath: '/admin/attendance'
-      preLoaderRoute: typeof AdminAttendanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/announcements': {
-      id: '/admin/announcements'
-      path: '/admin/announcements'
-      fullPath: '/admin/announcements'
-      preLoaderRoute: typeof AdminAnnouncementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/analytics': {
       id: '/admin/analytics'
       path: '/admin/analytics'
@@ -473,39 +493,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/activity': {
-      id: '/admin/activity'
-      path: '/admin/activity'
-      fullPath: '/admin/activity'
-      preLoaderRoute: typeof AdminActivityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnnouncementsRoute: AnnouncementsRoute,
-  AttendanceRoute: AttendanceRoute,
-  ClubsRoute: ClubsRoute,
-  CookiesRoute: CookiesRoute,
-  HelpRoute: HelpRoute,
-  MyPassRoute: MyPassRoute,
-  PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
-  ScheduleRoute: ScheduleRoute,
-  TermsRoute: TermsRoute,
-  AdminActivityRoute: AdminActivityRoute,
+  AnnouncementsLazyRoute: AnnouncementsLazyRoute,
+  AttendanceLazyRoute: AttendanceLazyRoute,
+  ClubsLazyRoute: ClubsLazyRoute,
+  CookiesLazyRoute: CookiesLazyRoute,
+  HelpLazyRoute: HelpLazyRoute,
+  MyPassLazyRoute: MyPassLazyRoute,
+  PrivacyLazyRoute: PrivacyLazyRoute,
+  ScheduleLazyRoute: ScheduleLazyRoute,
+  TermsLazyRoute: TermsLazyRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminAnnouncementsRoute: AdminAnnouncementsRoute,
-  AdminAttendanceRoute: AdminAttendanceRoute,
-  AdminClubsRoute: AdminClubsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentsRoute: AdminDocumentsRoute,
-  AdminEventsRoute: AdminEventsRoute,
-  AdminLoginRoute: AdminLoginRoute,
-  AdminScheduleRoute: AdminScheduleRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  AdminActivityLazyRoute: AdminActivityLazyRoute,
+  AdminAnnouncementsLazyRoute: AdminAnnouncementsLazyRoute,
+  AdminAttendanceLazyRoute: AdminAttendanceLazyRoute,
+  AdminClubsLazyRoute: AdminClubsLazyRoute,
+  AdminEventsLazyRoute: AdminEventsLazyRoute,
+  AdminLoginLazyRoute: AdminLoginLazyRoute,
+  AdminScheduleLazyRoute: AdminScheduleLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
