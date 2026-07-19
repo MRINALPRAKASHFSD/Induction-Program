@@ -77,11 +77,23 @@ service cloud.firestore {
     }
     
     // 3. ATTENDANCE
+    // SECURITY: Attendance is written ONLY by the server-side Admin SDK (api/attendance-mark.ts).
+    // Client-side writes are completely blocked to prevent forgery.
     match /attendance/{docId} {
-      allow get: if true;
+      allow get: if request.auth != null;
       allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
-      allow create: if isAttendanceValid(docId); // Enforces schema and composite ID
-      allow update, delete: if false; // Immutable once recorded
+      allow create, update, delete: if false; // Server-only via Admin SDK
+    }
+
+    // 3a. ATTENDANCE SESSIONS (admin-managed via API)
+    match /attendance_sessions/{sessionId} {
+      allow read: if isAdminOrCoordinator();
+      allow write: if false; // Server-only via Admin SDK
+    }
+
+    // 3b. ATTENDANCE QR NONCES (server-managed, single-use tokens)
+    match /attendance_qr_nonces/{nonce} {
+      allow read, write: if false; // Server-only via Admin SDK
     }
     
     // 4. CLUBS

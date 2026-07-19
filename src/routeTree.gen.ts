@@ -20,15 +20,14 @@ import { Route as ClubsRouteImport } from './routes/clubs'
 import { Route as AttendanceRouteImport } from './routes/attendance'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ScanTokenRouteImport } from './routes/scan.$token'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminScheduleRouteImport } from './routes/admin.schedule'
-import { Route as AdminScannerRouteImport } from './routes/admin.scanner'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEventsRouteImport } from './routes/admin.events'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminClubsRouteImport } from './routes/admin.clubs'
+import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
@@ -88,11 +87,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ScanTokenRoute = ScanTokenRouteImport.update({
-  id: '/scan/$token',
-  path: '/scan/$token',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/scan.$token.lazy').then((d) => d.Route))
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
@@ -105,11 +99,6 @@ const AdminScheduleRoute = AdminScheduleRouteImport.update({
   path: '/admin/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminScannerRoute = AdminScannerRouteImport.update({
-  id: '/admin/scanner',
-  path: '/admin/scanner',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/admin.scanner.lazy').then((d) => d.Route))
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -137,6 +126,11 @@ const AdminDashboardRoute = AdminDashboardRouteImport.update({
 const AdminClubsRoute = AdminClubsRouteImport.update({
   id: '/admin/clubs',
   path: '/admin/clubs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
+  id: '/admin/attendance',
+  path: '/admin/attendance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
@@ -172,15 +166,14 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/scanner': typeof AdminScannerRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/scan/$token': typeof ScanTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,15 +190,14 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/scanner': typeof AdminScannerRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/scan/$token': typeof ScanTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -223,15 +215,14 @@ export interface FileRoutesById {
   '/admin/activity': typeof AdminActivityRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/attendance': typeof AdminAttendanceRoute
   '/admin/clubs': typeof AdminClubsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/events': typeof AdminEventsRoute
   '/admin/login': typeof AdminLoginRoute
-  '/admin/scanner': typeof AdminScannerRoute
   '/admin/schedule': typeof AdminScheduleRoute
   '/admin/students': typeof AdminStudentsRoute
-  '/scan/$token': typeof ScanTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -250,15 +241,14 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
+    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
-    | '/admin/scanner'
     | '/admin/schedule'
     | '/admin/students'
-    | '/scan/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -275,15 +265,14 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
+    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
-    | '/admin/scanner'
     | '/admin/schedule'
     | '/admin/students'
-    | '/scan/$token'
   id:
     | '__root__'
     | '/'
@@ -300,15 +289,14 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/analytics'
     | '/admin/announcements'
+    | '/admin/attendance'
     | '/admin/clubs'
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/events'
     | '/admin/login'
-    | '/admin/scanner'
     | '/admin/schedule'
     | '/admin/students'
-    | '/scan/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -326,15 +314,14 @@ export interface RootRouteChildren {
   AdminActivityRoute: typeof AdminActivityRoute
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
+  AdminAttendanceRoute: typeof AdminAttendanceRoute
   AdminClubsRoute: typeof AdminClubsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentsRoute: typeof AdminDocumentsRoute
   AdminEventsRoute: typeof AdminEventsRoute
   AdminLoginRoute: typeof AdminLoginRoute
-  AdminScannerRoute: typeof AdminScannerRoute
   AdminScheduleRoute: typeof AdminScheduleRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
-  ScanTokenRoute: typeof ScanTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -416,13 +403,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/scan/$token': {
-      id: '/scan/$token'
-      path: '/scan/$token'
-      fullPath: '/scan/$token'
-      preLoaderRoute: typeof ScanTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/students': {
       id: '/admin/students'
       path: '/admin/students'
@@ -435,13 +415,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/schedule'
       fullPath: '/admin/schedule'
       preLoaderRoute: typeof AdminScheduleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/scanner': {
-      id: '/admin/scanner'
-      path: '/admin/scanner'
-      fullPath: '/admin/scanner'
-      preLoaderRoute: typeof AdminScannerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -477,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/clubs'
       fullPath: '/admin/clubs'
       preLoaderRoute: typeof AdminClubsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/attendance': {
+      id: '/admin/attendance'
+      path: '/admin/attendance'
+      fullPath: '/admin/attendance'
+      preLoaderRoute: typeof AdminAttendanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/announcements': {
@@ -518,15 +498,14 @@ const rootRouteChildren: RootRouteChildren = {
   AdminActivityRoute: AdminActivityRoute,
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
+  AdminAttendanceRoute: AdminAttendanceRoute,
   AdminClubsRoute: AdminClubsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentsRoute: AdminDocumentsRoute,
   AdminEventsRoute: AdminEventsRoute,
   AdminLoginRoute: AdminLoginRoute,
-  AdminScannerRoute: AdminScannerRoute,
   AdminScheduleRoute: AdminScheduleRoute,
   AdminStudentsRoute: AdminStudentsRoute,
-  ScanTokenRoute: ScanTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

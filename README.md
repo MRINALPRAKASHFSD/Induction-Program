@@ -1,8 +1,8 @@
 # KRMU Induction Management System
 
-A web application built to manage university induction events. Designed for K.R. Mangalam University (KRMU), it handles student attendance via QR scanning, document management, club registrations, analytics, and coordinator management. It runs on a serverless Firebase stack.
+A web app for managing university induction events at K.R. Mangalam University (KRMU). It handles QR-based attendance, document management, club registrations, analytics, and coordinator access. Runs on a serverless Firebase stack.
 
-The system supports up to 5,000 concurrent students and includes role-based authentication, signed URL document security, and an audit trail.
+Supports up to 5,000 concurrent students with role-based auth, signed URL document security, and a full audit trail.
 
 ---
 
@@ -41,7 +41,7 @@ mindmap
 
 ---
 
-## Technology Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
@@ -57,13 +57,14 @@ mindmap
 
 ---
 
-## Mobile Optimizations
+## Mobile
 
-The application is built for mobile devices so students can register or mark attendance on their phones.
-- **Responsive Layouts:** Scaled hero text, adaptive grid systems, and fluid container padding.
-- **Touch Controls:** Full-width buttons, oversized touch targets, and dynamic dropdown widths.
-- **Performance:** Achieved 95+ desktop and 85-90+ mobile Lighthouse scores using lazy-loaded admin chunks, WebP images, preloaded fonts, and GPU-accelerated CSS animations. Backdrop filter thresholds scale down on mobile devices.
-- **Vercel API:** Support for ESM (.js extensions) and glob routing configurations.
+The app is built for mobile so students can register or mark attendance on their phones.
+
+- **Responsive layouts:** Scaled hero text, adaptive grids, and fluid container padding.
+- **Touch controls:** Full-width buttons, oversized touch targets, and dynamic dropdown widths.
+- **Performance:** 95+ desktop and 85-90+ mobile Lighthouse scores via lazy-loaded admin chunks, WebP images, preloaded fonts, and GPU-accelerated CSS animations.
+- **Vercel API:** ESM (.js extensions) and glob routing support.
 
 ---
 
@@ -91,6 +92,29 @@ graph TD
     E --> D3
     E --> D4
 ```
+
+---
+
+## Attendance Security (v3)
+
+QR codes are generated server-side only and never sent to the student client. Each QR is signed with HMAC-SHA256 and rotates every 30 seconds.
+
+Every scan goes through 13 server-side checks:
+
+1. Firebase JWT auth
+2. Rate limiting (Redis, 5 req/min)
+3. QR payload structure
+4. HMAC-SHA256 signature
+5. QR expiry (rotation window)
+6. Nonce single-use (Redis SETNX, atomic)
+7. Session is active
+8. Student is registered
+9. Account not suspended
+10. Programme match
+11. Duplicate scan (Redis + Firestore)
+12. Geofence (250m campus radius, 40m GPS tolerance)
+
+Each attendance record stores a full audit log: IP, browser, OS, GPS coordinates, distance from campus, QR nonce, and request ID. Admins can view this. Students cannot.
 
 ---
 
@@ -127,7 +151,7 @@ sequenceDiagram
 
 ---
 
-## Storage Architecture
+## Storage Layout
 
 ```mermaid
 graph LR
@@ -218,6 +242,10 @@ graph LR
     FE[Frontend] -->|Bearer Token| A1[/vault-init-upload/]
     FE -->|Bearer Token| A2[/vault-download/]
     FE -->|Bearer Token| A3[/vault-assign-role/]
+    FE -->|Bearer Token| A7[/attendance-mark/]
+    FE -->|Admin Only| A8[/attendance-session/]
+    FE -->|Admin Only| A9[/attendance-qr/]
+    FE -->|Admin Only| A10[/attendance-export/]
     FE -->|Public| A4[/send-otp/]
     FE -->|Public| A5[/verify-otp/]
     FE -->|Public| A6[/live-impact/]
@@ -225,16 +253,17 @@ graph LR
     A1 -->|coordinator or super_admin| G1[Generate signed PUT URL]
     A2 -->|super_admin only| G2[Generate 30s signed GET URL]
     A3 -->|super_admin only| G3[Create Firebase user + set claims]
-    A4 --> G4[Send OTP via email/SMS]
-    A5 --> G5[Verify OTP token]
-    A6 --> G6[Return live attendance stats]
+    A7 -->|Authenticated student| G7[13-point server validation + record]
+    A8 -->|Admin only| G8[Create / update session state]
+    A9 -->|Admin only| G9[Generate + rotate signed QR]
+    A10 -->|Admin only| G10[Export attendance CSV]
 ```
 
 ---
 
 ## Design System
 
-The platform uses a glass aesthetic with interactive animations.
+Glass aesthetic with interactive animations.
 
 ```mermaid
 graph TD
@@ -251,5 +280,5 @@ graph TD
 
 ## License
 
-This project is proprietary software built for K.R. Mangalam University internal use.
+Proprietary software built for K.R. Mangalam University internal use.
 © 2026 KRMU. All rights reserved.

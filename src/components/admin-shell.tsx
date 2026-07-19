@@ -20,7 +20,7 @@ const isClient = typeof window !== 'undefined';
 
 const NAV = [
   { to: "/admin/dashboard", label: "Dashboard", icon: Element3 },
-  { to: "/admin/scanner", label: "QR Scanner", icon: ScanBarcode },
+  { to: "/admin/attendance", label: "Attendance", icon: ScanBarcode },
   { to: "/admin/events", label: "Events", icon: Calendar1 },
   { to: "/admin/students", label: "Students", icon: Profile2User },
   { to: "/admin/clubs", label: "Clubs", icon: MagicStar },

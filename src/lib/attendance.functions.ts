@@ -15,102 +15,34 @@ import {
 import { eventCache } from "@/lib/event-cache";
 
 /**
- * recordScan — v3: transaction-safe, scale-ready
+ * recordScan — REMOVED (Secure Attendance Architecture v2)
  *
- * Architecture fix vs v2:
- *   v2 ran getDocs(collection query) INSIDE runTransaction.
- *   Firestore only retries `transaction.get(docRef)` calls on contention —
- *   collection queries inside transactions are NOT retried and can read
- *   stale data when concurrent writes are happening.
+ * This function previously allowed ANY authenticated student to write attendance
+ * records directly to Firestore. This was the core security vulnerability.
  *
- * v3 splits the work into two phases:
- *   Phase 1 (pre-transaction): Resolve the event by qr_token using a
- *     targeted, indexed single-field query with limit(1). Events are
- *     written by admins and don't change mid-session, so this read
- *     doesn't need transactional protection.
- *   Phase 2 (transaction): Only performs O(1) doc reads (student + attendance)
- *     and the atomic write. These are the only operations that need
- *     transactional retry semantics.
+ * Attendance is now recorded EXCLUSIVELY through the server-side API
+ * (api/attendance-mark.ts) which performs 13-point validation including:
+ *   - HMAC-SHA256 QR signature verification
+ *   - Nonce-based anti-replay
+ *   - Geofence enforcement
+ *   - Programme matching
+ *   - Session status validation
  *
- * Result: The transaction body is now pure O(1) — two direct doc reads
- *   + one conditional write. No collection scans inside transactions.
- *   This safely handles thousands of concurrent attendees.
+ * The student-side attendance.tsx page now calls the API directly.
  */
-export const recordScan = async ({ data }: { data: any }) => {
-  try {
-    // ── Phase 1: Resolve event outside the transaction ────────────────────
-    // qr_token is a single-field index (auto-indexed by Firestore).
-    // limit(1) short-circuits as soon as the matching doc is found.
-    const eventsRef = collection(db, "events");
-    const eventQ = query(eventsRef, where("qr_token", "==", data.qr_token), limit(1));
-    const eventSnap = await getDocs(eventQ);
 
-    if (eventSnap.empty) {
-      return { ok: false as const, error: "Event not found for this QR token." };
-    }
-
-    const eventDoc = eventSnap.docs[0];
-    const eventId = eventDoc.id;
-    const eventData = eventDoc.data();
-
-    // Validate timing before entering transaction (fast-fail path)
-    const now = new Date();
-    if (eventData.starts_at && new Date(eventData.starts_at) > now) {
-      return { ok: false as const, error: "This session hasn't started yet." };
-    }
-    if (eventData.ends_at && new Date(eventData.ends_at) < now) {
-      return { ok: false as const, error: "This session has already ended." };
-    }
-
-    // ── Phase 2: Atomic transaction — O(1) reads + conditional write ──────
-    const result = await runTransaction(db, async (transaction) => {
-      // Direct doc read — enrollment_no IS the document ID (O(1), no index needed)
-      const studentRef = doc(db, "students", data.enrollment_no);
-      const studentDoc = await transaction.get(studentRef);
-      if (!studentDoc.exists()) throw new Error("Student not found.");
-
-      const studentId = studentDoc.id;
-      const studentData = studentDoc.data();
-
-      // Composite attendance doc ID = guaranteed unique per (event, student)
-      // Reading this doc is also O(1) — compound ID is the dedup mechanism
-      const attendanceId = `${eventId}_${studentId}`;
-      const attendanceRef = doc(db, "attendance", attendanceId);
-      const attDoc = await transaction.get(attendanceRef);
-
-      if (attDoc.exists()) {
-        return {
-          ok: true as const,
-          duplicate: true,
-          event: { title: eventData.title, venue: eventData.venue, day: eventData.day_number },
-          student: { name: studentData.full_name },
-        };
-      }
-
-      // Atomic write — Firestore rejects duplicates at the doc-ID level
-      transaction.set(attendanceRef, {
-        student_id: studentId,
-        event_id: eventId,
-        scanned_at: serverTimestamp(),
-      });
-
-      // Gamification: Add +10 points for event attendance
-      transaction.update(studentRef, {
-        points: increment(10)
-      });
-
-      return {
-        ok: true as const,
-        duplicate: false,
-        event: { title: eventData.title, venue: eventData.venue, day: eventData.day_number },
-        student: { name: studentData.full_name },
-      };
-    });
-
-    return result;
-  } catch (error: any) {
-    return { ok: false as const, error: error.message };
-  }
+/**
+ * getStudentAttendanceHistory — Fetch attendance records for a student.
+ * Used by the student dashboard to show past attendance.
+ */
+export const getStudentAttendanceHistory = async (enrollmentNo: string) => {
+  const q = query(
+    collection(db, "attendance"),
+    where("student_id", "==", enrollmentNo.toUpperCase()),
+    limit(50),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
 /**

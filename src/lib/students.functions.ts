@@ -208,28 +208,8 @@ export const getAllSchoolSessions = async ({ data }: { data: any }) => {
   return { sessions };
 };
 
-export const generateQrPayload = async ({ data }: { data: any }) => {
-  // Direct O(1) lookups — both use document IDs
-  const studentDocRef = doc(db, "students", data.enrollment_no);
-  const studentSnap = await getDoc(studentDocRef);
-  const studentRef = studentSnap.exists()
-    ? ({ id: studentSnap.id, ...studentSnap.data() } as any)
-    : null;
 
-  const sessionDoc = await getDoc(doc(db, "events", data.session_id));
-  if (!sessionDoc.exists()) {
-    throw new Error("Session not found");
-  }
-  const session = sessionDoc.data() as any;
+// NOTE: generateQrPayload was removed in the Secure Attendance Architecture migration.
+// QR payloads are now generated exclusively by the server-side admin API (api/attendance-qr.ts).
+// Students must NEVER generate or view QR codes.
 
-  const qrPayload = {
-    student_id: studentRef?.id || "local-only",
-    enrollment_no: studentRef?.enrollment_no || data.enrollment_no,
-    school_id: session.department_id,
-    day: session.day_number,
-    session_id: sessionDoc.id,
-    qr_token: session.qr_token || sessionDoc.id,
-  };
-
-  return { payload: JSON.stringify(qrPayload) };
-};

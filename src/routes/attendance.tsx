@@ -1,606 +1,638 @@
+/**
+ * src/routes/attendance.tsx
+ *
+ * Student Attendance Page — SECURE ARCHITECTURE (v2)
+ *
+ * What this page does:
+ *   1. Shows attendance history and percentage
+ *   2. Provides a "Scan Attendance" button that opens the camera
+ *   3. Scans the QR displayed by the admin
+ *   4. Captures GPS coordinates (geofence pre-check)
+ *   5. Sends { qr_data, enrollment_no, latitude, longitude } to api/attendance-mark
+ *   6. Shows success/error animations
+ *
+ * What this page does NOT do:
+ *   ✕ Generate QR codes
+ *   ✕ Display QR codes
+ *   ✕ Show session selectors
+ *   ✕ Allow manual entry of QR data
+ *   ✕ Write to Firestore directly
+ */
+
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
-import QRCode from "qrcode";
-import { 
-  QrCode, Scan, CheckCircle2, User, BookOpen, 
-  AlertTriangle, XCircle, ArrowLeft, AlertCircle, 
-  Building2, Calendar, Clock, RefreshCw, Check
+import {
+  ScanLine, CheckCircle2, XCircle, AlertTriangle,
+  ArrowLeft, Clock, MapPin, Shield, History,
+  Percent, ChevronRight, Camera, Loader2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
-import { getDepartments, getSchoolDays, getSchoolSessions } from "@/lib/students.functions";
-import { auth } from "@/lib/firebase/config";
+import { auth, db } from "@/lib/firebase/config";
+import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
+import { verifyInsideCampus, isInsideCampus, CAMPUS_CENTER, CAMPUS_RADIUS_METERS, type GeolocationResult } from "@/lib/geofence";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/attendance")({
   head: () => ({
     meta: [
-      { title: "Lodge Attendance · KRMU Induction" },
-      { name: "description", content: "Lodge your session attendance instantly by scanning the admin QR." },
+      { title: "Attendance · KRMU Induction" },
+      { name: "description", content: "Scan the admin QR code to mark your attendance at KRMU AARAMBH 2026." },
     ],
   }),
   component: AttendancePage,
 });
 
-type Phase = "dashboard" | "scanner" | "success" | "duplicate" | "error";
+type Phase = "dashboard" | "locating" | "scanner" | "submitting" | "success" | "duplicate" | "error";
 
-interface Dept {
+interface AttendanceRecord {
   id: string;
-  name: string;
-  code: string;
+  event_id: string;
+  session_id: string;
+  student_name: string;
+  programme_id: string;
+  scanned_at: any;
 }
 
-interface Session {
-  id: string;
-  title: string;
-  venue: string;
-  starts_at: string;
-  ends_at: string;
-  qr_token?: string; // returned dynamically
+interface MarkResult {
+  ok: boolean;
+  duplicate?: boolean;
+  studentName?: string;
+  eventTitle?: string;
+  venue?: string;
+  date?: string;
+  programme?: string;
+  message?: string;
+  error?: string;
 }
 
-const LOCAL_DEPARTMENTS = [
-  { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
-  { id: "soms", code: "SOMS", name: "School of Management Studies" },
-  { id: "sols", code: "SOLS", name: "School of Legal Studies" },
-  { id: "soa", code: "SOA", name: "School of Architecture" },
-  { id: "soah", code: "SOAH", name: "School of Allied Health Sciences" },
-  { id: "soe", code: "SOE", name: "School of Education" },
-  { id: "somc", code: "SOMC", name: "School of Media & Communication" },
-  { id: "sosc", code: "SOSC", name: "School of Science" },
-  { id: "sohs", code: "SOHS", name: "School of Hospitality Studies" },
-  { id: "sofa", code: "SOFA", name: "School of Fine Arts & Design" },
-];
-
+// ══════════════════════════════════════════════════════════════════════════════
 function AttendancePage() {
-  const [phase, setPhase] = useState<Phase>("dashboard");
   const [profile, setProfile] = useState<LocalStudent | null>(null);
-  
-  // List selections
-  const [schools, setSchools] = useState<Dept[]>([]);
-  const [schoolId, setSchoolId] = useState("");
-  const [days, setDays] = useState<number[]>([]);
-  const [day, setDay] = useState("");
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionId, setSessionId] = useState("");
+  const [phase, setPhase] = useState<Phase>("dashboard");
+  const [result, setResult] = useState<MarkResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(true);
+  const [location, setLocation] = useState<GeolocationResult | null>(null);
 
-  const [loadingDays, setLoadingDays] = useState(false);
-  const [loadingSessions, setLoadingSessions] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerContainerId = "qr-scanner-container";
 
-  // Dynamic QR Code url
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-
-  // Feedback state
-  const [feedbackMsg, setFeedbackMsg] = useState("");
-  const [isWrongSchool, setIsWrongSchool] = useState(false);
-
-  // Fully evaluate session selection early to prevent TDZ ReferenceError in hooks
-  const currentSelectedSession = sessions.find(s => s.id === sessionId);
-
+  // ── Load profile ──────────────────────────────────────────────────────────
   useEffect(() => {
-    // 1. Fetch active profile
     const p = localDb.getStudentProfile();
-    if (p) {
-      setProfile(p);
-    }
-    
-    // 2. Fetch schools list
-    Promise.race([
-      getDepartments(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-    ])
-      .then((res: any) => {
-        if (res.departments && res.departments.length > 0) {
-          setSchools(res.departments as Dept[]);
-        } else {
-          setSchools(LOCAL_DEPARTMENTS);
-        }
-      })
-      .catch((err) => {
-        console.warn("Failed to fetch departments from server, using local fallback", err);
-        setSchools(LOCAL_DEPARTMENTS);
-      });
+    setProfile(p);
+    if (p) loadAttendanceHistory(p.enrollment_no);
+    else setLoadingRecords(false);
   }, []);
 
-  // Generate QR code dynamically when session is selected
-  useEffect(() => {
-    if (currentSelectedSession && currentSelectedSession.qr_token && profile) {
-      // The QR URL points to `/scan/${qr_token}` or encodes the qr_token
-      const url = `${window.location.origin}/scan/${currentSelectedSession.qr_token}?enroll=${encodeURIComponent(profile.enrollment_no)}`;
-      QRCode.toDataURL(url, {
-        width: 360,
-        margin: 1,
-        color: { dark: "#2d0d12", light: "#fdfaf6" },
-        errorCorrectionLevel: "H",
-      })
-        .then(setQrCodeUrl)
-        .catch(console.error);
-    } else {
-      setQrCodeUrl(null);
-    }
-  }, [sessionId, currentSelectedSession]);
-
-  // When school is selected
-  const handleSchoolChange = async (val: string) => {
-    setSchoolId(val);
-    setDay("");
-    setSessionId("");
-    setDays([]);
-    setSessions([]);
-    setQrCodeUrl(null);
-    
-    if (!profile) return;
-
-    // Validation check: school mismatch
-    const selectedDept = schools.find(s => s.id === val);
-    if (selectedDept) {
-      const match = profile.department_id 
-        ? (profile.department_id === selectedDept.id || profile.department_id.toLowerCase() === selectedDept.code?.toLowerCase())
-        : profile.branch.toLowerCase().includes(selectedDept.name.toLowerCase());
-      
-      setIsWrongSchool(!match);
-      if (!match) {
-        toast.error("You can't lodge attendance for other school.");
-        return;
-      }
-    }
-
-    setLoadingDays(true);
+  // ── Load attendance history ───────────────────────────────────────────────
+  const loadAttendanceHistory = useCallback(async (enrollmentNo: string) => {
     try {
-      const res = await getSchoolDays({ data: { department_id: val } }) as any;
-      
-      if (res.days && res.days.length > 0) {
-        setDays(res.days);
-      }
+      const q = query(
+        collection(db, "attendance"),
+        where("student_id", "==", enrollmentNo.toUpperCase()),
+        orderBy("scanned_at", "desc"),
+        limit(50),
+      );
+      const snap = await getDocs(q);
+      const recs = snap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+      setRecords(recs);
     } catch (e: any) {
-      console.warn("Failed to fetch school days", e);
-      toast.error(`Failed to fetch days: ${e.message}`);
+      console.warn("Failed to load attendance history:", e);
     } finally {
-      setLoadingDays(false);
+      setLoadingRecords(false);
     }
-  };
+  }, []);
 
-  // When day is selected
-  const handleDayChange = async (val: string) => {
-    setDay(val);
-    setSessionId("");
-    setSessions([]);
-    setQrCodeUrl(null);
-    setLoadingSessions(true);
+  // ── Start scanning flow: GPS first, then camera ───────────────────────────
+  const startAttendanceFlow = async () => {
+    setPhase("locating");
+    setErrorMsg("");
+
     try {
-      const res = await getSchoolSessions({ data: { department_id: schoolId, day_number: Number(val) } }) as any;
-      
-      if (res.sessions && res.sessions.length > 0) {
-        setSessions(res.sessions as Session[]);
-      }
+      // Step 1: Get GPS coordinates and verify campus
+      const position = await verifyInsideCampus();
+      setLocation(position);
+
+      // Step 2: Start camera scanner
+      setPhase("scanner");
+      await startScanner();
     } catch (e: any) {
-      console.warn("Failed to fetch school sessions", e);
-      toast.error(`Failed to fetch sessions: ${e.message}`);
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
-  const handleSessionChange = (val: string) => {
-    setSessionId(val);
-  };
-
-  const startScanner = () => {
-    if (isWrongSchool) {
-      toast.error("Access blocked: School mismatch!");
-      return;
-    }
-    setPhase("scanner");
-  };
-
-  const closeScanner = () => setPhase("dashboard");
-
-  const onScanSuccess = async (decodedText: string) => {
-    if (!profile || !sessionId) return;
-    
-    setPhase("dashboard");
-    toast.loading("Lodging attendance...", { id: "lodge-toast" });
-
-    // Clean QR Token from decoded text (admin poster URL contains token at the end)
-    let qrToken = decodedText.trim();
-    try {
-      if (qrToken.includes("/scan/")) {
-        const urlObj = new URL(qrToken);
-        const parts = urlObj.pathname.split("/scan/");
-        if (parts.length > 1) {
-          qrToken = parts[1].split("/")[0];
-        }
-      }
-    } catch (e) {
-      if (qrToken.includes("/scan/")) {
-        const parts = qrToken.split("/scan/");
-        qrToken = parts[parts.length - 1].split("?")[0];
-      }
-    }
-
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error("You must be logged in as an admin or student to mark attendance.");
-      }
-      
-      const idToken = await currentUser.getIdToken();
-
-      const response = await fetch('/api/attendance-mark', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ qr_token: qrToken, enrollment_no: profile.enrollment_no }),
-      });
-
-      const res = await response.json() as any;
-
-      if (res.ok) {
-        // Also mirror it in local database to show checked list correctly
-        localDb.markAttendance(sessionId, profile);
-
-        toast.success("Attendance Lodged!", { id: "lodge-toast" });
-        setFeedbackMsg(res.duplicate 
-          ? `You were already checked in for ${res.eventTitle || res.event?.title}` 
-          : `Present marked for ${res.eventTitle || res.event?.title}`
-        );
-        setPhase(res.duplicate ? "duplicate" : "success");
-      } else {
-        throw new Error(res.error || res.message || "Server rejected transaction.");
-      }
-    } catch (err: any) {
-      console.warn("Server push failed", err);
-      toast.error(err.message || "Invalid QR code or network error.", { id: "lodge-toast" });
-      setFeedbackMsg(err.message || "The scanned QR token does not match this session or the session is inactive.");
+      setErrorMsg(e.message || "Failed to get your location");
       setPhase("error");
     }
-
-    setTimeout(() => {
-      setPhase("dashboard");
-    }, 4000);
   };
 
-  return (
-    <div className="min-h-screen bg-background pb-12">
-      <SiteHeader />
-      
-      {/* Decorative background */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-primary/8 blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
-      </div>
+  // ── Camera scanner ────────────────────────────────────────────────────────
+  const startScanner = async () => {
+    try {
+      // Small delay to let DOM render the container
+      await new Promise(r => setTimeout(r, 300));
 
-      <main className="relative container mx-auto max-w-lg px-4 py-6 sm:py-10">
-        <AnimatePresence mode="wait">
-          {!profile && (
-            <motion.div 
-              key="no-profile" 
-              initial={{ opacity: 0, y: 16 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -16 }}
-              className="glass-premium-v2 rounded-3xl overflow-hidden shadow-sm"
-            >
-              <div className="h-2 bg-hero" />
-              <div className="p-6 sm:p-8 text-center">
-                <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl bg-hero text-primary-foreground shadow-elegant">
-                  <User className="h-8 w-8" />
-                </div>
-                <h2 className="text-page-heading text-primary font-bold">Registration Required</h2>
-                <p className="mt-2 text-body-secondary max-w-xs mx-auto">
-                  You need to set up your profile first before you can lodge attendance for induction sessions.
-                </p>
-                <div className="mt-6 flex flex-col gap-2">
-                  <Button variant="liquidGlassMaroon" asChild size="lg" className="h-12 w-full text-base rounded-full font-semibold">
-                    <Link to="/register">Register in 30 Seconds</Link>
-                  </Button>
-                  <Button variant="liquidGlassDark" asChild size="lg" className="h-12 w-full text-base rounded-full font-medium">
-                    <Link to="/">Back to Home</Link>
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          )}
+      const scanner = new Html5Qrcode(scannerContainerId, {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
 
-          {profile && phase === "dashboard" && (
-            <motion.div 
-              key="dashboard" 
-              initial={{ opacity: 0, y: 16 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -16 }} 
-              className="space-y-6"
-            >
-              {/* Header profile block */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-hero-heading text-primary font-bold">Lodge Attendance</h1>
-                  <p className="text-label text-secondary uppercase font-bold tracking-wider mt-1">Induction Program &middot; KRMU 2026</p>
-                </div>
-              </div>
+      scannerRef.current = scanner;
 
-              {/* Student detail card */}
-              <div className="glass-premium-v2 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-hero" />
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-page-heading text-primary font-bold leading-tight">{profile.full_name}</h3>
-                  <div className="flex flex-col gap-1 text-body-secondary font-medium">
-                    <div className="flex items-center gap-2"><User className="h-4 w-4 shrink-0 text-primary/60"/> {profile.enrollment_no}</div>
-                    <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 shrink-0 text-primary/60"/> {profile.branch}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Attendance Lodge Form */}
-              <div className="glass-premium-v2 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-                <h3 className="text-section-heading text-primary font-bold flex items-center gap-2 mb-2">
-                  <QrCode className="h-5 w-5 text-primary" /> Setup Session Selection
-                </h3>
-
-                {/* Dropdown 1: School */}
-                <div className="grid gap-2">
-                  <Label htmlFor="school-select">Select School / Department</Label>
-                  <Select value={schoolId} onValueChange={handleSchoolChange}>
-                    <SelectTrigger id="school-select" className="h-12 bg-muted/20">
-                      <SelectValue placeholder="Choose your school" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {schools.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Validation alert */}
-                {schoolId && isWrongSchool && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex gap-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive items-start mt-2"
-                  >
-                    <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold">Access Blocked:</span> You can't lodge attendance for other school what you have written during registration.
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Dropdown 2: Day */}
-                <div className="grid gap-2">
-                  <Label htmlFor="day-select">Select Day</Label>
-                  <Select 
-                    value={day} 
-                    onValueChange={handleDayChange}
-                    disabled={!schoolId || isWrongSchool || days.length === 0}
-                  >
-                    <SelectTrigger id="day-select" className="h-12 bg-muted/20 disabled:opacity-50">
-                      <SelectValue placeholder={loadingDays ? "Loading days..." : days.length === 0 ? "No active sessions for this school" : "Choose day"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {days.map(d => (
-                        <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Dropdown 3: Slot / Session */}
-                <div className="grid gap-2">
-                  <Label htmlFor="session-select">Select Slot / Session</Label>
-                  <Select 
-                    value={sessionId} 
-                    onValueChange={handleSessionChange}
-                    disabled={!day || isWrongSchool || sessions.length === 0}
-                  >
-                    <SelectTrigger id="session-select" className="h-12 bg-muted/20 disabled:opacity-50">
-                      <SelectValue placeholder={loadingSessions ? "Loading sessions..." : "Choose session slot"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sessions.map(s => (
-                        <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Info summary of slot */}
-                {currentSelectedSession && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass-premium-v2 rounded-2xl p-4 text-caption space-y-1.5 border-[#8a4a22]/10 text-secondary font-medium"
-                  >
-                    <div className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-primary/60 shrink-0" /><span className="font-semibold text-foreground">{currentSelectedSession.venue}</span></div>
-                    <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-primary/60 shrink-0" />{new Date(currentSelectedSession.starts_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &rarr; {new Date(currentSelectedSession.ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                  </motion.div>
-                )}
-
-                {/* Display QR Code inside page if selected */}
-                {qrCodeUrl && !isWrongSchool && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center gap-3 p-5 glass-premium-v2 rounded-2xl mt-4"
-                  >
-                    <div className="rounded-2xl bg-[oklch(0.99_0.005_80)] p-3 border shadow-sm">
-                      <img src={qrCodeUrl} alt="Session QR" className="h-44 w-44 object-contain" draggable={false} />
-                    </div>
-                    <p className="text-caption text-secondary text-center font-medium max-w-xs">
-                      Session QR Code. Show this to the class coordinator or scan it using the scanner button below!
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* Scan Trigger Button / Extra Scanner Option */}
-                <Button 
-                  variant="liquidGlassMaroon"
-                  onClick={startScanner} 
-                  disabled={!sessionId || isWrongSchool}
-                  size="lg" 
-                  className="w-full h-14 text-base rounded-2xl relative overflow-hidden group mt-4 font-semibold"
-                >
-                  <span className="relative flex items-center justify-center gap-2">
-                    <Scan className="h-5 w-5 animate-pulse" /> Extra Scan Option &rarr; Mark Attendance
-                  </span>
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {phase === "scanner" && (
-            <motion.div 
-              key="scanner" 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              exit={{ opacity: 0, scale: 0.95 }} 
-              className="fixed inset-0 z-50 bg-black flex flex-col"
-            >
-              <div className="flex items-center justify-between p-4 bg-black/50 text-white backdrop-blur absolute top-0 left-0 right-0 z-10">
-                <button onClick={closeScanner} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
-                  <ArrowLeft className="h-6 w-6" />
-                </button>
-                <div className="font-semibold tracking-wide uppercase text-sm">Scan Admin Session QR</div>
-                <div className="w-10" />
-              </div>
-              
-              <div className="flex-1 relative">
-                <QRScanner onScan={onScanSuccess} />
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                   <div className="w-64 h-64 border-2 border-white/30 rounded-3xl relative">
-                     {/* Corners */}
-                     <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-xl" />
-                     <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-xl" />
-                     <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-xl" />
-                     <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-xl" />
-                     {/* Scanning laser */}
-                     <motion.div 
-                        className="w-full h-0.5 bg-primary/80 shadow-[0_0_8px_2px_rgba(255,255,255,0.3)] absolute top-0"
-                        animate={{ top: ['0%', '100%', '0%'] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                     />
-                   </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {(phase === "success" || phase === "duplicate" || phase === "error") && (
-             <motion.div 
-               key="feedback" 
-               initial={{ opacity: 0, scale: 0.9 }} 
-               animate={{ opacity: 1, scale: 1 }} 
-               exit={{ opacity: 0 }}
-               className="flex flex-col items-center justify-center py-12 sm:py-20 text-center space-y-4 glass-premium-v2 rounded-3xl p-6 sm:p-8 shadow-sm"
-             >
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
-                  {phase === "success" && <CheckCircle2 className="h-20 w-20 text-success drop-shadow-lg" />}
-                  {phase === "duplicate" && <AlertTriangle className="h-20 w-20 text-yellow-500 drop-shadow-lg" />}
-                  {phase === "error" && <XCircle className="h-20 w-20 text-destructive drop-shadow-lg" />}
-                </motion.div>
-                <h2 className="text-page-heading text-primary font-bold">
-                  {phase === "success" && "Attendance Marked!"}
-                  {phase === "duplicate" && "Already Marked"}
-                  {phase === "error" && "Check-in Failed"}
-                </h2>
-                <p className="text-body-secondary max-w-xs">{feedbackMsg}</p>
-                
-                {(phase === "success" || phase === "duplicate") && (
-                  <div className="pt-4 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-4 py-1.5 rounded-full">
-                    <Check className="h-3.5 w-3.5" /> Pushed Successfully to Server
-                  </div>
-                )}
-             </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-    </div>
-  );
-}
-
-// ─── Scanner Component ───
-function QRScanner({ onScan }: { onScan: (text: string) => void }) {
-  const scannerRef = useRef<Html5Qrcode | null>(null);
-  const onScanRef = useRef(onScan);
-  const scannedRef = useRef(false);
-  const initLockRef = useRef(false);
-  const scanRegionId = "attendance-qr-reader-lodge";
-
-  useEffect(() => {
-    onScanRef.current = onScan;
-  }, [onScan]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-      // Prevent double-init from React StrictMode / fast remounts
-      if (initLockRef.current) return;
-      initLockRef.current = true;
-
-      try {
-        const scanner = new Html5Qrcode(scanRegionId, { 
-          verbose: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-          useBarCodeDetectorIfSupported: true
-        });
-
-        const scanConfig = {
+      await scanner.start(
+        { facingMode: "environment" },
+        {
           fps: 10,
-          disableFlip: true,
-        };
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => handleScan(decodedText),
+        () => {}, // ignore scan errors (no QR in view)
+      );
+    } catch (e: any) {
+      console.error("Scanner error:", e);
+      setErrorMsg(
+        e.message?.includes("NotAllowed")
+          ? "Camera permission denied. Please enable camera access in your browser settings."
+          : "Failed to start camera. Please check your device permissions.",
+      );
+      setPhase("error");
+    }
+  };
 
-        const successCb = (decodedText: string) => {
-          if (!mounted || scannedRef.current) return;
-          scannedRef.current = true;
-          onScanRef.current(decodedText);
-        };
+  // ── Handle scanned QR ─────────────────────────────────────────────────────
+  const handleScan = async (qrData: string) => {
+    // Stop scanner immediately to prevent double-scans
+    try {
+      await scannerRef.current?.stop();
+    } catch {}
 
-        const errorCb = () => {};
+    if (!profile?.enrollment_no) {
+      setErrorMsg("Please register first to mark attendance.");
+      setPhase("error");
+      return;
+    }
 
-        // Try rear camera first (phones), fall back to front camera (laptops/desktops)
-        try {
-          await scanner.start({ facingMode: "environment" }, scanConfig, successCb, errorCb);
-        } catch {
-          console.warn("Rear camera unavailable, falling back to front camera");
-          await scanner.start({ facingMode: "user" }, { ...scanConfig, disableFlip: false }, successCb, errorCb);
-        }
+    if (!location) {
+      setErrorMsg("Location not available. Please try again.");
+      setPhase("error");
+      return;
+    }
 
-        if (mounted) {
-          scannerRef.current = scanner;
-        } else {
-          await scanner.stop().catch(() => {});
-          scanner.clear();
-        }
-      } catch (err) {
-        console.error("Camera start failed:", err);
-      } finally {
-        initLockRef.current = false;
+    setPhase("submitting");
+
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("You must be logged in to mark attendance.");
+
+      const idToken = await user.getIdToken();
+
+      const res = await fetch("/api/attendance-mark", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          qr_data: qrData,
+          enrollment_no: profile.enrollment_no,
+          latitude: location.lat,
+          longitude: location.lng,
+        }),
+      });
+
+      const data: MarkResult = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.error || "Failed to mark attendance.");
+        setPhase("error");
+        return;
       }
-    };
 
-    init();
+      setResult(data);
 
-    return () => {
-      mounted = false;
-      const scanner = scannerRef.current;
+      if (data.duplicate) {
+        setPhase("duplicate");
+        toast.info("Attendance already marked for this session.");
+      } else {
+        setPhase("success");
+        toast.success("Attendance marked!");
+        // Haptic feedback
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+        // Refresh history
+        loadAttendanceHistory(profile.enrollment_no);
+      }
+    } catch (e: any) {
+      // Classify network vs. other errors (Fix 4: offline detection)
+      const isOffline = !navigator.onLine
+        || e.name === 'TypeError'
+        || e.message?.toLowerCase().includes('failed to fetch')
+        || e.message?.toLowerCase().includes('network')
+        || e.message?.toLowerCase().includes('networkerror');
+
+      setErrorMsg(
+        isOffline
+          ? 'Network unavailable. Please reconnect and scan again.'
+          : e.message || 'Failed to mark attendance. Please try again.',
+      );
+      setPhase('error');
+    }
+  };
+
+  // ── Stop scanner ──────────────────────────────────────────────────────────
+  const stopScanner = async () => {
+    try {
+      await scannerRef.current?.stop();
       scannerRef.current = null;
-      if (scanner) {
-        (scanner.isScanning ? scanner.stop() : Promise.resolve())
-          .finally(() => scanner.clear())
-          .catch(() => {});
-      }
-    };
+    } catch {}
+  };
+
+  // ── Go back to dashboard ──────────────────────────────────────────────────
+  const goBack = () => {
+    stopScanner();
+    setPhase("dashboard");
+    setResult(null);
+    setErrorMsg("");
+    setLocation(null);
+  };
+
+  // Cleanup scanner on unmount
+  useEffect(() => {
+    return () => { stopScanner(); };
   }, []);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // Not Registered
+  // ══════════════════════════════════════════════════════════════════════════
+  if (!profile && !loadingRecords) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <div className="ambient-bg" aria-hidden="true">
+          <div className="ambient-blob ambient-blob-1" />
+          <div className="ambient-blob ambient-blob-2" />
+        </div>
+        <main className="container mx-auto max-w-md px-4 py-16 text-center relative">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="empty-state">
+              <div className="empty-state-icon"><ScanLine className="h-7 w-7" /></div>
+              <div className="empty-state-title">Mark Attendance</div>
+              <div className="empty-state-text">
+                Register to start marking your attendance by scanning the QR code displayed by the admin.
+              </div>
+              <Button asChild variant="liquidGlassMaroon" size="lg" className="rounded-full px-8">
+                <Link to="/register">Register Now</Link>
+              </Button>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD PHASE — History + Scan Button
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "dashboard") {
+    const attendanceCount = records.length;
+
+    return (
+      <div className="min-h-screen bg-background pb-16">
+        <SiteHeader />
+        <div className="ambient-bg" aria-hidden="true">
+          <div className="ambient-blob ambient-blob-1" />
+          <div className="ambient-blob ambient-blob-2" />
+          <div className="ambient-blob ambient-blob-3" />
+        </div>
+
+        <main className="relative container mx-auto max-w-md px-4 py-8 space-y-6">
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-1.5">
+            <h1 className="text-hero-heading text-primary font-bold">Attendance</h1>
+            <p className="text-label text-secondary uppercase font-bold tracking-wider">Aarambh 2026</p>
+          </motion.div>
+
+          {/* Stats */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-3">
+            <div className="glass-premium-v2 rounded-2xl p-4 text-center">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 mx-auto mb-2">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div className="text-2xl font-bold text-primary">{attendanceCount}</div>
+              <div className="text-xs text-tertiary font-medium">Sessions Attended</div>
+            </div>
+            <div className="glass-premium-v2 rounded-2xl p-4 text-center">
+              <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 mx-auto mb-2">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div className="text-2xl font-bold text-primary">{profile?.full_name?.[0] || "?"}</div>
+              <div className="text-xs text-tertiary font-medium">Verified Student</div>
+            </div>
+          </motion.div>
+
+          {/* SCAN BUTTON — the main CTA */}
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+            <Button
+              variant="liquidGlassMaroon"
+              size="lg"
+              className="w-full rounded-2xl h-16 text-lg font-bold gap-3"
+              onClick={startAttendanceFlow}
+            >
+              <Camera className="w-6 h-6" />
+              Scan Attendance QR
+            </Button>
+            <p className="text-center text-xs text-muted-foreground mt-2">
+              Point your camera at the QR displayed on the projector or smart panel
+            </p>
+          </motion.div>
+
+          {/* How it works */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <div className="glass-premium-v2 rounded-2xl p-4 space-y-3">
+              <h3 className="text-sm font-bold text-primary flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-500" />
+                How Secure Attendance Works
+              </h3>
+              {[
+                { icon: Camera, text: "Open camera and scan the QR code shown by admin" },
+                { icon: MapPin, text: "Your location is verified to ensure you're on campus" },
+                { icon: Clock, text: "QR codes rotate every 30s — they can't be shared" },
+                { icon: CheckCircle2, text: "Attendance is recorded securely on the server" },
+              ].map((step, i) => (
+                <div key={i} className="flex items-start gap-2.5 text-xs text-secondary">
+                  <div className="w-5 h-5 rounded-full bg-primary/5 flex items-center justify-center shrink-0 mt-0.5">
+                    <step.icon className="w-3 h-3 text-primary/60" />
+                  </div>
+                  {step.text}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Attendance History */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-label text-secondary uppercase font-bold tracking-wider flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5" />
+                Recent Attendance
+              </h3>
+              <span className="text-xs text-tertiary">{attendanceCount} total</span>
+            </div>
+
+            {loadingRecords ? (
+              <div className="space-y-2">
+                {[1,2,3].map(i => <div key={i} className="skeleton-glass skeleton-card" style={{ minHeight: "56px" }} />)}
+              </div>
+            ) : records.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-medium">No attendance records yet</p>
+                <p className="text-xs mt-1">Scan a QR code to mark your first attendance</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {records.map(rec => (
+                  <div key={rec.id} className="glass-premium-v2 rounded-xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-primary">{rec.event_id || rec.session_id}</div>
+                        <div className="text-xs text-tertiary">
+                          {rec.scanned_at?.toDate?.()
+                            ? rec.scanned_at.toDate().toLocaleString("en-IN", {
+                                day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                              })
+                            : "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                      Present
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // LOCATING PHASE — Getting GPS coordinates
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "locating") {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="container mx-auto max-w-md px-4 py-16">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto">
+              <MapPin className="w-10 h-10 text-blue-500 animate-bounce" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-primary">Verifying Location</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Checking that you're inside the KRMU campus...
+              </p>
+            </div>
+            <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+            <Button variant="outline" size="sm" onClick={goBack}>Cancel</Button>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SCANNER PHASE — Camera active
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "scanner") {
+    return (
+      <div className="min-h-screen bg-black">
+        <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl">
+          <Button variant="ghost" size="sm" className="text-white" onClick={goBack}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+          <span className="text-white text-sm font-semibold flex items-center gap-1.5">
+            <ScanLine className="w-4 h-4" /> Scan QR Code
+          </span>
+          <div className="w-16" />
+        </div>
+
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 pt-16 pb-8">
+          <div
+            id={scannerContainerId}
+            className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{ minHeight: "300px" }}
+          />
+
+          <div className="mt-6 text-center">
+            <p className="text-white/80 text-sm font-medium">
+              Point your camera at the QR code
+            </p>
+            <p className="text-white/40 text-xs mt-1">
+              The QR is displayed on the projector or smart panel by the admin
+            </p>
+            {location && (
+              <p className="text-emerald-400 text-xs mt-3 flex items-center justify-center gap-1">
+                <MapPin className="w-3 h-3" /> Location verified • On campus
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SUBMITTING PHASE — Processing attendance
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "submitting") {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="container mx-auto max-w-md px-4 py-16">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-primary">Marking Attendance</h2>
+              <p className="text-sm text-muted-foreground mt-1">Verifying your QR code and location...</p>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SUCCESS PHASE
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "success") {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="container mx-auto max-w-md px-4 py-16">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", damping: 15, stiffness: 200 }}
+            className="text-center space-y-6"
+          >
+            {/* Success checkmark */}
+            <motion.div
+              className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.1, damping: 10, stiffness: 200 }}
+            >
+              <CheckCircle2 className="w-14 h-14 text-emerald-500" />
+            </motion.div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-primary">Attendance Marked!</h2>
+              <p className="text-lg text-emerald-600 font-semibold mt-1">{result?.studentName}</p>
+            </div>
+
+            {result && (
+              <div className="glass-premium-v2 rounded-2xl p-4 space-y-2 text-left max-w-xs mx-auto">
+                {result.eventTitle && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-tertiary">Event</span>
+                    <span className="font-semibold text-primary">{result.eventTitle}</span>
+                  </div>
+                )}
+                {result.venue && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-tertiary">Venue</span>
+                    <span className="font-semibold text-primary">{result.venue}</span>
+                  </div>
+                )}
+                {result.date && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-tertiary">Date</span>
+                    <span className="font-semibold text-primary">{result.date}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-center pt-2">
+              <Button variant="outline" onClick={goBack}>
+                <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+              </Button>
+              <Button variant="liquidGlassMaroon" onClick={startAttendanceFlow}>
+                <Camera className="w-4 h-4 mr-1.5" /> Scan Another
+              </Button>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DUPLICATE PHASE
+  // ══════════════════════════════════════════════════════════════════════════
+  if (phase === "duplicate") {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <main className="container mx-auto max-w-md px-4 py-16">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-10 h-10 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-primary">Already Marked!</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your attendance for this session was already recorded.
+              </p>
+              {result?.studentName && (
+                <p className="text-base font-semibold text-primary mt-2">{result.studentName}</p>
+              )}
+            </div>
+            <Button variant="outline" onClick={goBack}>
+              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to Dashboard
+            </Button>
+          </motion.div>
+        </main>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ERROR PHASE
+  // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black flex items-center justify-center">
-      <div id={scanRegionId} className="w-full h-full" />
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <main className="container mx-auto max-w-md px-4 py-16">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
+          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+            <XCircle className="w-10 h-10 text-red-500" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-primary">Attendance Failed</h2>
+            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">{errorMsg}</p>
+          </div>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={goBack}>
+              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
+            </Button>
+            <Button variant="liquidGlassMaroon" onClick={startAttendanceFlow}>
+              <RefreshCw className="w-4 h-4 mr-1.5" /> Try Again
+            </Button>
+          </div>
+        </motion.div>
+      </main>
     </div>
   );
 }
