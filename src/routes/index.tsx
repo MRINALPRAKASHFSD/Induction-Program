@@ -134,29 +134,49 @@ function Landing() {
         {/* Gradient base */}
         <div className="bg-hero-premium absolute inset-0" />
 
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-          <div className="orb orb-4" />
-          
-          <div className="hero-ring hero-ring-1" />
-          <div className="hero-ring hero-ring-2" />
-          <div className="hero-ring hero-ring-3" />
-          <div className="hero-ring hero-ring-4" />
-          <div className="hero-ring hero-ring-5" />
-          
-          <div className="hero-particle hp1" /><div className="hero-particle hp2" />
-          <div className="hero-particle hp3" /><div className="hero-particle hp4" />
-          <div className="hero-particle hp5" /><div className="hero-particle hp6" />
-          <div className="hero-particle hp7" /><div className="hero-particle hp8" />
-          <div className="hero-particle hp9" /><div className="hero-particle hp10" />
-          <div className="hero-particle hp11" /><div className="hero-particle hp12" />
+        {/* Premium Ambient Stars */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="ambient-particles">
+            {Array.from({ length: 30 }).map((_, i) => (
+              <div key={`star-${i}`} className={`star-particle sp-${i + 1}`} />
+            ))}
+          </div>
         </div>
 
-        {/* Subtle noise texture */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIgLz4KICAgIDxmZUNvbG9yTWF0cml4IHR5cGU9Im1hdHJpeCIgdmFsdWVzPSIxIDAgMCAwIDAgIDAgMSAwIDAgMCAgMCAwIDEgMCAwICAwIDAgMCAwLjA4IDAiIC8+ICAKICA8L2ZpbHRlcj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiAvPgo8L3N2Zz4=')] opacity-40 mix-blend-multiply pointer-events-none" />
+        {/* Decorative Orbit Widgets */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="orbit-widget orbit-widget-tl">
+            <div className="ow-ring ow-ring-1" />
+            <div className="ow-ring ow-ring-2" />
+            <div className="ow-ring ow-ring-3" />
+          </div>
+          <div className="orbit-widget orbit-widget-br">
+            <div className="ow-ring ow-ring-1" />
+            <div className="ow-ring ow-ring-2" />
+          </div>
+        </div>
+
+        {/* Main Orbit System — GPU compositor only, zero paint cost */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <div className="orbit-system">
+            <div className="orbit-ring orbit-ring-1"><div className="orbit-node node-1-a orbit-node-trail-cw node-secondary" /><div className="orbit-node node-1-b" /></div>
+            <div className="orbit-ring orbit-ring-2"><div className="orbit-node node-2-a orbit-node-trail-ccw node-primary living-node" /><div className="orbit-node node-2-b" /><div className="orbit-node node-2-c" /></div>
+            <div className="orbit-ring orbit-ring-3"><div className="orbit-node node-3-a orbit-node-trail-cw node-accent" /></div>
+            <div className="orbit-ring orbit-ring-4"><div className="orbit-node node-4-a orbit-node-trail-ccw node-accent living-node" /><div className="orbit-node node-4-b" /></div>
+            <div className="orbit-ring orbit-ring-5"><div className="orbit-node node-5-a" /><div className="orbit-node node-5-b" /><div className="orbit-node node-5-c orbit-node-trail-cw node-secondary" /></div>
+            <div className="orbit-ring orbit-ring-6"><div className="orbit-node node-6-a orbit-node-trail-ccw node-primary" /></div>
+            <div className="orbit-ring orbit-ring-7"><div className="orbit-node node-7-a" /><div className="orbit-node node-7-b" /></div>
+            <div className="orbit-ring orbit-ring-8"><div className="orbit-node node-8-a orbit-node-trail-ccw node-secondary living-node" /><div className="orbit-node node-8-b" /><div className="orbit-node node-8-c" /></div>
+            <div className="orbit-ring orbit-ring-9"><div className="orbit-node node-9-a orbit-node-trail-cw node-primary" /></div>
+            <div className="orbit-ring orbit-ring-10"><div className="orbit-node node-10-a orbit-node-trail-ccw node-primary" /><div className="orbit-node node-10-b" /></div>
+            
+            {/* Focal center */}
+            <div className="orbit-center">
+              <div className="orbit-center-halo" />
+              <div className="orbit-center-core" />
+            </div>
+          </div>
+        </div>
 
         <div className="container relative mx-auto max-w-6xl px-4 py-24 sm:py-32">
           <div className="max-w-3xl">
