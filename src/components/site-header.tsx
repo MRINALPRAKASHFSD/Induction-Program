@@ -457,28 +457,31 @@ export function SiteHeader() {
         </div>
       </header>
 
-      {/* ── Mobile Bottom Sheet ──────────────────────────────────── */}
+      {/* ── Mobile Top Dropdown Overlay ──────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
-          <>
-            {/* Overlay */}
-            <motion.div
-              className="nav-mobile-overlay md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMobileOpen(false)}
-            />
+          <motion.div
+            className="fixed inset-0 bg-[#2c1208]/20 backdrop-blur-[2px] z-30 md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-            {/* Sheet */}
-            <motion.nav
-              className="nav-mobile-sheet md:hidden"
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            >
+      {/* ── Mobile Top Dropdown Menu ─────────────────────────────── */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.nav
+            className="fixed top-[64px] left-0 right-0 mx-2 bg-white/95 backdrop-blur-xl border border-[#8a4a22]/10 shadow-2xl md:hidden overflow-hidden z-40 max-h-[calc(100vh-90px)] overflow-y-auto rounded-3xl pb-6 pt-2"
+            initial={{ opacity: 0, y: -15, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.98 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div className="px-3">
               {/* Profile Card (if registered) */}
               {isRegistered && profile && (
                 <Link to="/my-pass" onClick={() => setMobileOpen(false)} className="mobile-profile-card">
@@ -528,7 +531,7 @@ export function SiteHeader() {
               )}
 
               {/* Nav Links */}
-              <div className="flex flex-col gap-0.5">
+              <div className="flex flex-col gap-1">
                 {navItems.map((item) => (
                   item.comingSoon ? (
                     <button
@@ -561,7 +564,7 @@ export function SiteHeader() {
               </div>
 
               {/* Divider + secondary actions */}
-              <div className="mt-4 pt-4 border-t border-[#8a4a22]/8">
+              <div className="mt-4 pt-4 border-t border-[#8a4a22]/8 flex flex-col gap-1">
                 <Link
                   to="/admin/login"
                   className="nav-mobile-link text-[#8a4a22]/70"
@@ -580,8 +583,8 @@ export function SiteHeader() {
                   </button>
                 )}
               </div>
-            </motion.nav>
-          </>
+            </div>
+          </motion.nav>
         )}
       </AnimatePresence>
 

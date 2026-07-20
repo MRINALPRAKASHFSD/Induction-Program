@@ -5,6 +5,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 import React, { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 export const Route = createFileRoute("/")({
@@ -113,6 +114,7 @@ function Landing() {
   }, []);
 
   const [isBgLoaded, setIsBgLoaded] = useState(false);
+  const isMobile = useIsMobile();
   useEffect(() => {
     const timer = setTimeout(() => {
       // Defer rendering of heavy background elements to prioritize LCP
@@ -141,7 +143,7 @@ function Landing() {
       )}
 
       {/* Hero */}
-      <section className="relative overflow-hidden min-h-[92svh] flex items-center">
+      <section className="relative overflow-hidden min-h-[80svh] md:min-h-[92svh] flex items-center">
         {/* Gradient base */}
         <div className="bg-hero-premium absolute inset-0" />
 
@@ -154,21 +156,23 @@ function Landing() {
           </div>
         </div>
 
-        {/* Decorative Orbit Widgets */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <div className="orbit-widget orbit-widget-tl">
-            <div className="ow-ring ow-ring-1" />
-            <div className="ow-ring ow-ring-2" />
-            <div className="ow-ring ow-ring-3" />
+        {/* Decorative Orbit Widgets - Desktop Only */}
+        {!isMobile && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+            <div className="orbit-widget orbit-widget-tl">
+              <div className="ow-ring ow-ring-1" />
+              <div className="ow-ring ow-ring-2" />
+              <div className="ow-ring ow-ring-3" />
+            </div>
+            <div className="orbit-widget orbit-widget-br">
+              <div className="ow-ring ow-ring-1" />
+              <div className="ow-ring ow-ring-2" />
+            </div>
           </div>
-          <div className="orbit-widget orbit-widget-br">
-            <div className="ow-ring ow-ring-1" />
-            <div className="ow-ring ow-ring-2" />
-          </div>
-        </div>
+        )}
 
-        {/* Main Orbit System — GPU compositor only, zero paint cost */}
-        {isBgLoaded && (
+        {/* Main Orbit System — GPU compositor only, Desktop Only */}
+        {isBgLoaded && !isMobile && (
           <div className="absolute inset-0 overflow-hidden pointer-events-none bg-deferred-fade-in" aria-hidden="true">
             <div className="orbit-system">
               <div className="orbit-ring orbit-ring-1"><div className="orbit-node node-1-a orbit-node-trail-cw node-secondary" /><div className="orbit-node node-1-b" /></div>
@@ -191,21 +195,21 @@ function Landing() {
           </div>
         )}
 
-        <div className="container relative mx-auto max-w-6xl px-4 py-24 sm:py-32">
+        <div className="container relative mx-auto max-w-6xl px-4 py-20 md:py-32">
           <div className="max-w-3xl">
             {/* Eyebrow */}
             <div className="css-animate-fade-in-up">
-              <span className="aarambh-year">K.R. Mangalam University · Student Induction</span>
+              <span className="aarambh-year text-[10px] sm:text-xs">K.R. Mangalam University · Student Induction</span>
             </div>
 
             {/* Wordmark with shimmer */}
-            <div className="mt-5 css-animate-fade-in-up css-delay-1">
+            <div className="mt-4 sm:mt-5 css-animate-fade-in-up css-delay-1">
               <div className="aarambh-wordmark-wrap">
-                <h1 className="aarambh-wordmark text-[2.25rem] sm:text-[4.8rem] lg:text-[6.2rem]">
+                <h1 className="aarambh-wordmark text-[3.25rem] sm:text-[4.8rem] lg:text-[6.2rem]">
                   Aarambh
                 </h1>
               </div>
-              <p className="aarambh-year mt-2.5 tracking-[0.32em]">2 0 2 6</p>
+              <p className="aarambh-year mt-2 sm:mt-2.5 tracking-[0.32em]">2 0 2 6</p>
             </div>
 
             {/* Divider */}
@@ -215,23 +219,23 @@ function Landing() {
 
             {/* Tagline */}
             <div className="css-animate-fade-in-up css-delay-2">
-              <p className="text-[#2c1208] text-lg sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
+              <p className="text-[#2c1208] text-[1.15rem] sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
                 Your beginning.{" "}
                 <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
               </p>
-              <p className="mt-3.5 text-[#7a4020]/70 text-sm sm:text-base font-normal max-w-xs leading-relaxed">
+              <p className="mt-3.5 text-[#7a4020]/75 text-[0.95rem] sm:text-base font-normal max-w-xs leading-relaxed">
                 Scan in. Stand out. Belong.
               </p>
             </div>
 
             {/* CTA buttons */}
-            <div className="mt-10 flex flex-col sm:flex-row flex-wrap gap-3 css-animate-fade-in-up css-delay-2">
-              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap gap-4 css-animate-fade-in-up css-delay-2">
+              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow min-h-[44px] h-12 sm:h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
                 <Link to="/register">
                   Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </Link>
               </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="h-12 px-7 rounded-full font-medium w-full sm:w-auto" aria-label="Lodge Attendance">
+              <Button variant="liquidGlassDark" size="lg" asChild className="min-h-[44px] h-12 sm:h-12 px-7 rounded-full font-medium w-full sm:w-auto" aria-label="Lodge Attendance">
                 <Link to="/attendance">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
                   Lodge Attendance
