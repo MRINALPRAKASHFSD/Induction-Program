@@ -69,11 +69,19 @@ export default async function handler(req: any, res: any) {
     const session = sessionDoc.data()!;
 
     // Fetch all attendance records for this session
+    // We remove .orderBy('scanned_at', 'asc') from the query to prevent
+    // requiring a composite index in Firestore. Instead, we sort in memory.
     const attSnap = await db
       .collection('attendance')
       .where('session_id', '==', sessionId)
-      .orderBy('scanned_at', 'asc')
       .get();
+
+    // Sort in memory by scanned_at to bypass Firestore composite index requirement
+    const sortedDocs = attSnap.docs.sort((a, b) => {
+      const aTime = a.data().scanned_at?.toMillis?.() || 0;
+      const bTime = b.data().scanned_at?.toMillis?.() || 0;
+      return aTime - bTime;
+    });
 
     // Build CSV
     const headers = [
@@ -87,7 +95,7 @@ export default async function handler(req: any, res: any) {
       'IP Address',
     ];
 
-    const rows = attSnap.docs.map((doc, index) => {
+    const rows = sortedDocs.map((doc, index) => {
       const data = doc.data();
       const scannedAt = data.scanned_at?.toDate?.()
         ? data.scanned_at.toDate().toISOString()
