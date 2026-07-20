@@ -13,11 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight,
-  CheckCircle2, ScanLine, MapPin, Ticket, Megaphone, Menu,
-  UsersRound, Shield, HelpCircle, Settings, Wallet, X,
+  CheckCircle2, ScanLine, MapPin, Megaphone,
+  UsersRound, Shield, HelpCircle, Wallet,
 } from "lucide-react";
 
 /* ─── Nav Items ─────────────────────────────────────────────────── */
@@ -310,7 +310,7 @@ export function SiteHeader() {
                           {announcements.map((a) => {
                             const isRead = readIds.has(a.id);
                             return (
-                              <motion.div
+                              <m.div
                                 key={a.id}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -351,7 +351,7 @@ export function SiteHeader() {
                                     )}
                                   </div>
                                 </Link>
-                              </motion.div>
+                              </m.div>
                             );
                           })}
                         </AnimatePresence>
@@ -460,7 +460,7 @@ export function SiteHeader() {
       {/* ── Mobile Top Dropdown Overlay ──────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
+          <m.div
             className="fixed inset-0 bg-[#2c1208]/20 backdrop-blur-[2px] z-30 md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -474,7 +474,7 @@ export function SiteHeader() {
       {/* ── Mobile Top Dropdown Menu ─────────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.nav
+          <m.nav
             className="fixed top-[64px] left-0 right-0 mx-2 bg-white/95 backdrop-blur-xl border border-[#8a4a22]/10 shadow-2xl md:hidden overflow-hidden z-40 max-h-[calc(100vh-90px)] overflow-y-auto rounded-3xl pb-6 pt-2"
             initial={{ opacity: 0, y: -15, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -584,7 +584,7 @@ export function SiteHeader() {
                 )}
               </div>
             </div>
-          </motion.nav>
+          </m.nav>
         )}
       </AnimatePresence>
 

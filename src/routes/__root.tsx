@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { LazyMotion, domAnimation } from "framer-motion";
 
 function NotFoundComponent() {
   return (
@@ -93,7 +94,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "preload", as: "style", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&display=swap" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&display=swap" },
     ],
   }),
@@ -126,8 +126,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors position="top-center" />
+      <LazyMotion features={domAnimation}>
+        <Outlet />
+        <Toaster richColors position="top-center" />
+      </LazyMotion>
     </QueryClientProvider>
   );
 }

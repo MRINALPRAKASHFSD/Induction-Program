@@ -203,7 +203,7 @@ function Landing() {
             </div>
 
             {/* Wordmark with shimmer */}
-            <div className="mt-4 sm:mt-5 css-animate-fade-in-up css-delay-1">
+            <div className="mt-4 sm:mt-5 css-animate-fade-in-up">
               <div className="aarambh-wordmark-wrap">
                 <h1 className="aarambh-wordmark text-[3.25rem] sm:text-[4.8rem] lg:text-[6.2rem]">
                   Aarambh
@@ -213,12 +213,12 @@ function Landing() {
             </div>
 
             {/* Divider */}
-            <div className="css-animate-scale-x css-delay-1">
+            <div className="css-animate-scale-x">
               <div className="hero-divider" />
             </div>
 
             {/* Tagline */}
-            <div className="css-animate-fade-in-up css-delay-2">
+            <div className="css-animate-fade-in-up">
               <p className="text-[#2c1208] text-[1.15rem] sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
                 Your beginning.{" "}
                 <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
@@ -229,7 +229,7 @@ function Landing() {
             </div>
 
             {/* CTA buttons */}
-            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap gap-4 css-animate-fade-in-up css-delay-2">
+            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap gap-4 css-animate-fade-in-up">
               <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow min-h-[44px] h-12 sm:h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
                 <Link to="/register">
                   Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
