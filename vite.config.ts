@@ -86,19 +86,13 @@ export default defineConfig(({ command, mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // PRIORITY 1: Core framework — must be checked before anything else
-              // to prevent helpers from leaking into other vendor chunks
-              if (id.includes('@tanstack/react-router') || id.includes('@tanstack/react-query') || id.includes('@tanstack/router-core') || id.includes('@tanstack/start')) return 'vendor-tanstack';
-              if (id.includes('firebase/app') || id.includes('firebase/auth') || id.includes('firebase/firestore') || id.includes('firebase/storage')) return 'vendor-firebase';
-
-              // PRIORITY 2: Heavy admin-only libraries — must never reach homepage bundle
               if (id.includes('html5-qrcode')) return 'vendor-scanner';
               if (id.includes('html2canvas') || id.includes('jspdf')) return 'vendor-pdf';
               if (id.includes('xlsx')) return 'vendor-excel';
-
-              // PRIORITY 3: Shared UI libraries
               if (id.includes('framer-motion')) return 'vendor-motion';
               if (id.includes('lucide-react')) return 'vendor-lucide';
+              if (id.includes('@tanstack/react-router') || id.includes('@tanstack/react-query')) return 'vendor-tanstack';
+              if (id.includes('firebase/app') || id.includes('firebase/auth') || id.includes('firebase/firestore') || id.includes('firebase/storage')) return 'vendor-firebase';
             }
           }
         }
