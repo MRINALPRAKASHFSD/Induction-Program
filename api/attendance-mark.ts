@@ -67,10 +67,11 @@ try {
   firebaseInitError = e.message;
 }
 
-// ── Geofence constants (must stay in sync with src/lib/geofence.ts) ───────────
+// ── Geofence constants (must stay in sync with src/lib/geofence.ts) ─────────────────
+// Verified coordinates: 28.2712°N, 77.0679°E (main campus, near A-Block/main gate)
 const CAMPUS_CENTER = {
-  lat: parseFloat(process.env.CAMPUS_LAT || '28.4089'),
-  lng: parseFloat(process.env.CAMPUS_LNG || '77.0420'),
+  lat: parseFloat(process.env.CAMPUS_LAT || '28.2712'),
+  lng: parseFloat(process.env.CAMPUS_LNG || '77.0679'),
 };
 const CAMPUS_RADIUS_METERS = 250;  // Updated: 250m radius
 const GPS_TOLERANCE_METERS = 40;   // Updated: ±40m for indoor/cloudy/Android drift
