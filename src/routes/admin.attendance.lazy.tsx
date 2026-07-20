@@ -413,7 +413,7 @@ function AdminAttendance() {
                   <Label>Venue</Label>
                   <Input placeholder="e.g. Main Auditorium" value={formVenue} onChange={e => setFormVenue(e.target.value)} />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <Label>Date</Label>
                     <Input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} />
@@ -427,7 +427,7 @@ function AdminAttendance() {
                     <Input type="time" value={formEndsAt} onChange={e => setFormEndsAt(e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <Label>QR Rotation (s)</Label>
                     <Input
@@ -546,7 +546,7 @@ function AdminAttendance() {
               {/* QR Panel */}
               <div
                 ref={qrContainerRef}
-                className={`flex flex-col items-center justify-center p-8 border-r border-border/50 ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
+                className={`flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-border/50 ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
               >
                 {qrDataUrl ? (
                   <>
@@ -651,7 +651,7 @@ function AdminAttendance() {
             {sessions.map(session => (
               <div
                 key={session.id}
-                className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:bg-muted/20 ${
+                className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:bg-muted/20 gap-3 sm:gap-0 ${
                   activeSession?.id === session.id ? 'border-primary/50 bg-primary/5' : 'border-border/50'
                 }`}
                 onClick={() => setActiveSession(session)}
@@ -662,14 +662,14 @@ function AdminAttendance() {
                       <span className="font-semibold text-sm">{session.event_id}</span>
                       <StatusBadge status={session.status} />
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {session.venue}</span>
                       <span>{session.programme_name}</span>
                       <span>{session.date}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                   <div className="text-right">
                     <div className="text-lg font-bold text-emerald-600">{session.total_present}</div>
                     <div className="text-xs text-muted-foreground">present</div>

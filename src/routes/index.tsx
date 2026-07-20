@@ -201,7 +201,7 @@ function Landing() {
             {/* Wordmark with shimmer */}
             <div className="mt-5 css-animate-fade-in-up css-delay-1">
               <div className="aarambh-wordmark-wrap">
-                <h1 className="aarambh-wordmark text-[2.75rem] sm:text-[4.8rem] lg:text-[6.2rem]">
+                <h1 className="aarambh-wordmark text-[2.25rem] sm:text-[4.8rem] lg:text-[6.2rem]">
                   Aarambh
                 </h1>
               </div>

@@ -206,7 +206,7 @@ export function SiteHeader() {
           <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setMobileOpen(false)}>
             <img src="/krmu-emblem.webp" alt="KRMU Emblem" className="h-9 w-auto mix-blend-multiply object-contain" />
             <span className="text-base font-semibold tracking-tight text-[#6b3517] hidden sm:inline-block">
-              KRMU Induction
+              Deeksharambh
             </span>
           </Link>
 

@@ -44,7 +44,6 @@ export const Route = createFileRoute("/register")({
 // ─── Static KRMU data (no DB call needed) ──────────────────────────────────
 const DEPARTMENTS = [
   { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
-  { id: "zsai", code: "ZSAI", name: "Zenith School of AI" },
   { id: "somc", code: "SOMC", name: "School of Management and Commerce" },
   { id: "sols", code: "SOLS", name: "School of Legal Studies" },
   { id: "smas", code: "SMAS", name: "School of Medical & Allied Sciences" },
@@ -222,7 +221,7 @@ function RegisterPage() {
         full_name: profile.full_name,
         enrollment_no: profile.enrollment_no,
         branch: `${profile.branch_id} · ${profile.deptName}`,
-        semester: `Year ${profile.year} · ${profile.course}`,
+        semester: `Session 2026–2027 · ${profile.course}`,
         created_at: new Date().toISOString(),
         department_id: profile.department_id,
       });
@@ -580,7 +579,7 @@ function RegisterPage() {
                         <Field label="Course">
                           <IconInput icon={BookOpen} required value={form.course} onChange={(e: any) => update("course", e.target.value)} placeholder="e.g. B.Tech CSE" />
                         </Field>
-                        <Field label="Year">
+                        <Field label="Session">
                           <div className="relative flex items-center w-full min-w-0">
                             <div className="absolute left-3 flex h-full items-center justify-center text-muted-foreground z-10 pointer-events-none">
                               <Calendar className="h-[18px] w-[18px]" />
@@ -588,7 +587,7 @@ function RegisterPage() {
                             <Select value={form.year} onValueChange={(v) => update("year", v)}>
                               <SelectTrigger className="pl-10 h-12 text-[15px] bg-background/50 border-border/50 focus:ring-primary/20"><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {[1].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
+                                {[1].map((y) => <SelectItem key={y} value={String(y)}>Session 2026–2027</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>

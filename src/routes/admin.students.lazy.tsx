@@ -350,7 +350,7 @@ function AdminStudents() {
             />
           </div>
           <Select value={dept} onValueChange={setDept}>
-            <SelectTrigger className="w-[180px] glass-card-hero">
+            <SelectTrigger className="w-[130px] sm:w-[180px] glass-card-hero">
               <SelectValue placeholder="Department" />
             </SelectTrigger>
             <SelectContent>
@@ -477,7 +477,7 @@ function AdminStudents() {
         <div className="mb-5 rounded-xl glass-card-hero shadow-sm overflow-hidden">
           <div className="bg-muted/30 px-5 py-3 border-b flex items-center justify-between">
             <h3 className="text-sm font-semibold">Room Occupancy</h3>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded bg-muted border" /> Empty
               </span>
