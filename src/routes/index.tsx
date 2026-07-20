@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -128,7 +128,6 @@ function Landing() {
   const clubs = stats.clubs;
 
   return (
-    <LazyMotion features={domAnimation}>
       <div className="min-h-screen bg-background">
       <SiteHeader />
 
@@ -244,23 +243,16 @@ function Landing() {
             </div>
 
             {/* Countdown timer */}
-            <div className="mt-12 glass-premium-v2 px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up css-delay-3">
+            <div className="mt-12 glass-premium-v2 px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up">
               <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15 relative z-10">
                 <div className="relative hidden sm:block">
                   <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
-                    <m.div 
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-                    >
+                    <div className="css-spin-slow">
                       <Clock className="h-6 w-6 text-[#8a4a22]" />
-                    </m.div>
+                    </div>
                   </div>
                   {/* Subtle pulse ring */}
-                  <m.div 
-                    className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0"
-                    animate={{ scale: [1, 1.3, 1], opacity: [0.8, 0, 0] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }}
-                  />
+                  <div className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0 css-pulse-ring" />
                 </div>
                 <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left relative z-10">
                   Induction<br/>Begins In
@@ -424,6 +416,5 @@ function Landing() {
         </div>
       </footer>
       </div>
-    </LazyMotion>
   );
 }
