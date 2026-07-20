@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { m, AnimatePresence } from "framer-motion";
+import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
 import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -128,6 +128,7 @@ function Landing() {
   const clubs = stats.clubs;
 
   return (
+    <LazyMotion features={domAnimation}>
       <div className="min-h-screen bg-background">
       <SiteHeader />
 
@@ -416,5 +417,6 @@ function Landing() {
         </div>
       </footer>
       </div>
+    </LazyMotion>
   );
 }
