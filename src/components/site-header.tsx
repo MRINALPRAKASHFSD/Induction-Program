@@ -35,7 +35,7 @@ type NavItem = {
 const GUEST_NAV_ITEMS: NavItem[] = [
   { to: "/schedule", label: "Schedule", icon: Calendar },
   { to: "/clubs", label: "Clubs", icon: UsersRound },
-  { to: "/campus", label: "Campus", icon: MapPin, comingSoon: true },
+  { to: "/campus", label: "Campus", icon: MapPin },
 ];
 
 // Items shown AFTER registration
@@ -44,7 +44,7 @@ const AUTH_NAV_ITEMS: NavItem[] = [
   { to: "/schedule", label: "Schedule", icon: Calendar },
   { to: "/announcements", label: "Announcements", icon: Megaphone },
   { to: "/clubs", label: "Clubs", icon: UsersRound },
-  { to: "/campus", label: "Campus", icon: MapPin, comingSoon: true },
+  { to: "/campus", label: "Campus", icon: MapPin },
 ];
 
 /* ─── Exported Spacer ───────────────────────────────────────────── */
