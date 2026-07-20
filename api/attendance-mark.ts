@@ -68,13 +68,14 @@ try {
 }
 
 // ── Geofence constants (must stay in sync with src/lib/geofence.ts) ─────────────────
-// Verified coordinates: 28.2712°N, 77.0679°E (main campus, near A-Block/main gate)
+// Verified coordinates: 28.272428°N, 77.0675693°E
+// Source: Google AI Overview + official krmangalam.edu.in documents (A-Block / campus centroid)
 const CAMPUS_CENTER = {
-  lat: parseFloat(process.env.CAMPUS_LAT || '28.2712'),
-  lng: parseFloat(process.env.CAMPUS_LNG || '77.0679'),
+  lat: parseFloat(process.env.CAMPUS_LAT || '28.272428'),
+  lng: parseFloat(process.env.CAMPUS_LNG || '77.0675693'),
 };
-const CAMPUS_RADIUS_METERS = 250;  // Updated: 250m radius
-const GPS_TOLERANCE_METERS = 40;   // Updated: ±40m for indoor/cloudy/Android drift
+const CAMPUS_RADIUS_METERS = 300;  // Full campus footprint (~300m radius from centroid)
+const GPS_TOLERANCE_METERS = 40;   // ±40m for indoor/cloudy/Android GPS drift
 
 // ── Haversine formula ────────────────────────────────────────────────────────
 function haversineDistance(

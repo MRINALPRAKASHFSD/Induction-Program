@@ -12,13 +12,14 @@
  */
 
 // ── K.R. Mangalam University, Sohna Road, Gurugram ────────────────────────────
-// Verified coordinates: 28.2712°N, 77.0679°E (main campus, near A-Block/main gate)
+// Verified coordinates: 28.272428°N, 77.0675693°E
+// Source: Google AI Overview + official krmangalam.edu.in documents (A-Block / campus centroid)
 export const CAMPUS_CENTER = {
-  lat: 28.2712,
-  lng: 77.0679,
+  lat: 28.272428,
+  lng: 77.0675693,
 };
 
-export const CAMPUS_RADIUS_METERS = 250;
+export const CAMPUS_RADIUS_METERS = 300; // Full campus footprint (~300m radius from centroid)
 export const GPS_TOLERANCE_METERS = 40; // ±40m for indoor/cloudy/Android GPS drift
 
 // ── Haversine distance ────────────────────────────────────────────────────────
