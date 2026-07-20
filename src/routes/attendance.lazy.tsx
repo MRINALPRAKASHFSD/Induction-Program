@@ -79,6 +79,9 @@ function AttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [location, setLocation] = useState<GeolocationResult | null>(null);
+  // locationRef mirrors location state but is readable inside scanner callbacks
+  // without stale closure issues (state updates are async; refs are synchronous).
+  const locationRef = useRef<GeolocationResult | null>(null);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = "qr-scanner-container";
@@ -118,7 +121,8 @@ function AttendancePage() {
     try {
       // Step 1: Get GPS coordinates and verify campus
       const position = await verifyInsideCampus();
-      setLocation(position);
+      locationRef.current = position;  // write synchronously — readable in scanner closure
+      setLocation(position);           // update UI state
 
       // Step 2: Start camera scanner
       setPhase("scanner");
@@ -176,7 +180,9 @@ function AttendancePage() {
       return;
     }
 
-    if (!location) {
+    // Read from ref — safe even inside a stale scanner callback closure
+    const currentLocation = locationRef.current;
+    if (!currentLocation) {
       setErrorMsg("Location not available. Please try again.");
       setPhase("error");
       return;
@@ -199,8 +205,8 @@ function AttendancePage() {
         body: JSON.stringify({
           qr_data: qrData,
           enrollment_no: profile.enrollment_no,
-          latitude: location.lat,
-          longitude: location.lng,
+          latitude: currentLocation.lat,
+          longitude: currentLocation.lng,
         }),
       });
 

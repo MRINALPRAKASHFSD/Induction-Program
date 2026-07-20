@@ -341,14 +341,15 @@ export default async function handler(req: any, res: any) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 13: Geofence — 250m radius + 40m GPS tolerance
+    // VALIDATION 13: Geofence — campus radius + GPS tolerance
+    // Always uses configured CAMPUS_CENTER (authoritative) — never trusts
+    // session.geofence_center because session documents may have stale coords.
     // ════════════════════════════════════════════════════════════════════════
     let distanceFromCampus = 0;
-    const maxAllowedRadius = (session.geofence_radius_meters || CAMPUS_RADIUS_METERS) + GPS_TOLERANCE_METERS;
+    const maxAllowedRadius = CAMPUS_RADIUS_METERS + GPS_TOLERANCE_METERS;
 
     if (typeof latitude === 'number' && typeof longitude === 'number') {
-      const campusCenter = session.geofence_center || CAMPUS_CENTER;
-      distanceFromCampus = Math.round(haversineDistance(latitude, longitude, campusCenter.lat, campusCenter.lng));
+      distanceFromCampus = Math.round(haversineDistance(latitude, longitude, CAMPUS_CENTER.lat, CAMPUS_CENTER.lng));
 
       if (distanceFromCampus > maxAllowedRadius) {
         console.warn(JSON.stringify({
