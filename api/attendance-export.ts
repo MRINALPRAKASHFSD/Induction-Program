@@ -71,13 +71,13 @@ export default async function handler(req: any, res: any) {
     // Fetch all attendance records for this session
     // We remove .orderBy('scanned_at', 'asc') from the query to prevent
     // requiring a composite index in Firestore. Instead, we sort in memory.
-    const attSnap = await db
-      .collection('attendance')
+    const recordsSnap = await db
+      .collection('attendance_logs')
       .where('session_id', '==', sessionId)
       .get();
 
     // Sort in memory by scanned_at to bypass Firestore composite index requirement
-    const sortedDocs = attSnap.docs.sort((a, b) => {
+    const sortedDocs = recordsSnap.docs.sort((a, b) => {
       const aTime = a.data().scanned_at?.toMillis?.() || 0;
       const bTime = b.data().scanned_at?.toMillis?.() || 0;
       return aTime - bTime;
@@ -105,11 +105,11 @@ export default async function handler(req: any, res: any) {
         index + 1,
         escapeCsv(data.student_id || ''),
         escapeCsv(data.student_name || ''),
-        escapeCsv(data.programme_id || session.programme_name || ''),
+        escapeCsv(data.department || session.programme_name || ''),
         escapeCsv(session.event_id || ''),
         escapeCsv(session.venue || ''),
         scannedAt,
-        escapeCsv(data.ip || ''),
+        escapeCsv(data.ip_address || ''),
       ].join(',');
     });
 
@@ -119,7 +119,7 @@ export default async function handler(req: any, res: any) {
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    return res.status(200).send(csv);
+    return res.status(200).end(csv);
   } catch (error: any) {
     console.error('attendance-export error:', error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });
