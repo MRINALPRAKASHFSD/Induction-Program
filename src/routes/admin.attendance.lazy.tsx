@@ -67,16 +67,21 @@ interface AttendanceRecord {
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
-async function apiCall(endpoint: string, body: any): Promise<any> {
+async function apiCall(endpoint: string, body: any, method: string = "POST"): Promise<any> {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
   const token = await user.getIdToken();
 
-  const res = await fetch(`/api/${endpoint}`, {
-    method: "POST",
+  const options: RequestInit = {
+    method,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  });
+  };
+
+  if (method !== "GET" && method !== "HEAD") {
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(`/api/${endpoint}`, options);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "API error");
   return data;
@@ -109,6 +114,7 @@ function AdminAttendance() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrCountdown, setQrCountdown] = useState(0);
   const [liveRecords, setLiveRecords] = useState<AttendanceRecord[]>([]);
+  const [liveStats, setLiveStats] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -156,7 +162,7 @@ function AdminAttendance() {
     if (!activeSession || activeSession.status !== "active") return;
 
     const q = query(
-      collection(db, "attendance"),
+      collection(db, "attendance_logs"),
       where("session_id", "==", activeSession.id),
       orderBy("scanned_at", "desc"),
       limit(100),
@@ -169,6 +175,29 @@ function AdminAttendance() {
 
     return () => unsub();
   }, [activeSession?.id, activeSession?.status]);
+
+  // ── Live stats polling ────────────────────────────────────────────────────
+  const fetchStats = useCallback(async () => {
+    if (!activeSession) return;
+    try {
+      const data = await apiCall(`attendance-stats?sessionId=${activeSession.id}`, null, "GET");
+      if (data.ok) {
+        setLiveStats(data.total_present);
+        
+        // Also update the session in the main list so it doesn't stay at 0
+        setSessions(prev => prev.map(s => 
+          s.id === activeSession.id ? { ...s, total_present: data.total_present } : s
+        ));
+      }
+    } catch(e) { }
+  }, [activeSession]);
+
+  useEffect(() => {
+    if (!activeSession || activeSession.status !== "active") return;
+    fetchStats();
+    const intId = setInterval(fetchStats, 5000); // 5 sec interval
+    return () => clearInterval(intId);
+  }, [activeSession?.id, activeSession?.status, fetchStats]);
 
   // ── QR polling & countdown ────────────────────────────────────────────────
   const fetchAndRenderQr = useCallback(async () => {
@@ -579,7 +608,7 @@ function AdminAttendance() {
               <div className="p-5">
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <div className="bg-emerald-500/10 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-emerald-600">{liveRecords.length}</div>
+                    <div className="text-3xl font-bold text-emerald-600">{liveStats}</div>
                     <div className="text-xs text-muted-foreground font-medium mt-0.5">Students Present</div>
                   </div>
                   <div className="bg-blue-500/10 rounded-xl p-4 text-center">

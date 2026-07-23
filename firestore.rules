@@ -2,20 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper Functions
-    function isValidStudent() {
-      let data = request.resource.data;
-      return data.keys().hasAll(['full_name', 'course', 'created_at'])
-          && data.full_name is string
-          && data.course is string;
-    }
+    // ── Helper Functions ────────────────────────────────────────────────────
 
-    function isAttendanceValid(docId) {
+    function isValidStudent() {
+      // Accepts both new students (semester field) and legacy students (department_id field).
+      // Only full_name and created_at are universally required across both schemas.
       let data = request.resource.data;
-      return data.keys().hasAll(['event_id', 'student_id', 'scanned_at'])
-          && data.event_id is string
-          && data.student_id is string
-          && docId == (data.event_id + '_' + data.student_id);
+      return data.keys().hasAll(['full_name', 'created_at'])
+          && data.full_name is string;
     }
 
     function isClubRegistrationValid(docId) {
@@ -26,44 +20,41 @@ service cloud.firestore {
           && docId == (data.club_id + '_' + data.student_id);
     }
 
+    // Role-based Custom Claims (Replaces get/exists)
+    function hasRole(role) {
+      return request.auth != null && request.auth.token.role == role;
+    }
+
     function isSuperAdmin() {
-      return request.auth != null && (
-        ('role' in request.auth.token && request.auth.token.role == 'super_admin') || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
-      );
+      return hasRole('super_admin');
     }
 
     function isAdminOrCoordinator() {
-      return request.auth != null && (
-        ('role' in request.auth.token && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator')) || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         'role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coordinator'))
-      );
+      return hasRole('super_admin') || hasRole('coordinator');
+    }
+
+    function isScanner() {
+      return hasRole('scanner');
     }
     
-    // 1. EVENTS
+    // ── 1. EVENTS ────────────────────────────────────────────────────────────
     match /events/{eventId} {
       allow read: if true;
       allow write: if isAdminOrCoordinator(); 
     }
     
-    // 2. STUDENTS
+    // ── 2. STUDENTS ──────────────────────────────────────────────────────────
     match /students/{enrollmentId} {
       allow get: if true; 
-      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
+      allow list: if isAdminOrCoordinator();
       allow create: if isValidStudent();
       allow update: if 
-        // 1. Department ID cannot be changed (Lock)
-        request.resource.data.department_id == resource.data.department_id &&
-        // 2. Points can only be updated if they increment by 5, 10 or 25
+        // 1. Points can only be updated if they increment by 5, 10 or 25 (gamification lock)
         (request.resource.data.points == resource.data.points + 5 || 
          request.resource.data.points == resource.data.points + 10 || 
          request.resource.data.points == resource.data.points + 25 ||
          request.resource.data.points == resource.data.points) &&
-        // 3. Other core fields cannot be changed
+        // 2. Core identity fields are immutable after registration
         request.resource.data.enrollment_no == resource.data.enrollment_no &&
         request.resource.data.full_name == resource.data.full_name;
       allow delete: if false;
@@ -71,46 +62,60 @@ service cloud.firestore {
       match /private/contact {
         allow get: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/students/$(enrollmentId)).data.auth_uid;
         allow list: if false;
-        allow create, update: if true; // We can restrict this further based on auth_uid if needed, but for registration we allow create.
+        allow create, update: if true; 
         allow delete: if false;
       }
     }
     
-    // 3. ATTENDANCE
-    // SECURITY: Attendance is written ONLY by the server-side Admin SDK (api/attendance-mark.ts).
-    // Client-side writes are completely blocked to prevent forgery.
-    match /attendance/{docId} {
-      allow get: if request.auth != null;
-      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
-      allow create, update, delete: if false; // Server-only via Admin SDK
-    }
-
-    // 3a. ATTENDANCE SESSIONS (admin-managed via API)
+    // ── 3. ENTERPRISE ATTENDANCE ARCHITECTURE ────────────────────────────────
+    
     match /attendance_sessions/{sessionId} {
-      allow read: if isAdminOrCoordinator();
-      allow write: if false; // Server-only via Admin SDK
+      allow read: if request.auth != null; 
+      allow write: if isAdminOrCoordinator();
+      
+      // Highly restricted secrets subcollection
+      match /secrets/{secretId} {
+        allow read, write: if false; // Admin SDK only
+      }
     }
 
-    // 3b. ATTENDANCE QR NONCES (server-managed, single-use tokens)
-    match /attendance_qr_nonces/{nonce} {
-      allow read, write: if false; // Server-only via Admin SDK
+    match /attendance_logs/{logId} {
+      allow read: if isAdminOrCoordinator() || (request.auth != null && logId.matches('.*_' + request.auth.uid));
+      // Workers use Admin SDK (bypasses rules). Client creation blocked.
+      allow write: if false; 
+    }
+
+    match /attendance_stats/{document=**} {
+      allow read: if isAdminOrCoordinator();
+      allow write: if false; // Worker (Admin SDK) only
+    }
+
+    match /scanner_devices/{deviceId} {
+      allow read: if isAdminOrCoordinator() || isScanner();
+      allow write: if isAdminOrCoordinator();
     }
     
-    // 4. CLUBS
+    // Internal system collections
+    match /processed_jobs/{id} { allow read, write: if false; }
+    match /dead_letter_jobs/{id} { allow read, write: if isSuperAdmin(); }
+    match /attendance_audit/{id} { allow read: if isAdminOrCoordinator(); allow write: if false; }
+    match /qr_history/{id} { allow read: if isAdminOrCoordinator(); allow write: if false; }
+    
+    // ── 4. CLUBS ─────────────────────────────────────────────────────────────
     match /clubs/{clubId} {
       allow read: if true;
       allow write: if false;
     }
     
-    // 5. CLUB REGISTRATIONS
+    // ── 5. CLUB REGISTRATIONS ────────────────────────────────────────────────
     match /club_registrations/{regId} {
       allow get: if true;
-      allow list: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
-      allow create: if isClubRegistrationValid(regId); // Enforces schema and composite ID
+      allow list: if isAdminOrCoordinator();
+      allow create: if isClubRegistrationValid(regId);
       allow update, delete: if false;
     }
 
-    // 6. CLUB EVENTS & ATTENDANCE
+    // ── 6. CLUB EVENTS & ATTENDANCE ──────────────────────────────────────────
     match /club_events/{eventId} {
       allow read: if true;
       allow write: if false;
@@ -119,52 +124,44 @@ service cloud.firestore {
     match /club_attendance/{docId} {
       allow get: if true;
       allow list: if false;
-      allow create: if isAttendanceValid(docId); 
+      // Note: Club attendance validation might need updating if they also switch to new architecture later.
+      allow create: if request.resource.data.keys().hasAll(['event_id', 'student_id', 'scanned_at']); 
       allow update, delete: if false;
     }
 
-    // 7. ADMINS
+    // ── 7. ADMINS ─────────────────────────────────────────────────────────────
     match /admins/{adminId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // 8. SECURE DOCUMENTS
+    // ── 8. SECURE DOCUMENTS ──────────────────────────────────────────────────
     match /secure_documents/{docId} {
-      // Allow super_admin and coordinator to read
-      allow read: if request.auth != null && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator');
-      // Allow coordinator and super_admin to upload document metadata
-      allow create: if request.auth != null && (request.auth.token.role == 'coordinator' || request.auth.token.role == 'super_admin');
-      // Allow updates for soft deletes/restores
-      allow update: if request.auth != null && (request.auth.token.role == 'coordinator' || request.auth.token.role == 'super_admin');
-      allow delete: if request.auth != null && request.auth.token.role == 'super_admin';
+      allow read: if isAdminOrCoordinator();
+      allow create, update: if isAdminOrCoordinator();
+      allow delete: if isSuperAdmin();
     }
 
-    // 9. USERS (RBAC)
+    // ── 9. USERS (RBAC) ──────────────────────────────────────────────────────
     match /users/{userId} {
-      // Allow a user to read their own profile, or super_admin to read all
-      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.role == 'super_admin');
-      // Only super_admin can create/update users
-      allow write: if request.auth != null && request.auth.token.role == 'super_admin';
-    }
-
-    // 10. AUDIT LOGS
-    match /audit_logs/{logId} {
-      // Only super admin can read the audit logs
-      allow read: if request.auth != null && request.auth.token.role == 'super_admin';
-      allow create: if request.auth != null;
-      allow update, delete: if false; // Immutable logs
-    }
-
-    // 11. ANNOUNCEMENTS
-    match /announcements/{announcementId} {
-      // Anyone can read active announcements. Super admins can read all (including archived).
-      allow read: if resource.data.status == 'active' || isSuperAdmin();
-      // Only super admin can modify announcements from the client, though they should use the API
+      allow read: if request.auth != null && (request.auth.uid == userId || isSuperAdmin());
       allow write: if isSuperAdmin();
     }
 
-    // 12. USER NOTIFICATIONS
+    // ── 10. AUDIT LOGS ───────────────────────────────────────────────────────
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdminOrCoordinator();
+      allow update, delete: if false; 
+    }
+
+    // ── 11. ANNOUNCEMENTS ─────────────────────────────────────────────────────
+    match /announcements/{announcementId} {
+      allow read: if resource.data.status == 'active' || isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // ── 12. USER NOTIFICATIONS ───────────────────────────────────────────────
     match /user_notifications/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
       
@@ -172,5 +169,25 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
+
+    // ── 13. UNIQUENESS INDEX COLLECTIONS ─────────────────────────────────────
+    match /email_index/{emailKey} {
+      allow create: if true;                  
+      allow read, update, delete: if false;   
+    }
+    match /studentid_index/{studentId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+    match /phone_index/{phoneKey} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+
+    // ── 14. OTP SESSIONS ─────────────────────────────────────────────────────
+    match /otp_sessions/{email} {
+      allow read, write: if false; // Server-only via Admin SDK
+    }
+
   }
 }

@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import { getRedis } from '../server/redis.js';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -47,6 +48,26 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Valid email is required' });
   }
 
+  const emailKey = email.toLowerCase().trim();
+
+  // ── Rate limiting: 5 OTP requests per email per 10 minutes ───────────────
+  // Prevents email flooding attacks. Fails OPEN if Redis is unavailable so
+  // legitimate users are never blocked due to a Redis outage.
+  try {
+    const redis = getRedis();
+    const rateLimitKey = `ratelimit:otp:${emailKey}`;
+    const attempts = await redis.incr(rateLimitKey);
+    if (attempts === 1) await redis.expire(rateLimitKey, 600); // 10-minute window
+    if (attempts > 5) {
+      return res.status(429).json({
+        error: 'Too many verification requests. Please wait 10 minutes before requesting another code.',
+      });
+    }
+  } catch (redisErr: any) {
+    // Fail open — Redis outage should not prevent logins
+    console.warn(`[send-otp] Redis rate limit check failed (fail-open): ${redisErr.message}`);
+  }
+
   try {
     const db = getFirestore();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -54,7 +75,7 @@ export default async function handler(req: any, res: any) {
     // Run Firestore write and email send IN PARALLEL for speed
     const expiresAt = Timestamp.fromDate(new Date(Date.now() + 5 * 60 * 1000));
     
-    const firestorePromise = db.collection('otp_sessions').doc(email.toLowerCase()).set({
+    const firestorePromise = db.collection('otp_sessions').doc(emailKey).set({
       otp,
       expiresAt,
       attempts: 0

@@ -98,7 +98,7 @@ function AttendancePage() {
   const loadAttendanceHistory = useCallback(async (enrollmentNo: string) => {
     try {
       const q = query(
-        collection(db, "attendance"),
+        collection(db, "attendance_logs"),
         where("student_id", "==", enrollmentNo.toUpperCase()),
         orderBy("scanned_at", "desc"),
         limit(50),

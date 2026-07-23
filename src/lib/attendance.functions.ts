@@ -37,7 +37,7 @@ import { eventCache } from "@/lib/event-cache";
  */
 export const getStudentAttendanceHistory = async (enrollmentNo: string) => {
   const q = query(
-    collection(db, "attendance"),
+    collection(db, "attendance_logs"),
     where("student_id", "==", enrollmentNo.toUpperCase()),
     limit(50),
   );

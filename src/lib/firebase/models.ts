@@ -1,15 +1,19 @@
 import { Timestamp } from "firebase/firestore";
 
 export interface Student {
-  id: string; // auto-generated
+  id: string;
   full_name: string;
   enrollment_no: string;
-  email?: string;
-  phone?: string;
   course: string;
-  year: number;
-  department_id: string;
-  created_at: Timestamp;
+  points: number;
+  auth_uid?: string | null;
+  created_at: Timestamp | string;
+  // Academic fields — present on all new registrations
+  department_id?: string;   // e.g. "soet"
+  branch_id?: string | null; // e.g. "Undergraduate Programmes"
+  year?: number;            // Session year: 1 = 2026–2027
+  // Legacy / compat
+  semester?: string;        // Only on records created by the old simplified flow
 }
 
 export interface Department {

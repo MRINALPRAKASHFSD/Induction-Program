@@ -124,7 +124,21 @@ export default async function handler(req: any, res: any) {
           updated_at: FieldValue.serverTimestamp(),
         };
 
-        await db.collection('attendance_sessions').doc(sessionId).set(sessionData);
+        const batch = db.batch();
+        const sessionRef = db.collection('attendance_sessions').doc(sessionId);
+        
+        // 1. Create the session document
+        batch.set(sessionRef, sessionData);
+
+        // 2. Create the cryptographic secret for QR signing
+        // This is isolated in a subcollection so rules can deny client access
+        const secretRef = sessionRef.collection('secrets').doc('key');
+        batch.set(secretRef, {
+          session_secret: crypto.randomBytes(32).toString('hex'),
+          created_at: FieldValue.serverTimestamp(),
+        });
+
+        await batch.commit();
 
         return res.status(201).json({
           ok: true,

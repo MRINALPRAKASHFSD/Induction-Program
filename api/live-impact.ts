@@ -36,7 +36,7 @@ export default async function handler(req: any, res: any) {
     // Run all aggregation queries in parallel
     const [students, attendance, clubs] = await Promise.all([
       db.collection('students').count().get(),
-      db.collection('attendance').count().get(),
+      db.collection('attendance_logs').count().get(),
       db.collection('club_registrations').count().get()
     ]);
 

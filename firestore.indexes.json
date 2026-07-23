@@ -46,25 +46,49 @@
       "collectionGroup": "attendance_sessions",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "programme_id", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "created_at", "order": "DESCENDING" }
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "attendance",
+      "collectionGroup": "attendance_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "school", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "attendance_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "session_id", "order": "ASCENDING" },
-        { "fieldPath": "scanned_at", "order": "DESCENDING" }
+        { "fieldPath": "scan_time", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "attendance",
+      "collectionGroup": "attendance_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "student_id", "order": "ASCENDING" },
-        { "fieldPath": "scanned_at", "order": "DESCENDING" }
+        { "fieldPath": "scan_time", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "attendance_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "session_id", "order": "ASCENDING" },
+        { "fieldPath": "programme", "order": "ASCENDING" },
+        { "fieldPath": "scan_time", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "attendance_audit",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "session_id", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
   ],

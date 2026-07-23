@@ -1,9 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { auth, db } from "@/lib/firebase/config";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { collection, query, where, onSnapshot, doc, setDoc } from "firebase/firestore";
+// Firebase imports moved to dynamic imports inside effects and handlers
 import { localDb } from "@/lib/local-db";
 import {
   DropdownMenu,
@@ -97,40 +95,62 @@ export function SiteHeader() {
 
   /* ── Auth listener ────────────────────────────────────────────── */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
+    let unsubscribe = () => {};
+    Promise.all([
+      import("@/lib/firebase/config"),
+      import("firebase/auth")
+    ]).then(([{ auth }, { onAuthStateChanged }]) => {
+      unsubscribe = onAuthStateChanged(auth, (u) => {
+        setUser(u);
+      });
+    }).catch(e => console.error("Firebase auth lazy load failed", e));
     return () => unsubscribe();
   }, []);
 
   /* ── Announcements listener ───────────────────────────────────── */
   useEffect(() => {
-    const qAnnouncements = query(
-      collection(db, "announcements"),
-      where("status", "==", "active")
-    );
+    let unsubAnnouncements = () => {};
     
-    const unsubAnnouncements = onSnapshot(qAnnouncements, (snap) => {
-      const now = new Date().getTime();
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => {
-        if (a.expiresAt && new Date(a.expiresAt).getTime() < now) return false;
-        return a.targetAudience === "All Students";
+    Promise.all([
+      import("@/lib/firebase/config"),
+      import("firebase/firestore")
+    ]).then(([{ db }, { collection, query, where, onSnapshot }]) => {
+      const qAnnouncements = query(
+        collection(db, "announcements"),
+        where("status", "==", "active")
+      );
+      
+      unsubAnnouncements = onSnapshot(qAnnouncements, (snap) => {
+        const now = new Date().getTime();
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter((a: any) => {
+          if (a.expiresAt && new Date(a.expiresAt).getTime() < now) return false;
+          return a.targetAudience === "All Students";
+        });
+        docs.sort((a: any, b: any) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
+        setAnnouncements(docs);
       });
-      docs.sort((a: any, b: any) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
-      setAnnouncements(docs);
-    });
+    }).catch(e => console.error("Firebase firestore lazy load failed", e));
 
-    return () => unsubAnnouncements();
+    return () => {
+      unsubAnnouncements();
+    };
   }, []);
 
   /* ── Read-state listener ──────────────────────────────────────── */
   useEffect(() => {
     if (user) {
-      const qReads = collection(db, `user_notifications/${user.uid}/reads`);
-      const unsubReads = onSnapshot(qReads, (snap) => {
-        const reads = new Set(snap.docs.map(d => d.id));
-        setReadIds(reads);
-      });
+      let unsubReads = () => {};
+      Promise.all([
+        import("@/lib/firebase/config"),
+        import("firebase/firestore")
+      ]).then(([{ db }, { collection, onSnapshot }]) => {
+        const qReads = collection(db, `user_notifications/${user.uid}/reads`);
+        unsubReads = onSnapshot(qReads, (snap) => {
+          const reads = new Set(snap.docs.map(d => d.id));
+          setReadIds(reads);
+        });
+      }).catch(e => console.error("Firebase reads lazy load failed", e));
+      
       return () => unsubReads();
     } else {
       const localReads = JSON.parse(localStorage.getItem('read_announcements') || '[]');
@@ -141,6 +161,8 @@ export function SiteHeader() {
   /* ── Handlers ─────────────────────────────────────────────────── */
   const handleLogout = async () => {
     try {
+      const { auth } = await import("@/lib/firebase/config");
+      const { signOut } = await import("firebase/auth");
       await signOut(auth);
       localStorage.removeItem("krmu_active_profile");
       toast.success("Logged out successfully");
@@ -155,17 +177,21 @@ export function SiteHeader() {
     
     if (user) {
       try {
+        const [{ db }, { doc, setDoc }] = await Promise.all([
+          import("@/lib/firebase/config"),
+          import("firebase/firestore")
+        ]);
         await setDoc(doc(db, `user_notifications/${user.uid}/reads/${id}`), {
           readAt: new Date().toISOString()
         });
-      } catch (e) {
-        console.error("Failed to mark read", e);
+      } catch (err) {
+        console.error("Failed to mark as read", err);
       }
     } else {
-      const newReads = new Set(readIds);
-      newReads.add(id);
-      setReadIds(newReads);
-      localStorage.setItem('read_announcements', JSON.stringify(Array.from(newReads)));
+      const updated = new Set(readIds);
+      updated.add(id);
+      setReadIds(updated);
+      localStorage.setItem('read_announcements', JSON.stringify(Array.from(updated)));
     }
   }, [readIds, user]);
 

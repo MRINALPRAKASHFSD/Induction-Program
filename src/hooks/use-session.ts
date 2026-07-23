@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
-import { auth } from "@/lib/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
 
 export function useSession() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        setUserId(null);
-      }
+    let unsubscribe = () => {};
+
+    Promise.all([
+      import("@/lib/firebase/config"),
+      import("firebase/auth")
+    ]).then(([{ auth }, { onAuthStateChanged }]) => {
+      unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          setUserId(user.uid);
+        } else {
+          setUserId(null);
+        }
+        setLoading(false);
+      });
+    }).catch(err => {
+      console.error("Failed to load Firebase auth in useSession", err);
       setLoading(false);
     });
 

@@ -6,21 +6,18 @@
  * Called by Upstash QStash after each successful attendance mark.
  * Responsibilities:
  *   1. Verify the QStash signature (security — prevents spoofing)
- *   2. Award +10 points to the student in Firestore
- *   3. Write a denormalized analytics record for the admin dashboard
+ *   2. Write an immutable log to `attendance_logs`
+ *   3. Increment a random distributed counter shard in `attendance_stats/{sessionId}/shards/{shardId}`
+ *   4. Record the job in `processed_jobs` for idempotency
  *
  * QStash retry policy: 3 retries with exponential backoff.
- * If all retries fail → logged in QStash dead letter queue (no data lost).
- *
- * Required env vars (same as attendance-mark.ts plus):
- *   QSTASH_CURRENT_SIGNING_KEY  — from Upstash QStash dashboard
- *   QSTASH_NEXT_SIGNING_KEY     — for rolling key rotation
  */
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { Receiver } from '@upstash/qstash';
 import type { AttendanceJobPayload } from '../server/qstash.js';
+import crypto from 'crypto';
 
 // ── Firebase Admin Singleton ──────────────────────────────────────────────────
 let firebaseInitialized = false;
@@ -58,15 +55,12 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── 1. Verify QStash Signature ────────────────────────────────────────────
-  // This prevents anyone from calling the worker endpoint directly.
-  // QStash signs every delivery with HMAC-SHA256.
   const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   const nextKey = process.env.QSTASH_NEXT_SIGNING_KEY;
 
   if (currentKey && nextKey) {
     try {
       const receiver = new Receiver({ currentSigningKey: currentKey, nextSigningKey: nextKey });
-
       const rawBody = JSON.stringify(req.body);
       const signature = req.headers['upstash-signature'] as string;
 
@@ -84,53 +78,83 @@ export default async function handler(req: any, res: any) {
       return res.status(401).json({ error: 'Signature verification failed' });
     }
   } else {
-    // In dev mode without QStash keys, allow but log a warning
     console.warn('[attendance-worker] QStash signing keys not set — running in dev mode (no signature check)');
   }
 
   // ── 2. Process the Job ────────────────────────────────────────────────────
   const payload = req.body as AttendanceJobPayload;
+  const messageId = req.headers['upstash-message-id'] as string || crypto.randomUUID();
 
-  if (!payload.eventId || !payload.studentId) {
+  if (!payload.sessionId || !payload.studentId) {
     return res.status(400).json({ error: 'Invalid job payload' });
   }
 
   try {
     const db = getFirestore();
 
-    // Award points and write analytics in a single batch (atomic)
-    const batch = db.batch();
+    // Idempotency Check using a Transaction
+    await db.runTransaction(async (transaction) => {
+      const processedJobRef = db.collection('processed_jobs').doc(messageId);
+      const jobDoc = await transaction.get(processedJobRef);
+      
+      if (jobDoc.exists) {
+        console.log(`[attendance-worker] Job ${messageId} already processed. Skipping.`);
+        return;
+      }
 
-    // +10 points to student
-    const studentRef = db.collection('students').doc(payload.studentId);
-    batch.update(studentRef, {
-      points: FieldValue.increment(10),
+      const logId = `${payload.sessionId}_${payload.studentId}`;
+      const logRef = db.collection('attendance_logs').doc(logId);
+      const logDoc = await transaction.get(logRef);
+      
+      if (!logDoc.exists) {
+        // Write the immutable attendance log
+        transaction.set(logRef, {
+          schema_version: 1,
+          session_id: payload.sessionId,
+          student_id: payload.studentId,
+          enrollment_no: payload.enrollmentNo,
+          student_name: payload.studentName,
+          school: payload.school,
+          department: payload.department,
+          programme: payload.programme,
+          semester: payload.semester,
+          section: payload.section,
+          email: payload.email,
+          scan_time: FieldValue.serverTimestamp(),
+          qr_version: payload.qrVersion,
+          scanner_device_id: payload.scannerDeviceId,
+          ip_address: payload.ipAddress,
+          user_agent: payload.userAgent,
+          verification_result: payload.verificationResult,
+          created_at: FieldValue.serverTimestamp(),
+        });
+
+        // Fetch shard count dynamically from session config (default 64)
+        const sessionRef = db.collection('attendance_sessions').doc(payload.sessionId);
+        const sessionDoc = await transaction.get(sessionRef);
+        const numShards = sessionDoc.exists ? (sessionDoc.data()?.num_shards || 64) : 64;
+        
+        // Pick a random shard
+        const shardId = Math.floor(Math.random() * numShards).toString();
+        const shardRef = db.collection('attendance_stats').doc(payload.sessionId).collection('shards').doc(shardId);
+        
+        // Increment the shard
+        transaction.set(shardRef, {
+          total_present: FieldValue.increment(1)
+        }, { merge: true });
+      }
+
+      // Record job as processed with a TTL (e.g., 7 days)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      transaction.set(processedJobRef, {
+        processed_at: FieldValue.serverTimestamp(),
+        expires_at: expiresAt
+      });
     });
 
-    // Analytics record — used by admin dashboard live counter
-    // Collection: attendance_analytics
-    // Doc ID: {eventId}_{studentId} (same compound key — idempotent writes)
-    const analyticsRef = db
-      .collection('attendance_analytics')
-      .doc(`${payload.eventId}_${payload.studentId}`);
-    batch.set(analyticsRef, {
-      event_id: payload.eventId,
-      student_id: payload.studentId,
-      student_name: payload.studentName,
-      event_title: payload.eventTitle,
-      day_number: payload.dayNumber,
-      scanned_at: payload.scannedAt,
-      points_awarded: 10,
-      ip: payload.ip,
-      processed_at: FieldValue.serverTimestamp(),
-    }, { merge: true }); // merge=true makes this safe to retry (QStash retries)
-
-    await batch.commit();
-
-    console.log(
-      `[attendance-worker] ✓ Processed: ${payload.studentId} @ ${payload.eventTitle}`
-    );
-
+    console.log(`[attendance-worker] ✓ Processed: ${payload.studentId} @ Session ${payload.sessionId}`);
     return res.status(200).json({ ok: true, message: 'Job processed successfully.' });
   } catch (error: any) {
     console.error('[attendance-worker] Processing error:', error);

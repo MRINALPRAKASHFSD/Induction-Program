@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "@/lib/firebase/config";
+import { db, auth } from "@/lib/firebase/config";
 import {
   collection,
   doc,
@@ -13,18 +13,21 @@ import {
 } from "firebase/firestore";
 import { eventCache } from "@/lib/event-cache";
 
+// ── Registration schema ────────────────────────────────────────────────────
+// Original KRMU registration fields, restored.
+// Phone is now MANDATORY (was optional before the production hardening).
+// All uniqueness is enforced via O(1) index collection lookups — not collection scans.
 const studentSchema = z.object({
-  full_name: z.string().trim().min(2, "Name is too short").max(120),
+  full_name:     z.string().trim().min(2, "Name is too short").max(120),
   enrollment_no: z.string().trim().min(3, "Enrollment number is too short").max(40),
-  email: z.string().trim().email("Invalid email address").max(200),
-  phone: z.string().trim().refine(val => val === "" || val.length >= 10, {
-    message: "Phone number must be at least 10 digits if provided",
-  }),
-  department_id: z.string().uuid().or(z.string()),
-  branch_id: z.string().uuid().or(z.string()).nullable().optional(),
-  course: z.string().trim().min(1, "Course is required").max(80),
-  year: z.number().int().min(1).max(6),
-  auth_uid: z.string().optional(),
+  email:         z.string().trim().email("Invalid email address").max(200),
+  phone:         z.string().trim().min(10, "Phone number must be at least 10 digits").max(20),
+  department_id: z.string().min(1, "School is required"),
+  branch_id:     z.string().nullable().optional(),
+  course:        z.string().trim().min(1, "Course is required").max(80),
+  year:          z.number().int().min(1).max(6),
+  deptName:      z.string().optional(),
+  auth_uid:      z.string().optional(),
 });
 
 export const registerStudent = async ({ data }: { data: any }) => {
@@ -34,41 +37,49 @@ export const registerStudent = async ({ data }: { data: any }) => {
   }
   const parsed = parsedResult.data;
 
-  const newStudentRef = doc(db, "students", parsed.enrollment_no);
+  try {
+    const idToken = await auth.currentUser?.getIdToken();
+    
+    if (!idToken) {
+       return {
+         ok: false,
+         error: "Authentication required. Please verify your OTP again.",
+       };
+    }
 
-  // Direct O(1) doc lookup — enrollment_no is the document ID
-  const docSnap = await getDoc(newStudentRef);
-  if (docSnap.exists()) {
-    const existingData = docSnap.data();
-    // If the enrollment number is already registered under a different email/auth session
-    if (existingData.auth_uid && existingData.auth_uid !== parsed.auth_uid) {
-      return { 
-        ok: false, 
-        error: "This enrollment number is already registered on another device or email. Please log in with the original email or contact support." 
+    // ── Call Secure Backend Endpoint ──────────────────────────────────────────
+    // Moving registration to the server allows the Admin SDK to bypass firestore 
+    // security rules. This enables accurate O(1) reads of index collections
+    // to return specific duplicate error codes (EMAIL_EXISTS, PHONE_EXISTS),
+    // eliminating the risk of masking generic database failures.
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(parsed),
+    });
+
+    const result = await res.json();
+    
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: result.error || "Failed to register. Please try again.",
+        code: result.code
       };
     }
-    // Otherwise, they are just "logging back in" on a new device with the SAME email.
-    return { ok: true, student_id: newStudentRef.id, duplicate: true };
+
+    return result; // { ok: true, student_id: string, duplicate: boolean }
+    
+  } catch (error: any) {
+    console.error("Client registration error:", error);
+    return {
+      ok: false,
+      error: "Network error during registration. Please check your connection and try again."
+    };
   }
-
-  const { email, phone, auth_uid, ...publicData } = parsed;
-
-  const batch = writeBatch(db);
-
-  batch.set(newStudentRef, {
-    ...publicData,
-    id: newStudentRef.id,
-    auth_uid: auth_uid || null,
-    points: 0, // Gamification: Start with 0 points
-    created_at: new Date().toISOString(),
-  });
-
-  const privateRef = doc(db, "students", parsed.enrollment_no, "private", "contact");
-  batch.set(privateRef, { email, phone });
-
-  await batch.commit();
-
-  return { ok: true, student_id: newStudentRef.id, duplicate: false };
 };
 
 export const lookupStudent = async ({ data }: { data: any }) => {
@@ -92,22 +103,15 @@ export const getDepartments = async () => {
 };
 
 /**
- * getSchoolDays — FIXED for 5,000+ concurrent users
+ * getSchoolDays — Optimized for 5,000+ concurrent users
  *
- * Before: Full collection scan on `events` → filter in JS
- *   → N reads on every request, N grows with every event created
- *
- * After:  Compound Firestore query (department_id + is_active)
- *   → reads ONLY matching documents, server-side
- *   → result cached in memory for 5 min; 5,000 students share 1 read
- *
+ * Uses compound Firestore query (department_id + is_active) with server-side filtering.
+ * Result cached in memory for 5 min — 5,000 students share 1 read.
  * Requires composite index: (department_id ASC, is_active ASC)
- * Defined in: firestore.indexes.json
  */
 export const getSchoolDays = async ({ data }: { data: any }) => {
   const cacheKey = `days:${data.department_id}`;
 
-  // Return from memory cache if still valid (5 min TTL)
   const cached = eventCache.get<number[]>(cacheKey);
   if (cached) return { days: cached };
 
@@ -128,22 +132,15 @@ export const getSchoolDays = async ({ data }: { data: any }) => {
 };
 
 /**
- * getSchoolSessions — FIXED for 5,000+ concurrent users
+ * getSchoolSessions — Optimized for 5,000+ concurrent users
  *
- * Before: Full collection scan → filter by dept + day + is_active in JS
- *   → reads entire events collection every time
- *
- * After:  3-clause compound query + server-side orderBy
- *   → pinpoint read, only the matching sessions returned
- *   → result cached per (dept, day) key for 5 min
- *
+ * 3-clause compound query + server-side orderBy, pinpoint read.
+ * Result cached per (dept, day) key for 5 min.
  * Requires composite index: (department_id ASC, day_number ASC, is_active ASC, starts_at ASC)
- * Defined in: firestore.indexes.json
  */
 export const getSchoolSessions = async ({ data }: { data: any }) => {
   const cacheKey = `sess:${data.department_id}:${data.day_number}`;
 
-  // Return from memory cache if still valid (5 min TTL)
   const cached = eventCache.get<any[]>(cacheKey);
   if (cached) return { sessions: cached };
 
@@ -152,13 +149,12 @@ export const getSchoolSessions = async ({ data }: { data: any }) => {
     eventsRef,
     where("department_id", "in", [data.department_id, null]),
     where("day_number", "==", Number(data.day_number)),
-    where("is_active", "==", true)
-    // orderBy("starts_at", "asc") - removed because Firestore requires orderBy field to be in the 'in' filter, we will sort in memory
+    where("is_active", "==", true),
   );
   const snap = await getDocs(q);
   const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  // Sort in memory since we used 'in' query
+
+  // Sort in memory — needed because 'in' queries don't support orderBy
   sessions.sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
   eventCache.set(cacheKey, sessions);
@@ -166,7 +162,7 @@ export const getSchoolSessions = async ({ data }: { data: any }) => {
 };
 
 /**
- * getAllSchoolDays - Master view (all departments)
+ * getAllSchoolDays - Master view (all departments, admin use)
  */
 export const getAllSchoolDays = async () => {
   const cacheKey = `days:all`;
@@ -186,7 +182,7 @@ export const getAllSchoolDays = async () => {
 };
 
 /**
- * getAllSchoolSessions - Master view (all departments)
+ * getAllSchoolSessions - Master view (all departments, admin use)
  */
 export const getAllSchoolSessions = async ({ data }: { data: any }) => {
   const cacheKey = `sess:all:${data.day_number}`;
@@ -197,11 +193,11 @@ export const getAllSchoolSessions = async ({ data }: { data: any }) => {
   const q = query(
     eventsRef,
     where("day_number", "==", Number(data.day_number)),
-    where("is_active", "==", true)
+    where("is_active", "==", true),
   );
   const snap = await getDocs(q);
   const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
+
   sessions.sort((a: any, b: any) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
 
   eventCache.set(cacheKey, sessions);
@@ -212,4 +208,3 @@ export const getAllSchoolSessions = async ({ data }: { data: any }) => {
 // NOTE: generateQrPayload was removed in the Secure Attendance Architecture migration.
 // QR payloads are now generated exclusively by the server-side admin API (api/attendance-qr.ts).
 // Students must NEVER generate or view QR codes.
-

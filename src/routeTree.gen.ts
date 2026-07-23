@@ -12,6 +12,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
@@ -93,6 +94,11 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -172,6 +178,7 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -223,6 +231,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -326,6 +338,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   AnnouncementsLazyRoute: typeof AnnouncementsLazyRoute
   AttendanceLazyRoute: typeof AttendanceLazyRoute
@@ -429,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -518,6 +538,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   AnnouncementsLazyRoute: AnnouncementsLazyRoute,
   AttendanceLazyRoute: AttendanceLazyRoute,

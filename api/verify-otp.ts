@@ -97,7 +97,21 @@ export default async function handler(req: any, res: any) {
       }
     );
     
-    return res.status(200).json({ success: true, customToken });
+    // ── Check if this email belongs to an already-registered student ──────
+    // O(1) document lookup — no collection scan required.
+    const emailKey = email.toLowerCase().trim();
+    const emailIndexSnap = await db.collection('email_index').doc(emailKey).get();
+    const userExists = emailIndexSnap.exists;
+    const enrollmentNo: string | null = userExists
+      ? (emailIndexSnap.data()!.enrollment_no as string)
+      : null;
+
+    return res.status(200).json({
+      success: true,
+      customToken,
+      userExists,    // true → existing student, go straight to dashboard
+      enrollmentNo,  // enrollment_no for existing students, null for new users
+    });
   } catch (error: any) {
     console.error("OTP Verify Error:", error);
     return res.status(500).json({ error: error.message || 'Internal Server Error' });

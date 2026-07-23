@@ -154,7 +154,7 @@ export const registerForClub = async ({ data }: { data: any }) => {
 export const getAnalytics = async () => {
   const [studentsSnap, attendanceSnap, clubsSnap, eventsSnap] = await Promise.all([
     getCountFromServer(collection(db, "students")),
-    getCountFromServer(collection(db, "attendance")),
+    getCountFromServer(collection(db, "attendance_logs")),
     getCountFromServer(collection(db, "club_registrations")),
     getDocs(collection(db, "events"))
   ]);
@@ -224,7 +224,7 @@ export const listActivityLogs = async ({ data }: { data: any }) => {
 /* ---------------- Attendance logs ---------------- */
 
 export const listAttendance = async ({ data }: { data: any }) => {
-  const attendanceRef = collection(db, "attendance");
+  const attendanceRef = collection(db, "attendance_logs");
   // Sort by scanned_at descending, limit to avoid downloading everything
   const q = query(attendanceRef, orderBy("scanned_at", "desc"), limit(data?.limit || 100));
   const snap = await getDocs(q);

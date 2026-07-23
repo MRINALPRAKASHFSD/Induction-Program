@@ -23,6 +23,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token.js';
 import { generateQrPayload, encodeQrPayload, type QrPayload } from '../server/qr-crypto.js';
+import crypto from 'crypto';
 
 // ── Firebase Admin singleton ──────────────────────────────────────────────────
 let firebaseInitialized = false;
@@ -53,8 +54,37 @@ async function rotateQr(
   eventId: string,
   rotationIntervalSeconds: number,
 ): Promise<{ payload: QrPayload; encoded: string }> {
+  
+  // Fetch cryptographic secret for this session
+  const secretsSnapshot = await db
+    .collection('attendance_sessions')
+    .doc(sessionId)
+    .collection('secrets')
+    .limit(1)
+    .get();
+
+  let sessionSecret: string;
+
+  if (secretsSnapshot.empty) {
+    // Self-healing: if a session was created before secret management,
+    // generate one now and save it.
+    console.log(`[QR Rotate] Self-healing missing secret for session ${sessionId}`);
+    sessionSecret = crypto.randomBytes(32).toString('hex');
+    await db
+      .collection('attendance_sessions')
+      .doc(sessionId)
+      .collection('secrets')
+      .doc('key')
+      .set({
+        session_secret: sessionSecret,
+        created_at: FieldValue.serverTimestamp(),
+      });
+  } else {
+    sessionSecret = secretsSnapshot.docs[0].data().session_secret;
+  }
+
   // Generate cryptographically signed payload
-  const payload = generateQrPayload(sessionId, eventId);
+  const payload = generateQrPayload(sessionId, eventId, sessionSecret);
   const encoded = encodeQrPayload(payload);
 
   // Store nonce for single-use verification
@@ -160,8 +190,11 @@ export default async function handler(req: any, res: any) {
           ? new Date(session.current_qr_generated_at).getTime()
           : 0;
         const elapsed = (Date.now() - lastGenerated) / 1000;
+        const remainingSeconds = Math.max(0, Math.floor(rotationInterval - elapsed));
 
-        // Auto-rotate if expired or no QR exists yet
+        // Auto-rotate only when QR is actually expired or does not exist yet.
+        // Do NOT regenerate on every poll — each rotateQr() call writes 2 Firestore
+        // documents and is unnecessary when the existing QR is still valid.
         if (!session.current_qr_nonce || elapsed >= rotationInterval) {
           const result = await rotateQr(
             db,
@@ -181,30 +214,16 @@ export default async function handler(req: any, res: any) {
           });
         }
 
-        // Return existing QR — regenerate from stored nonce
-        // The admin frontend uses the encoded payload to render the QR
-        const currentPayload = generateQrPayload(sessionId, session.event_id);
-        // Override nonce and timestamp with stored values for consistency
-        // Actually, we need to re-sign because the stored nonce was the original one
-        // Instead, just return the remaining time and let admin keep displaying
-        const remainingSeconds = Math.max(0, Math.floor(rotationInterval - elapsed));
-
-        // Re-generate from stored data for display
-        const result = await rotateQr(
-          db,
-          sessionId,
-          session.event_id,
-          rotationInterval,
-        );
-
+        // QR is still valid — return the stored nonce + countdown without writing to Firestore.
+        // The admin frontend already holds the encoded QR string from the last `rotated: true` response.
+        // It uses `next_rotation_in` to display the countdown timer.
         return res.status(200).json({
           ok: true,
-          qr_encoded: result.encoded,
-          nonce: result.payload.nonce,
-          timestamp: result.payload.timestamp,
+          nonce: session.current_qr_nonce,
+          timestamp: lastGenerated,
           rotation_interval: rotationInterval,
-          rotated: elapsed > 1, // effectively rotated since we regenerate each time
-          next_rotation_in: rotationInterval,
+          rotated: false,
+          next_rotation_in: remainingSeconds,
         });
       }
 

@@ -1,0 +1,269 @@
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. .btn-liquid-glass-white:hover::before
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. .btn-liquid-glass-dark:hover::before
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. .btn-liquid-glass-dark::before
+2. .btn-liquid-glass-maroon::before
+Body: content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: translateX(-100%); background: linear-gradient( 90deg, transparent, rgba(255, 255, 255, 0.3), transparent ); transition: transform 0.6s ease; will-change: transform; }
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. .btn-liquid-glass-maroon:hover::before
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. .btn-liquid-glass-destructive:hover::before
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes liquid-panel-sweep
+Body: 0%
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. 30%
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. 100%
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes wordmark-shimmer
+Body: 0%
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes dust-drift-1
+Body: 0%
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } @keyframes dust-drift-2
+Body: 0%
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } @keyframes dust-drift-3
+Body: 0%
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. /* Living Orbit Effect */ @keyframes living-pulse
+Body: 0%, 100%
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. /* Layer 3: Faint breathing animation (scale 1 -> 1.04) */ @keyframes center-breathe
+Body: 0%, 100%
+
+Duplicate body found:
+1. @keyframes tagline-line
+2. } @keyframes orbit-cw
+Body: from
+
+Duplicate body found:
+1. @keyframes tagline-line
+2. } @keyframes orbit-ccw
+Body: from
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. /* LCP Optimization: Pure CSS initial animations */ @keyframes css-fade-in-up
+Body: 0%
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } @keyframes css-fade-in-down
+Body: 0%
+
+Duplicate body found:
+1. 100%
+2. 100%
+Body: opacity: 1; transform: translateY(0); }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } @keyframes css-fade-in
+Body: 0%
+
+Duplicate body found:
+1. 8%
+2. 100%
+Body: opacity: 1; }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } @keyframes css-scale-x
+Body: 0%
+
+Duplicate body found:
+1. to
+2. 100%
+Body: transform: scaleX(1); opacity: 1; }
+
+Duplicate body found:
+1. @keyframes tagline-line
+2. } /* CSS-only clock spin — replaces Framer infinite animation */ @keyframes css-clock-spin
+Body: from
+
+Duplicate body found:
+1. to
+2. to
+Body: transform: rotate(360deg); }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. } /* CSS-only pulse ring — replaces Framer scale/opacity loop */ @keyframes css-pulse-ring-anim
+Body: 0%
+
+Duplicate body found:
+1. 70%
+2. 100%
+Body: transform: scale(1.3); opacity: 0; }
+
+Duplicate body found:
+1. @media (min-width: 768px)
+2. } @media (min-width: 1280px)
+Body: .nav-floating
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes nav-dot-in
+Body: 0%
+
+Duplicate body found:
+1. .btn-liquid-glass:hover::before
+2. .nav-scanner-btn:hover::before
+Body: transform: translateX(100%); }
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes scanner-glow
+Body: 0%, 100%
+
+Duplicate body found:
+1. .nav-link:hover
+2. .nav-icon-btn:hover
+Body: color: oklch(0.36 0.13 20); background: rgba(138, 74, 34, 0.06); }
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes wallet-float
+Body: 0%, 100%
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes avatar-gradient
+Body: 0%, 100%
+
+Duplicate body found:
+1. 50%
+2. 50%
+Body: background-position: 100% 50%; }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes deferred-fade-in
+Body: 0%
+
+Duplicate body found:
+1. 8%
+2. 100%
+Body: opacity: 1; }
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes ambient-drift
+Body: 0%, 100%
+
+Duplicate body found:
+1. 50%
+2. .hover-lift:hover
+Body: transform: translateY(-4px); }
+
+Duplicate body found:
+1. .kpi-card:active
+2. .hover-lift:active
+Body: transform: translateY(-2px) scale(0.99); }
+
+Duplicate body found:
+1. .action-card:hover::before
+2. .reflection-sweep:hover::after
+Body: left: 100%; }
+
+Duplicate body found:
+1. 8%
+2. .feature-card:hover::after
+Body: opacity: 1; }
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes scanner-gradient-shift
+Body: 0%, 100%
+
+Duplicate body found:
+1. 50%
+2. 50%
+Body: background-position: 100% 50%; }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. @keyframes scanner-sweep
+Body: 0%
+
+Duplicate body found:
+1. 8%
+2. 10%
+Body: opacity: 1; }
+
+Duplicate body found:
+1. 56%
+2. 51%
+Body: opacity: 0; }
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes scanner-ring-pulse
+Body: 0%, 100%
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. /* ─── Staggered Entrance Animations ──────────────────────────────── */ @keyframes slide-up-fade
+Body: 0%
+
+Duplicate body found:
+1. 100%
+2. 100%
+Body: opacity: 1; transform: translateY(0); }
+
+Duplicate body found:
+1. /* Hide scrollbar for mobile sheet */ .nav-mobile-sheet::-webkit-scrollbar
+2. /* ─── Scrollbar Styling ──────────────────────────────────────────── */ .hide-scrollbar::-webkit-scrollbar
+Body: display: none; }
+
+Duplicate body found:
+1. .nav-mobile-sheet
+2. .hide-scrollbar
+Body: scrollbar-width: none; }
+
+Duplicate body found:
+1. @keyframes gradient-shift
+2. /* ═══════════════════════════════════════════════════════════════════ PHASE 6: SKELETON SHIMMER + LOADING STATES ═══════════════════════════════════════════════════════════════════ */ @keyframes shimmer
+Body: 0%
+
+Duplicate body found:
+1. } @keyframes sparkle-pulse
+2. @keyframes fire-bob
+Body: 0%, 100%
