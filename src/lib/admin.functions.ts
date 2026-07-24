@@ -14,6 +14,7 @@ import {
   where,
   getCountFromServer,
   increment,
+  runTransaction,
 } from "firebase/firestore";
 import { eventCache } from "@/lib/event-cache";
 
@@ -72,16 +73,43 @@ export const listEvents = async () => {
 
 /* ---------------- Clubs ---------------- */
 
+const CLUB_CAPACITY = 120;
+
 export const upsertClub = async ({ data }: { data: any }) => {
   const { id, ...rest } = data;
   if (id) {
+    // Update existing club — preserve capacity/registeredCount/isRegistrationOpen
     const clubRef = doc(db, "clubs", id);
-    await updateDoc(clubRef, rest);
-    return { id, ...rest };
+    const patch = {
+      name: rest.name,
+      tagline: rest.tagline,
+      description: rest.description ?? null,
+      imageUrl: rest.imageUrl ?? null,
+      whatsappGroup: rest.whatsappGroup,
+      visible: rest.visible ?? true,
+      updatedAt: new Date().toISOString(),
+    };
+    await updateDoc(clubRef, patch);
+    return { id, ...patch };
   }
+
+  // Create new club
   const clubsRef = collection(db, "clubs");
   const newClubRef = doc(clubsRef);
-  const clubData = { ...rest, id: newClubRef.id, created_at: new Date().toISOString() };
+  const clubData = {
+    name: rest.name,
+    tagline: rest.tagline,
+    description: rest.description ?? null,
+    imageUrl: rest.imageUrl ?? null,
+    whatsappGroup: rest.whatsappGroup,
+    visible: rest.visible ?? true,
+    capacity: CLUB_CAPACITY,
+    registeredCount: 0,
+    isRegistrationOpen: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    id: newClubRef.id,
+  };
   await setDoc(newClubRef, clubData);
   return clubData;
 };
@@ -98,6 +126,7 @@ export const listClubs = async () => {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
 
+// Returns registration counts keyed by club_id
 export const listClubRegistrations = async () => {
   const regsRef = collection(db, "club_registrations");
   const snap = await getDocs(regsRef);
@@ -105,46 +134,68 @@ export const listClubRegistrations = async () => {
 };
 
 export const registerForClub = async ({ data }: { data: any }) => {
-  const { enrollment_no, slug } = data;
-  if (!enrollment_no || !slug) throw new Error("Missing data");
+  const { enrollment_no, club_id } = data;
+  if (!enrollment_no || !club_id) throw new Error("Missing data");
 
   // Direct O(1) student lookup — enrollment_no IS the document ID
   const studentRef = doc(db, "students", enrollment_no);
-  const studentDoc = await getDoc(studentRef);
-  if (!studentDoc.exists()) {
+  const studentSnap = await getDoc(studentRef);
+  if (!studentSnap.exists()) {
     throw new Error("Student not found. Please register first.");
   }
-  const studentId = studentDoc.id;
+  const studentId = studentSnap.id;
 
-  // Club lookup by slug (single-field, auto-indexed by Firestore)
-  const clubsRef = collection(db, "clubs");
-  const qClub = query(clubsRef, where("slug", "==", slug), limit(1));
-  const clubSnap = await getDocs(qClub);
-  if (clubSnap.empty) {
-    throw new Error("Club not found.");
-  }
-  const clubData = clubSnap.docs[0].data();
-  const club_id = clubSnap.docs[0].id;
-
-  // Dedup check via compound doc ID (O(1) read, no collection scan needed)
+  // Compound doc ID for O(1) dedup + security rule enforcement
   const regId = `${club_id}_${studentId}`;
   const regRef = doc(db, "club_registrations", regId);
-  const regDoc = await getDoc(regRef);
-  if (regDoc.exists()) {
-    return { ok: true, duplicate: true };
-  }
+  const clubRef = doc(db, "clubs", club_id);
 
-  // Write with the compound doc ID so security rules and dedup both work
-  await setDoc(regRef, {
-    club_id,
-    student_id: studentId,
-    registered_at: new Date().toISOString(),
+  // Firestore transaction: atomic increment + cap enforcement + dedup
+  const result = await runTransaction(db, async (tx) => {
+    const [clubSnap, regSnap] = await Promise.all([
+      tx.get(clubRef),
+      tx.get(regRef),
+    ]);
+
+    if (!clubSnap.exists()) throw new Error("Club not found.");
+
+    // Duplicate check
+    if (regSnap.exists()) return { ok: true, duplicate: true };
+
+    const clubData = clubSnap.data();
+    const currentCount: number = clubData.registeredCount ?? 0;
+    const capacity: number = clubData.capacity ?? CLUB_CAPACITY;
+
+    // Capacity check
+    if (!clubData.isRegistrationOpen || currentCount >= capacity) {
+      return { ok: false, full: true };
+    }
+
+    const newCount = currentCount + 1;
+    const willBeFull = newCount >= capacity;
+
+    // Write registration doc
+    tx.set(regRef, {
+      club_id,
+      student_id: studentId,
+      registered_at: new Date().toISOString(),
+    });
+
+    // Atomically update club counters
+    tx.update(clubRef, {
+      registeredCount: increment(1),
+      isRegistrationOpen: !willBeFull,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return { ok: true, duplicate: false };
   });
 
-  // Gamification: Add +25 points for joining a club
-  await updateDoc(studentRef, {
-    points: increment(25)
-  });
+  if (result.full) throw new Error("Registration is full for this club.");
+  if (result.duplicate) return { ok: true, duplicate: true };
+
+  // Gamification: +25 points for joining a club (outside tx to keep tx minimal)
+  await updateDoc(studentRef, { points: increment(25) });
 
   return { ok: true };
 };

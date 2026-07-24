@@ -72,11 +72,16 @@ export type LocalEvent = {
 export type LocalClub = {
   id: string;
   name: string;
-  slug: string;
+  tagline: string;
   description: string | null;
-  tags: string[];
-  image_url: string | null;
-  is_active: boolean;
+  imageUrl: string | null;
+  whatsappGroup: string;
+  capacity: number;
+  registeredCount: number;
+  isRegistrationOpen: boolean;
+  visible: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type LocalAttendance = {
@@ -260,14 +265,9 @@ class LocalDB {
     return { ok: true, duplicate: false, club: club_slug };
   }
 
-  // --- Clubs (Admin) ---
+  // --- Clubs (Admin) --- (legacy stub; clubs are now read/written via Firestore in admin.functions.ts)
   getClubs(): LocalClub[] {
-    const defaultClubs: LocalClub[] = [
-      { id: "c1", name: "Coding Club", slug: "coding", description: "Learn to build.", tags: ["Tech", "Code"], image_url: null, is_active: true },
-      { id: "c2", name: "Robotics Club", slug: "robotics", description: "Hardware & bots.", tags: ["Hardware"], image_url: null, is_active: true }
-    ];
-    const clubs = this.get<LocalClub>("krmu_local_clubs");
-    return clubs.length > 0 ? clubs : defaultClubs;
+    return this.get<LocalClub>("krmu_local_clubs");
   }
 
   upsertClub(club: Partial<LocalClub>): LocalClub {

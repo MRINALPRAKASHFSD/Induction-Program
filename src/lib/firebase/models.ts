@@ -40,12 +40,16 @@ export interface Event {
 export interface Club {
   id: string;
   name: string;
-  slug: string;
+  tagline: string;
   description?: string;
-  tags: string[];
-  image_url?: string;
-  is_active: boolean;
-  created_at: Timestamp;
+  imageUrl?: string;
+  whatsappGroup: string;
+  capacity: number;
+  registeredCount: number;
+  isRegistrationOpen: boolean;
+  visible: boolean;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface AttendanceRecord {
