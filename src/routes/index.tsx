@@ -206,7 +206,7 @@ function Landing() {
             <div className="mt-4 sm:mt-5 css-animate-fade-in-up">
               <div className="aarambh-wordmark-wrap">
                 <h1 className="aarambh-wordmark text-[3.25rem] sm:text-[4.8rem] lg:text-[6.2rem]">
-                  Aarambh
+                  AARAMBH
                 </h1>
               </div>
               <p className="aarambh-year mt-2 sm:mt-2.5 tracking-[0.32em]">2 0 2 6</p>
@@ -218,44 +218,53 @@ function Landing() {
             </div>
 
             {/* Tagline */}
-            <div className="css-animate-fade-in-up">
-              <p className="text-[#2c1208] text-[1.15rem] sm:text-[1.65rem] font-medium leading-snug tracking-wide max-w-lg">
-                Your beginning.{" "}
-                <span className="aarambh-tagline text-[#1e0c06] font-semibold">Make it count.</span>
-              </p>
-              <p className="mt-3.5 text-[#7a4020]/75 text-[0.95rem] sm:text-base font-normal max-w-xs leading-relaxed">
+            <div className="css-animate-fade-in-up mt-8 relative z-20">
+              <div className="flex items-baseline flex-wrap text-[#2c1208] leading-none drop-shadow-sm">
+                <span className="font-serif text-[1.75rem] sm:text-[2.25rem] md:text-[3rem] font-light tracking-tight opacity-90">Embracing</span>
+                <span className="font-['Pinyon_Script',cursive] text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] text-[#c87038] -ml-2 -mr-1 z-10 opacity-90 rotate-[-2deg] translate-y-1 sm:translate-y-2">the</span>
+                <span className="font-serif text-[1.75rem] sm:text-[2.25rem] md:text-[3rem] font-bold tracking-tight text-[#1e0c06]">Horizons</span>
+              </div>
+              
+              {/* Decorative line below Horizons */}
+              <div className="mt-5 flex items-center gap-3 opacity-80">
+                <div className="h-[1px] w-12 sm:w-20 bg-gradient-to-r from-transparent to-[#8a4a22]/50" />
+                <div className="text-[#c87038] text-[0.65rem] animate-pulse">✦</div>
+                <div className="h-[1px] w-32 sm:w-48 bg-gradient-to-l from-[#8a4a22]/50 to-transparent" />
+              </div>
+
+              <p className="mt-6 text-[#7a4020]/75 text-[0.95rem] sm:text-base font-normal max-w-xs leading-relaxed">
                 Scan in. Stand out. Belong.
               </p>
             </div>
 
             {/* CTA buttons */}
-            <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row flex-wrap gap-4 css-animate-fade-in-up">
-              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow min-h-[44px] h-12 sm:h-12 px-7 rounded-full font-semibold w-full sm:w-auto" aria-label="Register Now">
+            <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row flex-wrap gap-5 css-animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow min-h-[56px] h-14 sm:h-14 px-9 rounded-full font-semibold w-full sm:w-auto shadow-[0_8px_30px_rgb(138,74,34,0.06)] hover:shadow-[0_12px_40px_rgb(138,74,34,0.12)] transition-all duration-500 text-[0.95rem]" aria-label="Register Now">
                 <Link to="/register">
-                  Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1.5 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </Link>
               </Button>
-              <Button variant="liquidGlassDark" size="lg" asChild className="min-h-[44px] h-12 sm:h-12 px-7 rounded-full font-medium w-full sm:w-auto" aria-label="Lodge Attendance">
+              <Button variant="liquidGlassDark" size="lg" asChild className="min-h-[56px] h-14 sm:h-14 px-9 rounded-full font-medium w-full sm:w-auto shadow-[0_8px_30px_rgb(44,18,8,0.15)] hover:shadow-[0_12px_40px_rgb(44,18,8,0.25)] transition-all duration-500 text-[0.95rem]" aria-label="Lodge Attendance">
                 <Link to="/attendance">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2.5 h-4 w-4"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
                   Lodge Attendance
                 </Link>
               </Button>
             </div>
 
             {/* Countdown timer */}
-            <div className="mt-12 glass-premium-v2 px-6 py-5 inline-flex items-center flex-wrap gap-x-6 gap-y-4 rounded-[2rem] css-animate-fade-in-up">
-              <div className="flex items-center gap-4 pr-4 sm:pr-6 border-r border-[#8a4a22]/15 relative z-10">
+            <div className="mt-14 glass-premium-v2 px-7 py-6 inline-flex items-center flex-wrap gap-x-8 gap-y-5 rounded-[2.5rem] css-animate-fade-in-up shadow-[0_15px_40px_rgb(138,74,34,0.06)] border-[#8a4a22]/10" style={{ animationDelay: '0.4s' }}>
+              <div className="flex items-center gap-5 pr-5 sm:pr-8 border-r border-[#8a4a22]/10 relative z-10">
                 <div className="relative hidden sm:block">
-                  <div className="bg-white/60 p-2.5 rounded-2xl shadow-sm border border-white/50 relative z-10">
+                  <div className="bg-white/80 p-3 rounded-2xl shadow-sm border border-white/60 relative z-10 drop-shadow-sm">
                     <div className="css-spin-slow">
-                      <Clock className="h-6 w-6 text-[#8a4a22]" />
+                      <Clock className="h-6 w-6 text-[#8a4a22]/90" />
                     </div>
                   </div>
                   {/* Subtle pulse ring */}
-                  <div className="absolute inset-0 border-2 border-[#8a4a22]/30 rounded-2xl z-0 css-pulse-ring" />
+                  <div className="absolute inset-0 border-[1.5px] border-[#8a4a22]/20 rounded-2xl z-0 css-pulse-ring" />
                 </div>
-                <span className="text-[#8a4a22]/90 text-xs sm:text-sm font-black uppercase tracking-[0.25em] leading-tight text-left relative z-10">
+                <span className="text-[#8a4a22]/90 text-xs sm:text-[0.95rem] font-bold uppercase tracking-[0.25em] leading-snug text-left relative z-10">
                   Induction<br/>Begins In
                 </span>
               </div>

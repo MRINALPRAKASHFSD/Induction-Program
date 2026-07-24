@@ -43,12 +43,31 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: `Backend configuration error: ${firebaseInitError}` });
   }
 
-  const { email } = req.body || {};
+  const { email, type } = req.body || {};
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'Valid email is required' });
   }
 
   const emailKey = email.toLowerCase().trim();
+
+  // ── Check if email exists for Login / Register restrictions ──────────────
+  try {
+    const db = getFirestore();
+    if (type === 'login' || type === 'register') {
+      const emailSnap = await db.collection('email_index').doc(emailKey).get();
+      const userExists = emailSnap.exists;
+
+      if (type === 'login' && !userExists) {
+        return res.status(404).json({ error: 'This email is not registered. Please register first.' });
+      }
+
+      if (type === 'register' && userExists) {
+        return res.status(409).json({ error: 'This email is already registered. Kindly login instead.' });
+      }
+    }
+  } catch (err: any) {
+    console.error("Firestore email check error:", err);
+  }
 
   // ── Rate limiting: 5 OTP requests per email per 10 minutes ───────────────
   // Prevents email flooding attacks. Fails OPEN if Redis is unavailable so

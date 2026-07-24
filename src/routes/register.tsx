@@ -131,7 +131,7 @@ function RegisterPage() {
       const response = await fetch("/api/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email }),
+        body: JSON.stringify({ email: form.email, type: "register" }),
       });
       const contentType = response.headers.get("content-type");
       let data;

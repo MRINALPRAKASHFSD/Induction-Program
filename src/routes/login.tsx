@@ -92,7 +92,7 @@ function LoginPage() {
     try {
       const response = await fetch("/api/send-otp", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, type: "login" }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to send OTP.");
