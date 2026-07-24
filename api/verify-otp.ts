@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import jwt from 'jsonwebtoken';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -77,25 +76,11 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: result.error });
     }
 
-    // OTP is valid. 
-    // Instead of firebase-admin/auth which crashes on Vercel due to missing native bindings,
-    // we sign the Firebase Custom Token manually.
-    if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-       throw new Error("Missing credentials for token generation");
-    }
-    
-    const uid = email.toLowerCase();
-    const customToken = jwt.sign(
-      { uid: uid }, 
-      process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), 
-      {
-        algorithm: 'RS256',
-        issuer: process.env.FIREBASE_CLIENT_EMAIL,
-        subject: process.env.FIREBASE_CLIENT_EMAIL,
-        audience: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
-        expiresIn: '1h'
-      }
-    );
+    // OTP is valid. Create a Firebase Custom Token using Admin SDK.
+    // Using lazy import to avoid cold-start crashes on Vercel serverless.
+    const uid = `email:${email.toLowerCase()}`;
+    const { getAuth } = await import('firebase-admin/auth');
+    const customToken = await getAuth().createCustomToken(uid);
     
     // ── Check if this email belongs to an already-registered student ──────
     // O(1) document lookup — no collection scan required.

@@ -99,8 +99,13 @@ export default async function handler(req: any, res: any) {
   const phoneKey      = parsed.phone.trim();
 
   // Ensure authenticated user matches registration request
-  if (decodedToken.email?.toLowerCase() !== emailKey && decodedToken.uid !== parsed.auth_uid) {
+  // uid is either "email:user@example.com" (new flow) or the raw email (legacy)
+  const expectedUid = `email:${emailKey}`;
+  const tokenMatchesEmail = decodedToken.email?.toLowerCase() === emailKey;
+  const tokenMatchesUid   = decodedToken.uid === expectedUid || decodedToken.uid === emailKey;
+  if (!tokenMatchesEmail && !tokenMatchesUid) {
     logRequest('Unauthorized', enrollmentKey, emailKey, 'Token mismatch with payload');
+
     return res.status(403).json({ error: 'Forbidden: Token does not match registration email or uid' });
   }
 
