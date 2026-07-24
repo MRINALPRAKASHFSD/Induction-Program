@@ -14,6 +14,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EventAttendEventIdRouteImport } from './routes/event-attend.$eventId'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
@@ -147,6 +148,11 @@ const AdminActivityLazyRoute = AdminActivityLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.activity.lazy').then((d) => d.Route),
 )
+const EventAttendEventIdRoute = EventAttendEventIdRouteImport.update({
+  id: '/event-attend/$eventId',
+  path: '/event-attend/$eventId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/students'
+    | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/students'
+    | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/students'
+    | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
     | '/admin/attendance'
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentsRoute: typeof AdminDocumentsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  EventAttendEventIdRoute: typeof EventAttendEventIdRoute
   AdminActivityLazyRoute: typeof AdminActivityLazyRoute
   AdminAnnouncementsLazyRoute: typeof AdminAnnouncementsLazyRoute
   AdminAttendanceLazyRoute: typeof AdminAttendanceLazyRoute
@@ -505,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminActivityLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/event-attend/$eventId': {
+      id: '/event-attend/$eventId'
+      path: '/event-attend/$eventId'
+      fullPath: '/event-attend/$eventId'
+      preLoaderRoute: typeof EventAttendEventIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/admin/students'
@@ -554,6 +574,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentsRoute: AdminDocumentsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  EventAttendEventIdRoute: EventAttendEventIdRoute,
   AdminActivityLazyRoute: AdminActivityLazyRoute,
   AdminAnnouncementsLazyRoute: AdminAnnouncementsLazyRoute,
   AdminAttendanceLazyRoute: AdminAttendanceLazyRoute,

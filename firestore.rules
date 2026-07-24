@@ -154,5 +154,36 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
+
+    // ── 13. EVENT ATTENDANCE (isolated system — no relation to induction) ──────
+    //
+    // Collection: event_attendance
+    // Document ID: {event_id}_{enrollment_number}   (compound — O(1) dedup)
+    //
+    // Public write is required because students scan QR without logging in.
+    // Security is enforced server-side in api/event-attendance-mark.ts:
+    //   - student must exist in students/{enrollment_number}
+    //   - event must be active and within attendance window
+    //   - rate limiting applied (IP + enrollment + event)
+    //   - server writes the document — client NEVER writes directly
+    //
+    // Therefore client rules are read-only (admins only).
+    match /event_attendance/{docId} {
+      // Admins and coordinators can list records (for the admin panel)
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      // No client writes — server only (Firebase Admin SDK bypasses rules)
+      allow write: if false;
+    }
+
+    // 14. EVENT ATTENDANCE LOGS (audit trail — append-only via server)
+    match /event_attendance_logs/{logId} {
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token && request.auth.token.role == 'super_admin');
+      // No client writes — server only
+      allow write: if false;
+    }
   }
 }
+

@@ -285,3 +285,137 @@ export const listAttendance = async ({ data }: { data: any }) => {
   // (which we actually do when we record it in scanner.functions!) to avoid joins.
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
+
+/* ---------------- Event Attendance (new — isolated system) ---------------- */
+
+/**
+ * Build the attendance QR URL for an event.
+ * Format: /event-attend/{eventId}?v=1
+ * The ?v=1 is a URL schema version — allows future changes without reprinting QRs.
+ */
+export function getEventAttendanceUrl(eventId: string, version = 1): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/event-attend/${eventId}?v=${version}`;
+}
+
+/**
+ * Update an event with Optimistic Concurrency Control.
+ * Rejects the save if another admin updated the event since it was loaded.
+ *
+ * @throws ConflictError if the event was updated concurrently.
+ */
+export const updateEventWithOCC = async ({
+  data,
+}: {
+  data: { id: string; expected_version?: number; [key: string]: any };
+}) => {
+  const { id, expected_version, ...patch } = data;
+  if (!id) throw new Error("Missing ID for update");
+
+  const eventRef = doc(db, "events", id);
+
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists()) throw new Error("Event not found.");
+
+    const currentVersion = (snap.data().version as number | undefined) ?? 0;
+
+    // If caller supplied a version expectation and it doesn't match → conflict
+    if (expected_version !== undefined && currentVersion !== expected_version) {
+      const err = new Error(
+        "CONFLICT: This event was updated by another admin while you were editing. Reloading the latest version."
+      );
+      (err as any).code = "CONFLICT";
+      throw err;
+    }
+
+    tx.update(eventRef, {
+      ...patch,
+      version: increment(currentVersion + 1),
+      updated_at: new Date().toISOString(),
+    });
+
+    return { id, version: currentVersion + 1, ...patch };
+  });
+};
+
+/**
+ * Fetch paginated event attendance from the backend admin API.
+ * Uses server-side pagination to handle 50K+ records without memory issues.
+ */
+export const listEventAttendance = async ({
+  token,
+  event_id,
+  page = 1,
+  pageSize = 50,
+  search = "",
+  filter = {},
+  sortBy = "created_at",
+  sortOrder = "desc" as "asc" | "desc",
+  cursor,
+}: {
+  token: string;
+  event_id: string;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  filter?: { department?: string; school?: string; status?: string };
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  cursor?: string;
+}): Promise<any> => {
+  const res = await fetch("/api/event-attendance-list", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ event_id, page, pageSize, search, filter, sortBy, sortOrder, cursor }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+/**
+ * Export event attendance as CSV.
+ * Triggers a browser file download.
+ */
+export const exportEventAttendanceCsv = async ({
+  token,
+  event_id,
+  filter = {},
+  eventTitle = "event",
+}: {
+  token: string;
+  event_id: string;
+  filter?: { department?: string; school?: string; status?: string };
+  eventTitle?: string;
+}): Promise<void> => {
+  const res = await fetch("/api/event-attendance-export", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ event_id, filter }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.message || `HTTP ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `event_attendance_${eventTitle.replace(/[^a-z0-9]/gi, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
