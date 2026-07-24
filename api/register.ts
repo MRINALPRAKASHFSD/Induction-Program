@@ -1,7 +1,6 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
-import { Redis } from '@upstash/redis';
+import { getRedis } from '../server/redis.js';
 import { z } from 'zod';
 
 let firebaseInitialized = false;
@@ -26,14 +25,6 @@ try {
   firebaseInitError = e.message;
 }
 
-// Optional Redis client for rate limiting
-let redis: Redis | null = null;
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  redis = new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN,
-  });
-}
 // Fallback in-memory rate limiter if Redis is not configured
 const inMemoryRateLimits = new Map<string, { count: number, resetAt: number }>();
 
@@ -88,6 +79,7 @@ export default async function handler(req: any, res: any) {
   const token = authHeader.split('Bearer ')[1];
   let decodedToken;
   try {
+    const { getAuth } = await import('firebase-admin/auth');
     decodedToken = await getAuth().verifyIdToken(token);
   } catch (err: any) {
     logRequest('Unauthorized', undefined, undefined, `Invalid token: ${err.message}`);
@@ -117,21 +109,21 @@ export default async function handler(req: any, res: any) {
   const nowMs = Date.now();
   
   const limits = [
-    { key: `ip:${ip}`, max: 10 },
-    { key: `email:${emailKey}`, max: 5 }
+    { key: `reg:ip:${ip}`, max: 10 },
+    { key: `reg:email:${emailKey}`, max: 5 }
   ];
 
   for (const { key, max } of limits) {
-    if (redis) {
-      // Basic token bucket / sliding window equivalent via incr & expire
+    try {
+      const redis = getRedis();
       const current = await redis.incr(key);
       if (current === 1) await redis.expire(key, 60);
       if (current > max) {
         logRequest('RateLimited', enrollmentKey, emailKey, `Exceeded limit for ${key}`);
         return res.status(429).json({ error: 'Too many requests. Please try again later.' });
       }
-    } else {
-      // ⚠️ FALLBACK ONLY FOR LOCAL DEV. Not safe for production Vercel serverless.
+    } catch {
+      // Fail open — Redis outage should not block legitimate registrations
       let record = inMemoryRateLimits.get(key);
       if (!record || record.resetAt < nowMs) {
         record = { count: 1, resetAt: nowMs + windowMs };
