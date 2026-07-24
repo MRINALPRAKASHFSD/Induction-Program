@@ -85,22 +85,7 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (id.includes('node_modules')) {
-              if (id.includes('html5-qrcode')) return 'vendor-scanner';
-              if (id.includes('html2canvas') || id.includes('jspdf')) return 'vendor-pdf';
-              if (id.includes('xlsx')) return 'vendor-excel';
-              
-              if (id.includes('firebase')) return 'vendor-firebase';
-              if (id.includes('framer-motion')) return 'vendor-motion';
-              if (id.includes('@tanstack')) return 'vendor-tanstack';
-              if (id.includes('react/') || id.includes('react-dom/')) return 'vendor-react';
-              if (id.includes('lucide-react')) return 'vendor-lucide';
-              if (id.includes('zod')) return 'vendor-zod';
-              if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('date-fns')) return 'vendor-utils';
-              
-              // Fallback for other node_modules
-              return 'vendor';
-            }
+            // Disabled manual chunks to prevent circular dependencies in production
           }
         }
       }
