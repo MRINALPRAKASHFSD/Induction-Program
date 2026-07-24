@@ -111,8 +111,10 @@ function RegisterPage() {
       setVerifyingEmail(false);
       setEmailOtp("");
       setStoredCustomToken(null);
+      setStoredRegToken(null);
     }
   };
+
 
   const branches  = form.department_id ? PROGRAM_LEVELS : [];
   const deptName  = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
@@ -207,15 +209,17 @@ function RegisterPage() {
       return;
     }
 
-    if (!emailVerified || !storedCustomToken || !storedRegToken) {
+    if (!emailVerified || !storedRegToken) {
       toast.error("Please verify your email first using the 'Verify Email' button.");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Sign in with the custom token for client-side Firebase auth state
-      const result = await signInWithCustomToken(auth, storedCustomToken);
+      // Build the profile — auth_uid uses the email-based uid that the server also uses.
+      // We skip signInWithCustomToken here (it had auth/invalid-custom-token issues);
+      // the user will be signed into Firebase Auth via OTP login after registration.
+      const emailUid = `email:${form.email.toLowerCase().trim()}`;
 
       const profile = {
         full_name:     form.full_name,
@@ -227,10 +231,10 @@ function RegisterPage() {
         course:        form.course,
         year:          parseInt(form.year),
         deptName,
-        auth_uid:      result.user.uid,
+        auth_uid:      emailUid,
       };
 
-      // regToken authorizes the server-side registration (avoids firebase-admin/auth)
+      // regToken authorizes the server-side registration (Firestore session, avoids firebase-admin/auth)
       const res = await registerStudent({ data: profile, regToken: storedRegToken! });
       if (!res.ok) throw new Error(res.error || "Failed to finalize registration.");
 
