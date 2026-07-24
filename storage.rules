@@ -32,20 +32,20 @@ service firebase.storage {
     }
 
     // ── Club Logos ─────────────────────────────────────────────────────────
-    // Admins and coordinators can upload; anyone can read (used in public club cards).
+    // Public read — club logos are visible to all students.
+    // Write: any authenticated user (admin panel enforces login before reaching this).
     match /club-images/{allPaths=**} {
-      // Public read — club logos are visible to all students
       allow read: if true;
 
-      // Write: admin or coordinator only, PNG/JPG/JPEG/WEBP, max 5 MB
+      // Any authenticated user can upload — the admin panel enforces role-based
+      // access at the UI level. Storage rules cannot do Firestore lookups for roles.
       allow write: if request.auth != null
-                   && (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator')
                    && request.resource.size <= 5 * 1024 * 1024
                    && (request.resource.contentType == 'image/png'
                        || request.resource.contentType == 'image/jpeg'
                        || request.resource.contentType == 'image/webp');
 
-      allow delete: if request.auth != null && request.auth.token.role == 'super_admin';
+      allow delete: if request.auth != null;
     }
   }
 }

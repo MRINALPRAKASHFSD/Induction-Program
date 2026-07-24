@@ -509,7 +509,7 @@
 
 /* Wordmark — deep maroon → auburn → warm copper on light bg */
 .aarambh-wordmark {
-  font-family: 'Cinzel Decorative', serif;
+  font-family: 'Cinzel Decorative', 'Cinzel', serif;
   font-weight: 900;
   letter-spacing: 0.07em;
   line-height: 1;
