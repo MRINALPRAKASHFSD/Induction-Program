@@ -1,5 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -42,7 +44,8 @@ export default async function handler(req: any, res: any) {
 
   try {
     const db = getFirestore();
-    const docRef = db.collection('otp_sessions').doc(email.toLowerCase());
+    const emailKey = email.toLowerCase().trim();
+    const docRef = db.collection('otp_sessions').doc(emailKey);
     
     // We use a transaction to prevent brute-forcing
     const result = await db.runTransaction(async (transaction) => {
@@ -76,15 +79,39 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: result.error });
     }
 
-    // OTP is valid. Create a Firebase Custom Token using Admin SDK.
-    // Using lazy import to avoid cold-start crashes on Vercel serverless.
-    const uid = `email:${email.toLowerCase()}`;
-    const { getAuth } = await import('firebase-admin/auth');
-    const customToken = await getAuth().createCustomToken(uid);
-    
+    // ── Generate Firebase Custom Token (for client-side signInWithCustomToken) ──
+    // Uses proper Firebase custom token format with jsonwebtoken.
+    // This avoids firebase-admin/auth which has a jwks-rsa/jose ESM conflict on Vercel.
+    const uid = `email:${emailKey}`;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL!;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+    const now = Math.floor(Date.now() / 1000);
+
+    const customToken = jwt.sign(
+      {
+        iss: clientEmail,
+        sub: clientEmail,
+        aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+        iat: now,
+        exp: now + 3600,
+        uid,
+      },
+      privateKey,
+      { algorithm: 'RS256', noTimestamp: true }
+    );
+
+    // ── Generate a short-lived Firestore-backed registration session token ──────
+    // This token is sent in the Authorization header during /api/register
+    // and verified by looking it up in Firestore — avoids firebase-admin/auth entirely.
+    const regToken = crypto.randomBytes(32).toString('hex');
+    const sessionRef = db.collection('registration_sessions').doc(emailKey);
+    await sessionRef.set({
+      token: regToken,
+      email: emailKey,
+      expiresAt: Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000)), // 10 minutes
+    });
+
     // ── Check if this email belongs to an already-registered student ──────
-    // O(1) document lookup — no collection scan required.
-    const emailKey = email.toLowerCase().trim();
     const emailIndexSnap = await db.collection('email_index').doc(emailKey).get();
     const userExists = emailIndexSnap.exists;
     const enrollmentNo: string | null = userExists
@@ -93,9 +120,10 @@ export default async function handler(req: any, res: any) {
 
     return res.status(200).json({
       success: true,
-      customToken,
-      userExists,    // true → existing student, go straight to dashboard
-      enrollmentNo,  // enrollment_no for existing students, null for new users
+      customToken,  // for signInWithCustomToken on client
+      regToken,     // for /api/register Authorization header
+      userExists,
+      enrollmentNo,
     });
   } catch (error: any) {
     console.error("OTP Verify Error:", error);

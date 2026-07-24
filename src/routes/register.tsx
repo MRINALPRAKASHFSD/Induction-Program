@@ -90,6 +90,7 @@ function RegisterPage() {
   const [emailOtp, setEmailOtp]               = useState("");
   const [sendingOtp, setSendingOtp]           = useState(false);
   const [storedCustomToken, setStoredCustomToken] = useState<string | null>(null);
+  const [storedRegToken, setStoredRegToken]   = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -179,6 +180,7 @@ function RegisterPage() {
       }
 
       setStoredCustomToken(data.customToken);
+      setStoredRegToken(data.regToken);
       setEmailVerified(true);
       setVerifyingEmail(false);
       setEmailOtp("");
@@ -205,14 +207,14 @@ function RegisterPage() {
       return;
     }
 
-    if (!emailVerified || !storedCustomToken) {
+    if (!emailVerified || !storedCustomToken || !storedRegToken) {
       toast.error("Please verify your email first using the 'Verify Email' button.");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Sign in with the token obtained during email verification
+      // Sign in with the custom token for client-side Firebase auth state
       const result = await signInWithCustomToken(auth, storedCustomToken);
 
       const profile = {
@@ -228,7 +230,8 @@ function RegisterPage() {
         auth_uid:      result.user.uid,
       };
 
-      const res = await registerStudent({ data: profile });
+      // regToken authorizes the server-side registration (avoids firebase-admin/auth)
+      const res = await registerStudent({ data: profile, regToken: storedRegToken! });
       if (!res.ok) throw new Error(res.error || "Failed to finalize registration.");
 
       // Save profile to local device storage for offline use

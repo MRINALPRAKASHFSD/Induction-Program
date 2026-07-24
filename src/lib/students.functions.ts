@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { db, auth } from "@/lib/firebase/config";
+import { db } from "@/lib/firebase/config";
+
 import {
   collection,
   doc,
@@ -30,33 +31,30 @@ const studentSchema = z.object({
   auth_uid:      z.string().optional(),
 });
 
-export const registerStudent = async ({ data }: { data: any }) => {
+export const registerStudent = async ({ data, regToken }: { data: any; regToken: string }) => {
   const parsedResult = studentSchema.safeParse(data);
   if (!parsedResult.success) {
     return { ok: false, error: parsedResult.error.errors[0].message };
   }
   const parsed = parsedResult.data;
 
-  try {
-    const idToken = await auth.currentUser?.getIdToken();
-    
-    if (!idToken) {
-       return {
-         ok: false,
-         error: "Authentication required. Please verify your OTP again.",
-       };
-    }
+  if (!regToken) {
+    return {
+      ok: false,
+      error: "Authentication required. Please verify your OTP again.",
+    };
+  }
 
+  try {
     // ── Call Secure Backend Endpoint ──────────────────────────────────────────
-    // Moving registration to the server allows the Admin SDK to bypass firestore 
-    // security rules. This enables accurate O(1) reads of index collections
-    // to return specific duplicate error codes (EMAIL_EXISTS, PHONE_EXISTS),
-    // eliminating the risk of masking generic database failures.
+    // Authorization uses a Firestore-backed registration session token (regToken)
+    // issued by /api/verify-otp. This avoids firebase-admin/auth which has a
+    // jwks-rsa/jose ESM conflict on Vercel Node 18+.
     const res = await fetch("/api/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${idToken}`,
+        "Authorization": `Bearer ${regToken}`,
       },
       body: JSON.stringify(parsed),
     });
@@ -81,6 +79,7 @@ export const registerStudent = async ({ data }: { data: any }) => {
     };
   }
 };
+
 
 export const lookupStudent = async ({ data }: { data: any }) => {
   if (!data.enrollment_no) return { student: null };

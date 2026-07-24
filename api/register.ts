@@ -69,24 +69,18 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: `Backend configuration error: ${firebaseInitError}` });
   }
 
-  // 1. Authentication Check
+  // ── 1. Authentication — Firestore-backed registration session token ──────────
+  // We avoid firebase-admin/auth entirely (jwks-rsa/jose ESM conflict on Vercel Node 18+).
+  // Instead verify-otp stored a short-lived token in Firestore that we validate here.
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logRequest('Unauthorized', undefined, undefined, 'Missing Bearer token');
     return res.status(401).json({ error: 'Unauthorized: Missing token' });
   }
 
-  const token = authHeader.split('Bearer ')[1];
-  let decodedToken;
-  try {
-    const { getAuth } = await import('firebase-admin/auth');
-    decodedToken = await getAuth().verifyIdToken(token);
-  } catch (err: any) {
-    logRequest('Unauthorized', undefined, undefined, `Invalid token: ${err.message}`);
-    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
-  }
+  const regToken = authHeader.split('Bearer ')[1];
 
-  // 2. Validate Payload
+  // 2. Validate Payload first (to get email for session lookup)
   const parsedResult = studentSchema.safeParse(req.body);
   if (!parsedResult.success) {
     logRequest('BadRequest', undefined, undefined, parsedResult.error.errors[0].message);
@@ -98,18 +92,37 @@ export default async function handler(req: any, res: any) {
   const emailKey      = parsed.email.toLowerCase().trim();
   const phoneKey      = parsed.phone.trim();
 
-  // Ensure authenticated user matches registration request
-  // uid is either "email:user@example.com" (new flow) or the raw email (legacy)
-  const expectedUid = `email:${emailKey}`;
-  const tokenMatchesEmail = decodedToken.email?.toLowerCase() === emailKey;
-  const tokenMatchesUid   = decodedToken.uid === expectedUid || decodedToken.uid === emailKey;
-  if (!tokenMatchesEmail && !tokenMatchesUid) {
-    logRequest('Unauthorized', enrollmentKey, emailKey, 'Token mismatch with payload');
+  // 3. Verify the registration session token against Firestore
+  const db = getFirestore();
+  const sessionRef = db.collection('registration_sessions').doc(emailKey);
+  const sessionSnap = await sessionRef.get();
 
-    return res.status(403).json({ error: 'Forbidden: Token does not match registration email or uid' });
+  if (!sessionSnap.exists) {
+    logRequest('Unauthorized', enrollmentKey, emailKey, 'No registration session found');
+    return res.status(401).json({ error: 'Unauthorized: Session expired or not found. Please verify your email again.' });
   }
 
-  // 3. Rate Limiting (IP & Email)
+  const sessionData = sessionSnap.data()!;
+  if (sessionData.token !== regToken) {
+    logRequest('Unauthorized', enrollmentKey, emailKey, 'Registration token mismatch');
+    return res.status(401).json({ error: 'Unauthorized: Invalid session token.' });
+  }
+
+  if (sessionData.expiresAt.toDate() < new Date()) {
+    await sessionRef.delete();
+    logRequest('Unauthorized', enrollmentKey, emailKey, 'Registration session expired');
+    return res.status(401).json({ error: 'Unauthorized: Session expired. Please verify your email again.' });
+  }
+
+  if (sessionData.email !== emailKey) {
+    logRequest('Unauthorized', enrollmentKey, emailKey, 'Email mismatch in session');
+    return res.status(403).json({ error: 'Forbidden: Email mismatch.' });
+  }
+
+  // Session is valid — delete it now (single-use)
+  await sessionRef.delete();
+
+  // 4. Rate Limiting (IP & Email)
   const windowMs = 60 * 1000; // 1 minute
   const nowMs = Date.now();
   
@@ -144,9 +157,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const db = getFirestore();
-
-    // 4. Run Transaction for strict concurrency safety and idempotency
+    // 5. Run Transaction for strict concurrency safety and idempotency
     const result = await db.runTransaction(async (t) => {
       const emailRef = db.collection("email_index").doc(emailKey);
       const enrollmentRef = db.collection("studentid_index").doc(enrollmentKey);
