@@ -135,9 +135,9 @@ export default async function handler(req: any, res: any) {
   const event = eventDoc.data()!;
 
   // ── Build query with filters ──────────────────────────────────────────────
-  let q: FirebaseFirestore.Query = db.collection('event_attendance')
+  let q: any = db.collection('event_attendance')
     .where('event_id', '==', event_id)
-    .orderBy('created_at', 'asc');
+    .orderBy('created_at', 'desc');
 
   if (filter.department) q = q.where('department', '==', filter.department);
   if (filter.school)     q = q.where('school', '==', filter.school);

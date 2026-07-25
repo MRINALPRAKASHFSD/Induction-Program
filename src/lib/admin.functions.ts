@@ -375,7 +375,7 @@ export const listEventAttendance = async ({
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.message || `HTTP ${res.status}`);
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
   }
   return res.json();
 };
@@ -406,7 +406,7 @@ export const exportEventAttendanceCsv = async ({
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.message || `HTTP ${res.status}`);
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
   }
 
   const blob = await res.blob();
