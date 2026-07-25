@@ -35,13 +35,7 @@
         { "fieldPath": "club_id",        "order": "ASCENDING" }
       ]
     },
-    {
-      "collectionGroup": "students",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "points", "order": "DESCENDING" }
-      ]
-    },
+
     {
       "collectionGroup": "attendance_sessions",
       "queryScope": "COLLECTION",
