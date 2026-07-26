@@ -178,16 +178,15 @@ export default async function handler(req: any, res: any) {
       return apiResponse(res, 400, false, 'No valid rows found. Ensure the file contains "Application Number" and "Name" columns.');
     }
 
-    // 5. Get next version number
+    // 5. Get next version number — no orderBy to avoid composite index dependency
     const versionsQuery = await db.collection('event_datasets')
       .where('event_id', '==', event_id)
-      .orderBy('version', 'desc')
-      .limit(1)
       .get();
 
     let nextVersion = 1;
     if (!versionsQuery.empty) {
-      nextVersion = (versionsQuery.docs[0].data().version || 0) + 1;
+      const maxVersion = Math.max(...versionsQuery.docs.map(d => d.data().version || 0));
+      nextVersion = maxVersion + 1;
     }
 
     // 6. Create event_datasets document (PREVIEW state)

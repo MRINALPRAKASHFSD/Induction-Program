@@ -550,7 +550,12 @@ export const deleteDataset = async (token: string, dataset_id: string, deleted_b
 
 export const listDatasets = async (event_id: string) => {
   const datasetsRef = collection(db, "event_datasets");
-  const q = query(datasetsRef, where("event_id", "==", event_id), orderBy("version", "desc"));
+  // No orderBy to avoid composite index requirement — sort client-side instead
+  const q = query(datasetsRef, where("event_id", "==", event_id));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  // Sort by version descending (newest first)
+  rows.sort((a: any, b: any) => (b.version ?? 0) - (a.version ?? 0));
+  return rows;
 };
+
