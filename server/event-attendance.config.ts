@@ -47,9 +47,13 @@ export const EVENT_ATTENDANCE_CONFIG = {
   // ── QR Versioning ─────────────────────────────────────────────────────────
   qrVersion: 1,
 
-  // ── Enrollment Validation ─────────────────────────────────────────────────
+  // ── Enrollment / Application Number Validation ───────────────────────────
   /** Regex for a valid enrollment number. Adjust if institution format changes. */
   enrollmentPattern: /^[A-Z0-9\-]{3,40}$/,
+  /** Alias — used by event-attendance-mark (application numbers use the same pattern). */
+  applicationNumberPattern: /^[A-Z0-9\-]{3,40}$/,
+  /** Alias of rateLimitEnrollment — used by event-attendance-mark. */
+  rateLimitApplication: { max: 5, windowSec: 300 },
 
   // ── Event Schema Defaults ─────────────────────────────────────────────────
   qrEnabledDefault: true,
