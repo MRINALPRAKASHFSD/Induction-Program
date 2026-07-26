@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "@/components/auth-provider";
+import { getAuth } from "firebase/auth";
 import {
   listEvents,
   uploadDataset,
@@ -24,7 +24,11 @@ export const Route = createLazyFileRoute("/admin/datasets")({
 });
 
 function DatasetsManager() {
-  const { token, user } = useAuth();
+  const getToken = async (): Promise<string> => {
+    const user = getAuth().currentUser;
+    if (!user) throw new Error("Not authenticated");
+    return user.getIdToken();
+  };
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [datasets, setDatasets] = useState<any[]>([]);
@@ -76,7 +80,9 @@ function DatasetsManager() {
     if (!file || !selectedEventId) return;
     setUploading(true);
     try {
-      await uploadDataset(token!, file, selectedEventId, user?.email || "Admin");
+      const token = await getToken();
+      const email = getAuth().currentUser?.email || "Admin";
+      await uploadDataset(token, file, selectedEventId, email);
       toast.success("Dataset uploaded and validated successfully.");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -108,7 +114,8 @@ function DatasetsManager() {
       const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
 
       toast.info("Starting import...");
-      const startRes = await importDatasetBatch(token!, { dataset_id: dataset.id, action: 'start' });
+      const token = await getToken();
+      const startRes = await importDatasetBatch(token, { dataset_id: dataset.id, action: 'start' });
       if (!startRes.ok && startRes.message !== 'Import started and lock acquired.' && !startRes.message.includes('already')) {
         throw new Error(startRes.message);
       }
@@ -119,11 +126,11 @@ function DatasetsManager() {
       for (let i = 0; i < rawRows.length; i += CHUNK_SIZE) {
         const chunk = rawRows.slice(i, i + CHUNK_SIZE);
         const batchStart = Date.now();
-        await importDatasetBatch(token!, { dataset_id: dataset.id, action: 'chunk', rows: chunk, batch_time_ms: Date.now() - batchStart });
+        await importDatasetBatch(token, { dataset_id: dataset.id, action: 'chunk', rows: chunk, batch_time_ms: Date.now() - batchStart });
         setImportProgress(Math.round(((i + chunk.length) / rawRows.length) * 100));
       }
 
-      await importDatasetBatch(token!, { 
+      await importDatasetBatch(token, { 
         dataset_id: dataset.id, 
         action: 'finish',
         import_duration_ms: Date.now() - startTimestamp
@@ -140,7 +147,9 @@ function DatasetsManager() {
 
   const handleActivate = async (datasetId: string) => {
     try {
-      await activateDataset(token!, datasetId, user?.email || "Admin");
+      const token = await getToken();
+      const email = getAuth().currentUser?.email || "Admin";
+      await activateDataset(token, datasetId, email);
       toast.success("Dataset activated successfully!");
       loadDatasets();
     } catch (err: any) {
@@ -151,7 +160,9 @@ function DatasetsManager() {
   const handleDelete = async (datasetId: string) => {
     if (!confirm("Are you sure you want to delete this dataset?")) return;
     try {
-      await deleteDataset(token!, datasetId, user?.email || "Admin");
+      const token = await getToken();
+      const email = getAuth().currentUser?.email || "Admin";
+      await deleteDataset(token, datasetId, email);
       toast.success("Dataset deleted.");
       loadDatasets();
     } catch (err: any) {
