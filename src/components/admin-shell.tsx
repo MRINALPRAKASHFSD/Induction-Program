@@ -1,6 +1,6 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick } from "iconsax-react";
+import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText } from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { auth, db } from "@/lib/firebase/config";
@@ -22,6 +22,7 @@ const NAV = [
   { to: "/admin/dashboard", label: "Dashboard", icon: Element3 },
   { to: "/admin/attendance", label: "Attendance", icon: ScanBarcode },
   { to: "/admin/events", label: "Events", icon: Calendar1 },
+  { to: "/admin/datasets", label: "Dataset Management", icon: DocumentText },
   { to: "/admin/students", label: "Students", icon: Profile2User },
   { to: "/admin/clubs", label: "Clubs", icon: MagicStar },
   { to: "/admin/announcements", label: "Announcements", icon: Bell },

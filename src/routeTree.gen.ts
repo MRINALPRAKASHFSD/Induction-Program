@@ -33,6 +33,7 @@ const AnnouncementsLazyRouteImport = createFileRoute('/announcements')()
 const AdminScheduleLazyRouteImport = createFileRoute('/admin/schedule')()
 const AdminLoginLazyRouteImport = createFileRoute('/admin/login')()
 const AdminEventsLazyRouteImport = createFileRoute('/admin/events')()
+const AdminDatasetsLazyRouteImport = createFileRoute('/admin/datasets')()
 const AdminClubsLazyRouteImport = createFileRoute('/admin/clubs')()
 const AdminAttendanceLazyRouteImport = createFileRoute('/admin/attendance')()
 const AdminAnnouncementsLazyRouteImport = createFileRoute(
@@ -122,6 +123,13 @@ const AdminEventsLazyRoute = AdminEventsLazyRouteImport.update({
   path: '/admin/events',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/admin.events.lazy').then((d) => d.Route))
+const AdminDatasetsLazyRoute = AdminDatasetsLazyRouteImport.update({
+  id: '/admin/datasets',
+  path: '/admin/datasets',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.datasets.lazy').then((d) => d.Route),
+)
 const AdminClubsLazyRoute = AdminClubsLazyRouteImport.update({
   id: '/admin/clubs',
   path: '/admin/clubs',
@@ -205,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
   '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
@@ -232,6 +241,7 @@ export interface FileRoutesByTo {
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
   '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
@@ -260,6 +270,7 @@ export interface FileRoutesById {
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
   '/admin/attendance': typeof AdminAttendanceLazyRoute
   '/admin/clubs': typeof AdminClubsLazyRoute
+  '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
+    | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
@@ -316,6 +328,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
+    | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
@@ -343,6 +356,7 @@ export interface FileRouteTypes {
     | '/admin/announcements'
     | '/admin/attendance'
     | '/admin/clubs'
+    | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
     | '/admin/schedule'
@@ -371,6 +385,7 @@ export interface RootRouteChildren {
   AdminAnnouncementsLazyRoute: typeof AdminAnnouncementsLazyRoute
   AdminAttendanceLazyRoute: typeof AdminAttendanceLazyRoute
   AdminClubsLazyRoute: typeof AdminClubsLazyRoute
+  AdminDatasetsLazyRoute: typeof AdminDatasetsLazyRoute
   AdminEventsLazyRoute: typeof AdminEventsLazyRoute
   AdminLoginLazyRoute: typeof AdminLoginLazyRoute
   AdminScheduleLazyRoute: typeof AdminScheduleLazyRoute
@@ -490,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEventsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/datasets': {
+      id: '/admin/datasets'
+      path: '/admin/datasets'
+      fullPath: '/admin/datasets'
+      preLoaderRoute: typeof AdminDatasetsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/clubs': {
       id: '/admin/clubs'
       path: '/admin/clubs'
@@ -579,6 +601,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAnnouncementsLazyRoute: AdminAnnouncementsLazyRoute,
   AdminAttendanceLazyRoute: AdminAttendanceLazyRoute,
   AdminClubsLazyRoute: AdminClubsLazyRoute,
+  AdminDatasetsLazyRoute: AdminDatasetsLazyRoute,
   AdminEventsLazyRoute: AdminEventsLazyRoute,
   AdminLoginLazyRoute: AdminLoginLazyRoute,
   AdminScheduleLazyRoute: AdminScheduleLazyRoute,

@@ -448,3 +448,100 @@ export const getAnalyticsQR = (token: string, filter?: any) => fetchAnalyticsEnd
 export const getAnalyticsActivity = (token: string, limit?: number, cursor?: string) => fetchAnalyticsEndpoint('analytics-activity', token, { limit, cursor });
 export const getAnalyticsSnapshot = (token: string) => fetchAnalyticsEndpoint('analytics-snapshot', token);
 
+/* ---------------- Event Datasets Management ---------------- */
+
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+export const uploadDataset = async (token: string, file: File, event_id: string, adminName: string) => {
+  const storage = getStorage();
+  const fileExt = file.name.split('.').pop();
+  const uniqueName = `datasets/${event_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+  const storageRef = ref(storage, uniqueName);
+  
+  await uploadBytes(storageRef, file);
+  const download_url = await getDownloadURL(storageRef);
+
+  const payload = {
+    event_id,
+    filename: file.name,
+    file_size: file.size,
+    mime_type: file.type,
+    storage_path: uniqueName,
+    download_url,
+    uploaded_by: adminName,
+    created_by_name: adminName
+  };
+
+  const res = await fetch("/api/event-dataset-upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+export const importDatasetBatch = async (token: string, payload: { dataset_id: string, action: 'start' | 'chunk' | 'finish', rows?: any[], batch_time_ms?: number, import_duration_ms?: number }) => {
+  const res = await fetch("/api/event-dataset-import", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+export const activateDataset = async (token: string, dataset_id: string, activated_by: string) => {
+  const res = await fetch("/api/event-dataset-activate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ dataset_id, activated_by }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+export const deleteDataset = async (token: string, dataset_id: string, deleted_by: string) => {
+  const res = await fetch("/api/event-dataset-delete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ dataset_id, deleted_by }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+export const listDatasets = async (event_id: string) => {
+  const datasetsRef = collection(db, "event_datasets");
+  const q = query(datasetsRef, where("event_id", "==", event_id), orderBy("version", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};

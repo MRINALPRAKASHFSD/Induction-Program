@@ -51,10 +51,10 @@ function EventAttendPage() {
 
   const [pageState,  setPageState]  = useState<PageState>('loading');
   const [event,      setEvent]      = useState<EventData | null>(null);
-  const [enrollment, setEnrollment] = useState('');
-  const [errorMsg,   setErrorMsg]   = useState('');
-  const [resultData, setResultData] = useState<{ studentName: string; status: string } | null>(null);
-  const [confetti,   setConfetti]   = useState(false);
+  const [applicationNumber, setApplicationNumber] = useState('');
+  const [errorMsg,          setErrorMsg]          = useState('');
+  const [resultData,        setResultData]        = useState<{ studentName: string; status: string } | null>(null);
+  const [confetti,          setConfetti]          = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load event from Firestore (public read)
@@ -104,9 +104,9 @@ function EventAttendPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanEnrollment = enrollment.trim().toUpperCase();
-    if (!cleanEnrollment || cleanEnrollment.length < 3) {
-      setErrorMsg('Please enter your enrollment number.');
+    const cleanApplicationNumber = applicationNumber.trim().toUpperCase();
+    if (!cleanApplicationNumber || cleanApplicationNumber.length < 3) {
+      setErrorMsg('Please enter your application number.');
       return;
     }
 
@@ -119,7 +119,7 @@ function EventAttendPage() {
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
           event_id:          eventId,
-          enrollment_number: cleanEnrollment,
+          application_number: cleanApplicationNumber,
           client_timestamp:  new Date().toISOString(),
         }),
       });
@@ -135,20 +135,20 @@ function EventAttendPage() {
       }
 
       if (json.code === 'DUPLICATE') {
-        setResultData({ studentName: json.data?.studentName || cleanEnrollment, status: 'present' });
+        setResultData({ studentName: json.data?.studentName || cleanApplicationNumber, status: 'present' });
         setPageState('duplicate');
         return;
       }
 
       // Map error codes to human-readable messages
       const errorMessages: Record<string, string> = {
-        NOT_FOUND:      'Enrollment number not found. Please check and try again.',
+        NOT_FOUND:      'Application Number not found for this event.',
         SUSPENDED:      'Your account is suspended. Please contact administration.',
         QR_DISABLED:    json.message || 'Attendance has been disabled by the organizer.',
         OUTSIDE_WINDOW: json.message || 'Attendance window is currently closed.',
         CAPACITY_FULL:  'This event has reached its maximum capacity.',
         RATE_LIMITED:   `Too many attempts. Please wait ${json.meta?.retryAfter ?? 60} seconds and try again.`,
-        INVALID_INPUT:  'Invalid enrollment number format.',
+        INVALID_INPUT:  'Invalid application number format.',
         SERVER_ERROR:   'Server error. Please try again.',
       };
 
@@ -245,14 +245,14 @@ function EventAttendPage() {
             <EventHeader event={event} />
             <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
               <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.55)', marginBottom: 8, fontWeight: 500 }}>
-                Enrollment Number
+                Application Number
               </label>
               <input
                 ref={inputRef}
                 type="text"
-                value={enrollment}
-                onChange={e => { setEnrollment(e.target.value); setErrorMsg(''); }}
-                placeholder="e.g. 21BTECH1001"
+                value={applicationNumber}
+                onChange={e => { setApplicationNumber(e.target.value); setErrorMsg(''); }}
+                placeholder="e.g. KRMU2643057"
                 autoComplete="off"
                 autoCapitalize="characters"
                 spellCheck={false}

@@ -189,19 +189,19 @@ export default async function handler(req: any, res: any) {
   if (filter.school)     q = q.where('school', '==', filter.school);
   if (filter.status)     q = q.where('status', '==', filter.status);
 
-  // Enrollment prefix search: Firestore range query (uses Index 2)
-  const isEnrollmentSearch = search && /^[A-Z0-9\-]/i.test(search.trim()) && !search.trim().includes(' ');
-  if (isEnrollmentSearch) {
+  // Application Number prefix search: Firestore range query (uses Index 2)
+  const isApplicationNumberSearch = search && /^[A-Z0-9\-]/i.test(search.trim()) && !search.trim().includes(' ');
+  if (isApplicationNumberSearch) {
     const prefix = search.trim().toUpperCase();
-    q = q.where('enrollment_number', '>=', prefix)
-         .where('enrollment_number', '<=', prefix + '\uf8ff');
+    q = q.where('application_number', '>=', prefix)
+         .where('application_number', '<=', prefix + '\uf8ff');
   }
 
   // Sort
   const validSortFields: Record<string, string> = {
     created_at:        'created_at',
     student_name:      'student_name',
-    enrollment_number: 'enrollment_number',
+    application_number: 'application_number',
   };
   const sortField = validSortFields[sortBy] ?? 'created_at';
   const sortDir   = sortOrder === 'asc' ? 'asc' : 'desc';
@@ -225,7 +225,7 @@ export default async function handler(req: any, res: any) {
     const data = d.data();
     return {
       id:                d.id,
-      enrollment_number: data.enrollment_number,
+      application_number: data.application_number,
       student_name:      data.student_name,
       department:        data.department,
       school:            data.school,
@@ -241,11 +241,11 @@ export default async function handler(req: any, res: any) {
   });
 
   // Name search: filter on the loaded page
-  if (search && !isEnrollmentSearch) {
-    const term = search.trim().toLowerCase();
-    records = records.filter(r =>
+  if (search && !isApplicationNumberSearch) {
+    const term = search.toLowerCase().trim();
+    records = records.filter(r => 
       r.student_name?.toLowerCase().includes(term) ||
-      r.enrollment_number?.toLowerCase().includes(term)
+      r.application_number?.toLowerCase().includes(term)
     );
   }
 

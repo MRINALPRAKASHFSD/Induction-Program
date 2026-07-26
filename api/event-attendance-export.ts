@@ -78,7 +78,7 @@ function formatISTTimestamp(firestoreTimestamp: any): string {
 
 const CSV_HEADERS = [
   'S.No',
-  'Enrollment Number',
+  'Application Number',
   'Student Name',
   'Department',
   'School',
@@ -177,7 +177,7 @@ export default async function handler(req: any, res: any) {
         const d = docSnap.data();
         rows.push([
           sno++,
-          escapeCsv(d.enrollment_number),
+          escapeCsv(d.application_number),
           escapeCsv(d.student_name),
           escapeCsv(d.department),
           escapeCsv(d.school),

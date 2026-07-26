@@ -45,7 +45,7 @@ type EventRow = {
 
 type AttendanceRecord = {
   id: string;
-  enrollment_number: string;
+  application_number: string;
   student_name: string;
   department: string;
   school: string;
@@ -390,7 +390,7 @@ function AttendancePanel({ event }: { event: EventRow }) {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#7a4020]/40" />
           <Input
-            placeholder="Search enrollment or name…"
+            placeholder="Search by Application Number or Name…"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="pl-8 h-8 text-xs rounded-xl"
@@ -418,7 +418,7 @@ function AttendancePanel({ event }: { event: EventRow }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[#8a4a22]/10 bg-[#8a4a22]/4">
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Enrollment</th>
+                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Application No.</th>
                 <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Name</th>
                 <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Dept.</th>
                 <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Status</th>
@@ -429,7 +429,7 @@ function AttendancePanel({ event }: { event: EventRow }) {
             <tbody>
               {records.map((r, i) => (
                 <tr key={r.id} className={`border-b border-[#8a4a22]/6 hover:bg-[#8a4a22]/3 transition-colors ${i % 2 === 0 ? "" : "bg-[#8a4a22]/2"}`}>
-                  <td className="p-2.5 font-mono text-[#5a2c14] font-semibold">{r.enrollment_number}</td>
+                  <td className="p-2.5 font-mono text-[#5a2c14] font-semibold">{r.application_number}</td>
                   <td className="p-2.5 text-[#2c1208]">{r.student_name}</td>
                   <td className="p-2.5 text-[#7a4020]/70 truncate max-w-[100px]">{r.department || r.school}</td>
                   <td className="p-2.5">

@@ -15,16 +15,16 @@
  * Validation Pipeline (15 checks — all server-side, never trust client):
  *   1.  HTTP method guard (POST only)
  *   2.  Firebase Admin initialized
- *   3.  Input validation (event_id, enrollment_number shape)
- *   4.  Three-layer rate limit check (IP + Enrollment + Event) — fail open on Redis error
+ *   3.  Input validation (event_id, application_number shape)
+ *   4.  Three-layer rate limit check (IP + Application + Event) — fail open on Redis error
  *   5.  Event fetch (events/{event_id}) — O(1) document ID lookup
  *   6.  Event must exist
  *   7.  event.is_active === true
  *   8.  event.qr_enabled !== false
  *   9.  Attendance window: now within [starts_at - windowBefore, ends_at + windowAfter]
  *  10.  Status derivation: 'present' or 'late'
- *  11.  Student fetch (students/{enrollment_number}) — O(1) document ID lookup
- *  12.  Student must exist (enrollment not found → NOT_FOUND)
+ *  11.  Student fetch (students/{application_number}) — O(1) document ID lookup
+ *  12.  Student must exist (application number not found → NOT_FOUND)
  *  13.  Student not suspended
  *  14.  Capacity pre-check (before entering transaction)
  *  15.  Firestore Transaction:
@@ -116,7 +116,7 @@ function getClientIp(req: any): string {
  */
 async function checkRateLimit(
   ip: string,
-  enrollment: string,
+  applicationNumber: string,
   eventId: string,
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
   const cfg = EVENT_ATTENDANCE_CONFIG;
@@ -132,16 +132,16 @@ async function checkRateLimit(
 
   try {
     const ipKey  = `ea:ip:${hashIp(ip)}`;
-    const enrKey = `ea:enr:${eventId}:${enrollment}`;
+    const enrKey = `ea:app:${eventId}:${applicationNumber}`;
     const evtKey = `ea:evt:${eventId}`;
-    const failKey = `ea:fail:${eventId}:${enrollment}`;
+    const failKey = `ea:fail:${eventId}:${applicationNumber}`;
 
     // Pipeline: INCR + EXPIRE for all three layers + GET failure count
     const pipeline = redis.pipeline();
     pipeline.incr(ipKey);
     pipeline.expire(ipKey, cfg.rateLimitIp.windowSec, 'NX');
     pipeline.incr(enrKey);
-    pipeline.expire(enrKey, cfg.rateLimitEnrollment.windowSec, 'NX');
+    pipeline.expire(enrKey, cfg.rateLimitApplication.windowSec, 'NX');
     pipeline.incr(evtKey);
     pipeline.expire(evtKey, cfg.rateLimitEvent.windowSec, 'NX');
     pipeline.get(failKey);
@@ -162,8 +162,8 @@ async function checkRateLimit(
     if (ipCount > cfg.rateLimitIp.max) {
       return { allowed: false, retryAfter: cfg.rateLimitIp.windowSec };
     }
-    if (enrCount > cfg.rateLimitEnrollment.max) {
-      return { allowed: false, retryAfter: cfg.rateLimitEnrollment.windowSec };
+    if (enrCount > cfg.rateLimitApplication.max) {
+      return { allowed: false, retryAfter: cfg.rateLimitApplication.windowSec };
     }
     if (evtCount > cfg.rateLimitEvent.max) {
       return { allowed: false, retryAfter: cfg.rateLimitEvent.windowSec };
@@ -182,10 +182,10 @@ async function checkRateLimit(
 }
 
 /** Increment the failure counter for exponential backoff. */
-async function recordFailure(eventId: string, enrollment: string): Promise<void> {
+async function recordFailure(eventId: string, applicationNumber: string): Promise<void> {
   try {
     const redis = getRedis();
-    const failKey = `ea:fail:${eventId}:${enrollment}`;
+    const failKey = `ea:fail:${eventId}:${applicationNumber}`;
     const pipeline = redis.pipeline();
     pipeline.incr(failKey);
     pipeline.expire(failKey, 300); // 5 min TTL
@@ -198,7 +198,7 @@ async function recordFailure(eventId: string, enrollment: string): Promise<void>
 /** Post-response analytics: sorted set timeline, first/last attendee, counters. Non-blocking. */
 async function recordAnalytics(
   eventId: string,
-  enrollment: string,
+  applicationNumber: string,
   studentName: string,
   nowMs: number,
 ): Promise<void> {
@@ -209,7 +209,7 @@ async function recordAnalytics(
     const lastKey      = `ea:last:${eventId}`;
     const presentKey   = `ea:present:${eventId}`;
 
-    const memberPayload = JSON.stringify({ enrollment, name: studentName, at: nowMs });
+    const memberPayload = JSON.stringify({ applicationNumber, name: studentName, at: nowMs });
 
     const pipeline = redis.pipeline();
     // Sorted set by timestamp — for velocity and hourly breakdown
@@ -274,23 +274,23 @@ export default async function handler(req: any, res: any) {
 
   // 3. Input validation
   const rawEventId    = req.body?.event_id;
-  const rawEnrollment = req.body?.enrollment_number;
+  const rawApplicationNumber = req.body?.application_number;
   const clientTs      = req.body?.client_timestamp ?? null;
 
   if (!rawEventId || typeof rawEventId !== 'string' || rawEventId.length > 128) {
     return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT, 'Invalid or missing event_id.', null, { requestId: reqId });
   }
 
-  const enrollment = typeof rawEnrollment === 'string' ? rawEnrollment.trim().toUpperCase() : '';
-  if (!EVENT_ATTENDANCE_CONFIG.enrollmentPattern.test(enrollment)) {
+  const applicationNumber = typeof rawApplicationNumber === 'string' ? rawApplicationNumber.trim().toUpperCase() : '';
+  if (!EVENT_ATTENDANCE_CONFIG.applicationNumberPattern.test(applicationNumber)) {
     return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT,
-      'Invalid enrollment number format. Must be 3–40 alphanumeric characters.', null, { requestId: reqId });
+      'Invalid application number format. Must be 3–40 alphanumeric characters.', null, { requestId: reqId });
   }
 
   const eventId = rawEventId.trim();
 
   // 4. Rate limit check
-  const rateLimitResult = await checkRateLimit(ip, enrollment, eventId);
+  const rateLimitResult = await checkRateLimit(ip, applicationNumber, eventId);
   if (!rateLimitResult.allowed) {
     void incrementRejectedCounter(eventId);
     return apiResponse(res, 429, false, RESPONSE_CODES.RATE_LIMITED,
@@ -322,7 +322,7 @@ export default async function handler(req: any, res: any) {
 
   // 7. Event must be active
   if (event.is_active !== true) {
-    void recordFailure(eventId, enrollment);
+    void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
     return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED,
       'This event is not currently active.', null, { requestId: reqId });
@@ -342,7 +342,7 @@ export default async function handler(req: any, res: any) {
   const windowClose = endsAt   + cfg.windowAfterEndMs;
 
   if (now < windowOpen) {
-    void recordFailure(eventId, enrollment);
+    void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
     const openAt = new Date(windowOpen).toISOString();
     return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW,
@@ -359,31 +359,33 @@ export default async function handler(req: any, res: any) {
   // 10. Derive status
   const status = (now > startsAt + cfg.lateThresholdMs) ? 'late' : 'present';
 
-  // 11–13. Student validation (O(1) — enrollment IS the document ID)
-  const studentRef = db.collection('students').doc(enrollment);
-  let studentDoc;
+  // 11–13. Participant validation (O(1) — eventId_appNumber IS the document ID)
+  const participantDocId = `${eventId}_${applicationNumber}`;
+  const participantRef = db.collection('event_participants').doc(participantDocId);
+  let participantDoc;
   try {
-    studentDoc = await studentRef.get();
+    participantDoc = await participantRef.get();
   } catch (err: any) {
-    console.error('[event-attendance-mark] Firestore student fetch error:', err.message);
+    console.error('[event-attendance-mark] Firestore participant fetch error:', err.message);
     return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, 'Database error. Try again.', null, { requestId: reqId });
   }
 
-  // 12. Student must exist
-  if (!studentDoc.exists) {
-    void recordFailure(eventId, enrollment);
+  // 12. Participant must exist
+  if (!participantDoc.exists) {
+    void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
     return apiResponse(res, 404, false, RESPONSE_CODES.NOT_FOUND,
-      'Enrollment number not found. This student is not registered.', null, { requestId: reqId });
+      'Application Number not found in the official dataset for this event.', null, { requestId: reqId });
   }
 
-  const student = studentDoc.data()!;
+  const participant = participantDoc.data()!;
 
-  // 13. Student not suspended
-  if (student.is_suspended === true || student.is_deactivated === true) {
+  // Must belong to the ACTIVE dataset
+  if (event.active_dataset_id && participant.dataset_id !== event.active_dataset_id) {
+    void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
-    return apiResponse(res, 403, false, RESPONSE_CODES.SUSPENDED,
-      'Your account is suspended. Please contact administration.', null, { requestId: reqId });
+    return apiResponse(res, 404, false, RESPONSE_CODES.NOT_FOUND,
+      'Application Number not found in the currently active dataset.', null, { requestId: reqId });
   }
 
   // 14. Capacity pre-check (fast path — avoids tx if obviously full)
@@ -398,12 +400,12 @@ export default async function handler(req: any, res: any) {
   }
 
   // 15. Firestore Transaction — atomic dedup + counter + write
-  const attendanceDocId = `${eventId}_${enrollment}`;
+  const attendanceDocId = `${eventId}_${applicationNumber}`;
   const attendanceRef   = db.collection('event_attendance').doc(attendanceDocId);
   const auditLogRef     = db.collection('event_attendance_logs').doc();
 
   let isDuplicate = false;
-  let studentName = student.full_name as string || enrollment;
+  let studentName = participant.student_name as string || applicationNumber;
 
   try {
     isDuplicate = await db.runTransaction(async (tx) => {
@@ -428,14 +430,21 @@ export default async function handler(req: any, res: any) {
       const dupeDoc = await tx.get(attendanceRef);
       if (dupeDoc.exists) return true; // duplicate — don't write
 
+      // Update participant record (attendance status)
+      tx.update(participantRef, {
+        attendance_status: status,
+        attendance_time: FieldValue.serverTimestamp(),
+        last_updated_at: FieldValue.serverTimestamp()
+      });
+
       // Write attendance record
       tx.set(attendanceRef, {
         event_id:            eventId,
-        student_uid:         student.auth_uid || enrollment,
-        enrollment_number:   enrollment,
+        dataset_id:          participant.dataset_id,
+        application_number:  applicationNumber,
         student_name:        studentName,
-        department:          student.department || student.course || '',
-        school:              student.school || student.department_id || '',
+        department:          participant.program || participant.course || '',
+        school:              participant.school || '',
 
         // Status & verification
         status,
@@ -493,7 +502,7 @@ export default async function handler(req: any, res: any) {
     studentName,
     eventTitle:   event.title,
     status,
-    enrollment,
+    applicationNumber,
   };
 
   // Must set response before async post-processing
@@ -508,11 +517,11 @@ export default async function handler(req: any, res: any) {
 
   // Non-blocking post-response work — analytics + audit log
   void Promise.allSettled([
-    recordAnalytics(eventId, enrollment, studentName, now),
+    recordAnalytics(eventId, applicationNumber, studentName, now),
     db.collection('event_attendance_logs').doc().create?.({
       event_id:   eventId,
       action:     'marked',
-      enrollment,
+      applicationNumber,
       status,
       reason:     `QR attendance marked as ${status}`,
       ip_hash:    hashIp(ip),
@@ -523,7 +532,7 @@ export default async function handler(req: any, res: any) {
       return auditLogRef.set({
         event_id:   eventId,
         action:     'marked',
-        enrollment,
+        applicationNumber,
         status,
         reason:     `QR attendance marked as ${status}`,
         ip_hash:    hashIp(ip),
