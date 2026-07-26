@@ -12,8 +12,8 @@
 export interface RedisFailureContext {
   /** API endpoint name, e.g. 'event-attendance-mark' */
   endpoint:  string;
-  /** Firestore event document ID */
-  event_id:  string;
+  /** Firestore event document ID, or 'GLOBAL' for system-wide analytics */
+  event_id?: string;
   /** What Redis operation failed, e.g. 'rate_limit_pipeline', 'zadd_timeline' */
   operation: string;
   /** Error message from the caught exception */

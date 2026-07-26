@@ -10,6 +10,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/config";
 
 export const Route = createLazyFileRoute("/admin/login")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({
     meta: [
       { title: "Admin Login · KRMU Induction" },

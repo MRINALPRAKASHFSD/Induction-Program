@@ -60,6 +60,7 @@ type AttendanceRecord = {
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 export const Route = createLazyFileRoute("/admin/events")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({ meta: [{ title: "Events · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminEvents,
 });

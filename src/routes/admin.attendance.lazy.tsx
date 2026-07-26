@@ -17,6 +17,7 @@ import { auth, db } from "@/lib/firebase/config";
 import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 
 export const Route = createLazyFileRoute("/admin/attendance")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({
     meta: [
       { title: "Attendance · KRMU Admin" },

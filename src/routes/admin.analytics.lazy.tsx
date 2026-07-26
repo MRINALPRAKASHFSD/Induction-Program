@@ -15,6 +15,7 @@ import { ExportCentre } from "@/components/analytics/ExportCentre";
 import { Loader2 } from "lucide-react";
 
 export const Route = createLazyFileRoute("/admin/analytics")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({
     meta: [
       { title: "Analytics Dashboard · KRMU Admin" },

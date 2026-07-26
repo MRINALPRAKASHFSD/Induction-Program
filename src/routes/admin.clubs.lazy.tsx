@@ -22,6 +22,7 @@ import { uploadClubImage } from "@/lib/upload-club-image";
 import type { LocalClub } from "@/lib/local-db";
 
 export const Route = createLazyFileRoute("/admin/clubs")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({ meta: [{ title: "Clubs · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminClubs,
 });

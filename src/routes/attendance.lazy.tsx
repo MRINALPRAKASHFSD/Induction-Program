@@ -64,6 +64,7 @@ const playSuccessSound = () => {
 };
 
 export const Route = createLazyFileRoute("/attendance")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({
     meta: [
       { title: "Attendance · KRMU Induction" },

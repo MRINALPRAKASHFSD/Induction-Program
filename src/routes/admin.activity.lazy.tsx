@@ -6,6 +6,7 @@ import { listActivityLogs } from "@/lib/admin.functions";
 import type { LocalActivityLog } from "@/lib/local-db";
 
 export const Route = createLazyFileRoute("/admin/activity")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({ meta: [{ title: "Activity log · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminActivity,
 });

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { listEvents, createEvent, updateEvent, deleteEvent } from "@/lib/admin.functions";
 
 export const Route = createLazyFileRoute("/admin/schedule")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({ meta: [{ title: "Schedule · KRMU Admin" }, { name: "robots", content: "noindex" }] }),
   component: AdminSchedule,
 });

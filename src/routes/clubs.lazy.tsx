@@ -18,6 +18,7 @@ import { listClubs, registerForClub } from "@/lib/admin.functions";
 import type { LocalClub } from "@/lib/local-db";
 
 export const Route = createLazyFileRoute("/clubs")({
+  // @ts-expect-error - Route type options do not include head in this version
   head: () => ({
     meta: [
       { title: "Clubs & Societies · KRMU Induction" },
