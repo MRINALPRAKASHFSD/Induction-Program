@@ -53,7 +53,7 @@ function extractValue(row: any, possibleKeys: string[]): string {
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return apiResponse(res, 405, false, 'Method Not Allowed');
@@ -67,12 +67,17 @@ export default async function handler(req: any, res: any) {
       mime_type,
       storage_path,
       download_url,
+      file_base64,   // NEW: raw file bytes as base64
       uploaded_by,
       created_by_name
     } = req.body;
 
-    if (!event_id || !download_url || !filename) {
-      return apiResponse(res, 400, false, 'Missing required fields (event_id, filename, download_url).');
+    if (!event_id || !filename) {
+      return apiResponse(res, 400, false, 'Missing required fields (event_id, filename).');
+    }
+
+    if (!file_base64 && !download_url) {
+      return apiResponse(res, 400, false, 'Missing file content (file_base64 or download_url required).');
     }
 
     const db = getFirestore();
@@ -86,25 +91,42 @@ export default async function handler(req: any, res: any) {
       return apiResponse(res, 400, false, 'Cannot upload dataset to an archived or deleted event.');
     }
 
-    // 1. Download the file from Firebase Storage URL
-    const fileRes = await fetch(download_url);
-    if (!fileRes.ok) {
-      return apiResponse(res, 500, false, 'Failed to download file from storage.');
+    // 1. Get file buffer — prefer base64 sent directly, fallback to download_url
+    let buffer: Buffer;
+
+    if (file_base64) {
+      // Primary path: base64 encoded file sent directly in the request body
+      try {
+        buffer = Buffer.from(file_base64, 'base64');
+      } catch (e: any) {
+        return apiResponse(res, 400, false, 'Invalid base64 file content.');
+      }
+    } else {
+      // Fallback path: download from URL
+      console.log('[event-dataset-upload] Falling back to download_url');
+      const fileRes = await fetch(download_url);
+      if (!fileRes.ok) {
+        return apiResponse(res, 500, false, `Failed to download file from storage: HTTP ${fileRes.status}. Use file_base64 instead.`);
+      }
+      const arrayBuffer = await fileRes.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
     }
-    
-    const arrayBuffer = await fileRes.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.length === 0) {
+      return apiResponse(res, 400, false, 'File content is empty.');
+    }
 
     // 2. Compute checksum and verify duplicates
     const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
-    
+
+    // Check for duplicate (same file already uploaded for this event)
     const existingQuery = await db.collection('event_datasets')
       .where('event_id', '==', event_id)
       .where('checksum', '==', checksum)
-      .where('status', '!=', 'DELETED')
       .get();
-      
-    if (!existingQuery.empty) {
+
+    const nonDeleted = existingQuery.docs.filter(d => d.data().status !== 'DELETED');
+    if (nonDeleted.length > 0) {
       return apiResponse(res, 409, false, 'Exact same file has already been uploaded for this event (checksum match).');
     }
 
@@ -147,7 +169,7 @@ export default async function handler(req: any, res: any) {
         duplicate_rows++;
         continue;
       }
-      
+
       seenAppNumbers.add(appNumber.toUpperCase());
       valid_rows++;
     }
@@ -156,21 +178,21 @@ export default async function handler(req: any, res: any) {
       return apiResponse(res, 400, false, 'No valid rows found. Ensure the file contains "Application Number" and "Name" columns.');
     }
 
-    // Get next version number
+    // 5. Get next version number
     const versionsQuery = await db.collection('event_datasets')
       .where('event_id', '==', event_id)
       .orderBy('version', 'desc')
       .limit(1)
       .get();
-      
+
     let nextVersion = 1;
     if (!versionsQuery.empty) {
       nextVersion = (versionsQuery.docs[0].data().version || 0) + 1;
     }
 
-    // 5. Create event_datasets document (PREVIEW)
+    // 6. Create event_datasets document (PREVIEW state)
     const datasetRef = db.collection('event_datasets').doc();
-    
+
     const datasetData = {
       id: datasetRef.id,
       event_id,
@@ -179,8 +201,8 @@ export default async function handler(req: any, res: any) {
       filename,
       file_size: file_size || buffer.length,
       mime_type: mime_type || 'application/octet-stream',
-      storage_path,
-      download_url,
+      storage_path: storage_path || '',
+      download_url: download_url || '',
       status: 'PREVIEW',
       total_rows,
       valid_rows,
@@ -207,7 +229,7 @@ export default async function handler(req: any, res: any) {
 
     return apiResponse(res, 200, true, 'Dataset uploaded and validated successfully.', datasetData);
   } catch (error: any) {
-    console.error('[event-dataset-upload]', error);
-    return apiResponse(res, 500, false, 'Internal server error processing dataset upload.');
+    console.error('[event-dataset-upload] UNHANDLED ERROR:', error.message, error.stack);
+    return apiResponse(res, 500, false, `Internal server error: ${error.message}`);
   }
 }

@@ -457,9 +457,17 @@ export const uploadDataset = async (token: string, file: File, event_id: string,
   const fileExt = file.name.split('.').pop();
   const uniqueName = `datasets/${event_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
   const storageRef = ref(storage, uniqueName);
-  
+
+  // Upload to Storage for archival purposes
   await uploadBytes(storageRef, file);
   const download_url = await getDownloadURL(storageRef);
+
+  // Read file as base64 so the API can process it directly
+  // (avoids the server needing to re-download from an auth-gated Storage URL)
+  const fileArrayBuffer = await file.arrayBuffer();
+  const fileBase64 = btoa(
+    new Uint8Array(fileArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+  );
 
   const payload = {
     event_id,
@@ -468,6 +476,7 @@ export const uploadDataset = async (token: string, file: File, event_id: string,
     mime_type: file.type,
     storage_path: uniqueName,
     download_url,
+    file_base64: fileBase64,
     uploaded_by: adminName,
     created_by_name: adminName
   };
