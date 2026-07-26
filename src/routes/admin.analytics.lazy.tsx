@@ -1,117 +1,88 @@
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
+import React, { useEffect, useState } from "react";
+import { auth } from "@/lib/firebase/config";
 import { AdminShell } from "@/components/admin-shell";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getAnalytics } from "@/lib/admin.functions";
+import { GlobalFilters, AnalyticsFilters } from "@/components/analytics/GlobalFilters";
+import { KPICards } from "@/components/analytics/KPICards";
+import { AttendanceAnalytics } from "@/components/analytics/AttendanceAnalytics";
+import { EventAnalytics } from "@/components/analytics/EventAnalytics";
+import { ClubAnalytics } from "@/components/analytics/ClubAnalytics";
+import { StudentAnalytics } from "@/components/analytics/StudentAnalytics";
+import { QRAnalytics } from "@/components/analytics/QRAnalytics";
+import { LiveActivityFeed } from "@/components/analytics/LiveActivityFeed";
+import { InsightsPanel } from "@/components/analytics/InsightsPanel";
+import { ExportCentre } from "@/components/analytics/ExportCentre";
+import { Loader2 } from "lucide-react";
 
 export const Route = createLazyFileRoute("/admin/analytics")({
+  head: () => ({
+    meta: [
+      { title: "Analytics Dashboard · KRMU Admin" },
+    ],
+  }),
   component: AdminAnalytics,
 });
 
-const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-
-type Data = {
-  totals: { students: number; attendance: number; clubs: number; events: number; };
-  byDept: { name: string; value: number }[];
-  byYear: { name: string; value: number }[];
-  byEvent: { name: string; value: number }[];
-  byHour: { name: string; value: number }[];
-  byClub: { name: string; count: number }[];
-};
-
 function AdminAnalytics() {
-  const [data, setData] = useState<Data | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [filters, setFilters] = useState<AnalyticsFilters>({ dateRange: "last7" });
 
   useEffect(() => {
-    let active = true;
-    const fetchStats = async () => {
-      try {
-        const stats = await getAnalytics();
-        if (active) {
-          setData(stats);
-        }
-      } catch (e) {
-        console.error("Failed to fetch analytics", e);
+    const unsub = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        const t = await user.getIdToken();
+        setToken(t);
+      } else {
+        setToken(null);
       }
-    };
-    fetchStats();
-    return () => { active = false; };
+    });
+    return () => unsub();
   }, []);
 
-  if (!data) return <AdminShell title="Analytics"><div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64" />)}</div></AdminShell>;
+  if (!token) {
+    return (
+      <AdminShell title="Analytics Dashboard">
+        <div className="flex items-center justify-center h-64 w-full">
+          <div className="flex flex-col items-center justify-center text-gray-500">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-4" />
+            <p>Loading analytics engine...</p>
+          </div>
+        </div>
+      </AdminShell>
+    );
+  }
 
   return (
-    <AdminShell title="Analytics" subtitle="Department spread, attendance peaks, club popularity.">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Students by department">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.byDept}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" interval={0} angle={-20} textAnchor="end" height={60} className="text-xs" />
-              <YAxis allowDecimals={false} className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="value" fill="var(--primary)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Students by year">
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={data.byYear} dataKey="value" nameKey="name" outerRadius={100} label>
-                {data.byYear.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Legend /><Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Attendance by session">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.byEvent} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" allowDecimals={false} className="text-xs" />
-              <YAxis dataKey="name" type="category" width={160} className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="value" fill="var(--chart-2)" radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Scans by hour of day">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.byHour}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" className="text-xs" />
-              <YAxis allowDecimals={false} className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="value" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        <Card title="Club popularity" className="lg:col-span-2">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.byClub}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" interval={0} angle={-20} textAnchor="end" height={70} className="text-xs" />
-              <YAxis allowDecimals={false} className="text-xs" />
-              <Tooltip />
-              <Bar dataKey="count" fill="var(--chart-3)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+    <AdminShell 
+      title="Analytics Dashboard" 
+      subtitle="Central intelligence for the induction platform. Track attendance, event performance, and student engagement."
+    >
+      <div className="max-w-7xl mx-auto space-y-2 pb-12">
+        <ExportCentre token={token} />
+        
+        <GlobalFilters 
+          filters={filters} 
+          onChange={setFilters} 
+          onClear={() => setFilters({ dateRange: "last7" })} 
+        />
+        
+        <InsightsPanel token={token} />
+        
+        <KPICards token={token} filters={filters} />
+        
+        <AttendanceAnalytics token={token} filters={filters} />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <EventAnalytics token={token} filters={filters} />
+          <StudentAnalytics token={token} filters={filters} />
+        </div>
+        
+        <ClubAnalytics token={token} filters={filters} />
+        
+        <QRAnalytics token={token} filters={filters} />
+        
+        <LiveActivityFeed token={token} />
       </div>
     </AdminShell>
-  );
-}
-
-function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-xl border glass-card-hero p-4 shadow-sm ${className}`}>
-      <h3 className="mb-3 text-sm font-semibold">{title}</h3>
-      {children}
-    </div>
   );
 }

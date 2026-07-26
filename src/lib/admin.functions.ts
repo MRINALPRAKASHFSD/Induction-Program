@@ -419,3 +419,32 @@ export const exportEventAttendanceCsv = async ({
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
+/* ---------------- Modular Analytics API Fetchers ---------------- */
+
+async function fetchAnalyticsEndpoint(endpoint: string, token: string, body = {}) {
+  const res = await fetch(`/api/${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export const getAnalyticsOverview = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-overview', token, { filter });
+export const getAnalyticsAttendance = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-attendance', token, { filter });
+export const getAnalyticsEvents = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-events', token, { filter });
+export const getAnalyticsClubs = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-clubs', token, { filter });
+export const getAnalyticsStudents = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-students', token, { filter });
+export const getAnalyticsQR = (token: string, filter?: any) => fetchAnalyticsEndpoint('analytics-qr', token, { filter });
+export const getAnalyticsActivity = (token: string, limit?: number, cursor?: string) => fetchAnalyticsEndpoint('analytics-activity', token, { limit, cursor });
+export const getAnalyticsSnapshot = (token: string) => fetchAnalyticsEndpoint('analytics-snapshot', token);
+
