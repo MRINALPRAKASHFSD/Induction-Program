@@ -184,6 +184,25 @@ service cloud.firestore {
       // No client writes — server only
       allow write: if false;
     }
+    // 15. EVENT DATASETS (Admin upload & management)
+    match /event_datasets/{datasetId} {
+      // Admins and coordinators can read all dataset records
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      // No direct client writes — all writes go through the Admin SDK (server-side APIs)
+      allow write: if false;
+    }
+
+    // 16. EVENT PARTICIPANTS (imported from datasets — server only)
+    match /event_participants/{participantId} {
+      // Admins and coordinators can read participant records
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      // No direct client writes — populated by the import API via Admin SDK
+      allow write: if false;
+    }
   }
 }
 
