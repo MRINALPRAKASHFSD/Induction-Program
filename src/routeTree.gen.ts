@@ -31,6 +31,7 @@ const CampusLazyRouteImport = createFileRoute('/campus')()
 const AttendanceLazyRouteImport = createFileRoute('/attendance')()
 const AnnouncementsLazyRouteImport = createFileRoute('/announcements')()
 const AdminScheduleLazyRouteImport = createFileRoute('/admin/schedule')()
+const AdminRoomsLazyRouteImport = createFileRoute('/admin/rooms')()
 const AdminLoginLazyRouteImport = createFileRoute('/admin/login')()
 const AdminEventsLazyRouteImport = createFileRoute('/admin/events')()
 const AdminDatasetsLazyRouteImport = createFileRoute('/admin/datasets')()
@@ -113,6 +114,11 @@ const AdminScheduleLazyRoute = AdminScheduleLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.schedule.lazy').then((d) => d.Route),
 )
+const AdminRoomsLazyRoute = AdminRoomsLazyRouteImport.update({
+  id: '/admin/rooms',
+  path: '/admin/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.rooms.lazy').then((d) => d.Route))
 const AdminLoginLazyRoute = AdminLoginLazyRouteImport.update({
   id: '/admin/login',
   path: '/admin/login',
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/rooms': typeof AdminRoomsLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRoutesByTo {
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/rooms': typeof AdminRoomsLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRoutesById {
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/admin/datasets': typeof AdminDatasetsLazyRoute
   '/admin/events': typeof AdminEventsLazyRoute
   '/admin/login': typeof AdminLoginLazyRoute
+  '/admin/rooms': typeof AdminRoomsLazyRoute
   '/admin/schedule': typeof AdminScheduleLazyRoute
 }
 export interface FileRouteTypes {
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
+    | '/admin/rooms'
     | '/admin/schedule'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
+    | '/admin/rooms'
     | '/admin/schedule'
   id:
     | '__root__'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/admin/datasets'
     | '/admin/events'
     | '/admin/login'
+    | '/admin/rooms'
     | '/admin/schedule'
   fileRoutesById: FileRoutesById
 }
@@ -388,6 +400,7 @@ export interface RootRouteChildren {
   AdminDatasetsLazyRoute: typeof AdminDatasetsLazyRoute
   AdminEventsLazyRoute: typeof AdminEventsLazyRoute
   AdminLoginLazyRoute: typeof AdminLoginLazyRoute
+  AdminRoomsLazyRoute: typeof AdminRoomsLazyRoute
   AdminScheduleLazyRoute: typeof AdminScheduleLazyRoute
 }
 
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/schedule'
       fullPath: '/admin/schedule'
       preLoaderRoute: typeof AdminScheduleLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/rooms': {
+      id: '/admin/rooms'
+      path: '/admin/rooms'
+      fullPath: '/admin/rooms'
+      preLoaderRoute: typeof AdminRoomsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/login': {
@@ -604,6 +624,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDatasetsLazyRoute: AdminDatasetsLazyRoute,
   AdminEventsLazyRoute: AdminEventsLazyRoute,
   AdminLoginLazyRoute: AdminLoginLazyRoute,
+  AdminRoomsLazyRoute: AdminRoomsLazyRoute,
   AdminScheduleLazyRoute: AdminScheduleLazyRoute,
 }
 export const routeTree = rootRouteImport

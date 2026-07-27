@@ -15,7 +15,7 @@ import { m, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight,
   CheckCircle2, ScanLine, MapPin, Megaphone,
-  UsersRound, Shield, HelpCircle, Wallet,
+  UsersRound, Shield, HelpCircle, Wallet, LogIn
 } from "lucide-react";
 
 /* ─── Nav Items ─────────────────────────────────────────────────── */
@@ -277,11 +277,16 @@ export function SiteHeader() {
               </Link>
             )}
 
-            {/* Register CTA for guests */}
+            {/* Auth CTAs for guests */}
             {!isRegistered && !user && (
-              <Button variant="liquidGlassMaroon" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold hidden sm:flex">
-                <Link to="/register">Register</Link>
-              </Button>
+              <div className="hidden sm:flex items-center gap-2">
+                <Button variant="liquidGlassMaroon" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold">
+                  <Link to="/register">Register Now</Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold border-[#8a4a22]/30 text-[#8a4a22] hover:bg-[#8a4a22]/5">
+                  <Link to="/login">Login</Link>
+                </Button>
+              </div>
             )}
 
             {/* Notification Bell — only show when registered */}
@@ -432,12 +437,7 @@ export function SiteHeader() {
                         </Link>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
-                      <Link to="/admin/login" className="flex items-center gap-3 w-full">
-                        <Shield className="w-4 h-4 opacity-70" /> 
-                        <span>Admin Panel</span>
-                      </Link>
-                    </DropdownMenuItem>
+
                     <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
                     <DropdownMenuItem
                       onClick={handleLogout}
@@ -455,13 +455,7 @@ export function SiteHeader() {
                         <span>Register now</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
-                      <Link to="/admin/login" className="flex items-center gap-3 w-full">
-                        <Shield className="w-4 h-4 opacity-70" /> 
-                        <span>Admin Panel</span>
-                      </Link>
-                    </DropdownMenuItem>
+
                   </>
                 )}
               </DropdownMenuContent>
@@ -544,16 +538,26 @@ export function SiteHeader() {
                 </div>
               )}
 
-              {/* Scanner CTA (for guests, prominent) */}
+              {/* Auth CTAs (for guests, prominent) */}
               {!isRegistered && (
-                <Link
-                  to="/register"
-                  className="nav-mobile-scanner mb-4"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <User className="w-5 h-5" />
-                  Register Now
-                </Link>
+                <div className="flex flex-col gap-2 mb-4">
+                  <Link
+                    to="/register"
+                    className="nav-mobile-scanner"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    Register Now
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="nav-mobile-scanner bg-white text-[#8a4a22] border border-[#8a4a22]/20 shadow-sm"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <LogIn className="w-5 h-5" />
+                    Login
+                  </Link>
+                </div>
               )}
 
               {/* Nav Links */}
@@ -591,14 +595,7 @@ export function SiteHeader() {
 
               {/* Divider + secondary actions */}
               <div className="mt-4 pt-4 border-t border-[#8a4a22]/8 flex flex-col gap-1">
-                <Link
-                  to="/admin/login"
-                  className="nav-mobile-link text-[#8a4a22]/70"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <Shield className="w-5 h-5 opacity-40" />
-                  <span>Admin Panel</span>
-                </Link>
+
                 {user && (
                   <button
                     className="nav-mobile-link text-red-600/80 w-full"

@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Profile2User, ScanBarcode, MagicStar, Calendar1, Import, DocumentText, TableDocument, DocumentCode, Document } from "iconsax-react";
-import { useLiveCount } from "@/hooks/use-live-count";
+import { usePlatformAnalytics } from "@/hooks/use-platform-analytics";
 import { AdminShell } from "@/components/admin-shell";
 import { collection, query, orderBy, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -142,10 +142,12 @@ function AdminDashboard() {
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [exporting, setExporting] = useState<string | null>(null);
 
-  const students = useLiveCount("students");
-  const scans = useLiveCount("attendance");
-  const clubs = useLiveCount("club_registrations");
-  const events = useLiveCount("events");
+  const { data } = usePlatformAnalytics({ fresh: true });
+
+  const students = data?.stats.students ?? 0;
+  const scans = data?.stats.attendance ?? 0;
+  const clubs = data?.stats.clubRegistrations ?? 0;
+  const events = data?.stats.liveEvents ?? 0;
 
   // Live feed — latest 50 in real-time
   useEffect(() => {

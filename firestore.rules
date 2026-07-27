@@ -203,6 +203,18 @@ service cloud.firestore {
       // No direct client writes — populated by the import API via Admin SDK
       allow write: if false;
     }
+
+    // 17. ROOMS
+    match /rooms/{roomId} {
+      allow read: if isAdminOrCoordinator();
+      allow write: if false;
+    }
+
+    // 18. ROOM ALLOCATIONS
+    match /room_allocations/{allocId} {
+      allow read: if isAdminOrCoordinator();
+      allow write: if false;
+    }
   }
 }
 

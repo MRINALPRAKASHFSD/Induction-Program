@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getRedis } from '../server/redis.js';
+import { allocateRoom } from '../server/room-allocation.js';
 import { z } from 'zod';
 
 let firebaseInitialized = false;
@@ -196,17 +197,46 @@ export default async function handler(req: any, res: any) {
       const now = new Date().toISOString();
       const { email, phone, auth_uid, deptName, ...publicData } = parsed;
 
-      // Writes
+      // ── Room Allocation (within this same transaction) ──────────────────
+      // allocateRoom never throws — returns allocationStatus: 'pending' on error.
+      const roomAssignment = await allocateRoom(
+        db, t, parsed.department_id, enrollmentKey,
+      );
+
+      // ── Writes ──────────────────────────────────────────────────────────
+      const studentPayload = {
+        ...publicData,
+        roomAssignment,
+        // Legacy flat field for backward compat with admin exports + local-db
+        room_no: roomAssignment.roomNumber ?? undefined,
+      };
+
       if (studentSnap.exists) {
-        t.set(studentRef, { ...publicData, auth_uid: auth_uid || null }, { merge: true });
+        t.set(studentRef, { ...studentPayload, auth_uid: auth_uid || null }, { merge: true });
       } else {
         t.set(studentRef, {
-          ...publicData,
+          ...studentPayload,
           id:            enrollmentKey,
           enrollment_no: enrollmentKey,
           auth_uid:      auth_uid || null,
           points:        0,
           created_at:    now,
+        });
+      }
+
+      // ── Audit log: room_allocations ─────────────────────────────────────
+      if (roomAssignment.allocationStatus === 'allocated') {
+        const auditRef = db.collection('room_allocations').doc();
+        t.set(auditRef, {
+          enrollment_no:  enrollmentKey,
+          student_name:   parsed.full_name,
+          department_id:  parsed.department_id,
+          room_number:    roomAssignment.roomNumber,
+          block:          roomAssignment.block,
+          action:         'allocated',
+          reason:         'initial_registration',
+          performed_by:   'system',
+          allocated_at:   now,
         });
       }
 
@@ -217,7 +247,7 @@ export default async function handler(req: any, res: any) {
       t.set(enrollmentRef, { email: emailKey, auth_uid: auth_uid || null, created_at: now });
       t.set(phoneRef, { enrollment_no: enrollmentKey, created_at: now });
 
-      return { ok: true, student_id: enrollmentKey, duplicate: false };
+      return { ok: true, student_id: enrollmentKey, duplicate: false, roomAssignment };
     });
 
     logRequest(result.duplicate ? 'Duplicate(Idempotent)' : 'Success', enrollmentKey, emailKey);

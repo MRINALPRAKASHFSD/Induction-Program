@@ -165,6 +165,37 @@
         { "fieldPath": "checksum", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
+    },
+
+    /* ── ROOMS ──────────────────────────────────────────────────────────── */
+
+    {
+      "collectionGroup": "rooms",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "school",          "order": "ASCENDING" },
+        { "fieldPath": "status",          "order": "ASCENDING" },
+        { "fieldPath": "allocationOrder", "order": "ASCENDING" }
+      ]
+    },
+
+    /* ── ROOM ALLOCATIONS AUDIT ─────────────────────────────────────────── */
+
+    {
+      "collectionGroup": "room_allocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "enrollment_no", "order": "ASCENDING" },
+        { "fieldPath": "allocated_at",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "room_allocations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "room_number", "order": "ASCENDING" },
+        { "fieldPath": "allocated_at","order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

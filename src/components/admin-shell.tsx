@@ -1,6 +1,6 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText } from "iconsax-react";
+import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText, Building4 } from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { auth, db } from "@/lib/firebase/config";
@@ -19,16 +19,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 const isClient = typeof window !== 'undefined';
 
 const NAV = [
-  { to: "/admin/dashboard", label: "Dashboard", icon: Element3 },
-  { to: "/admin/attendance", label: "Attendance", icon: ScanBarcode },
-  { to: "/admin/events", label: "Events", icon: Calendar1 },
-  { to: "/admin/datasets", label: "Dataset Management", icon: DocumentText },
-  { to: "/admin/students", label: "Students", icon: Profile2User },
-  { to: "/admin/clubs", label: "Clubs", icon: MagicStar },
-  { to: "/admin/announcements", label: "Announcements", icon: Bell },
-  { to: "/admin/documents", label: "Documents", icon: ShieldTick },
-  { to: "/admin/analytics", label: "Analytics", icon: Chart1 },
-  { to: "/admin/activity", label: "Activity", icon: Activity },
+  { to: "/admin/dashboard",   label: "Dashboard",          icon: Element3     },
+  { to: "/admin/attendance",  label: "Attendance",          icon: ScanBarcode  },
+  { to: "/admin/events",      label: "Events",              icon: Calendar1    },
+  { to: "/admin/datasets",    label: "Dataset Management",  icon: DocumentText },
+  { to: "/admin/students",    label: "Students",            icon: Profile2User },
+  { to: "/admin/rooms",       label: "Rooms",               icon: Building4    },
+  { to: "/admin/clubs",       label: "Clubs",               icon: MagicStar    },
+  { to: "/admin/announcements", label: "Announcements",     icon: Bell         },
+  { to: "/admin/documents",   label: "Documents",           icon: ShieldTick   },
+  { to: "/admin/analytics",   label: "Analytics",           icon: Chart1       },
+  { to: "/admin/activity",    label: "Activity",            icon: Activity     },
 ] as const;
 
 export function AdminShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {

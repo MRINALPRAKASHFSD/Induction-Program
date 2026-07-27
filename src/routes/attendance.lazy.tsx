@@ -216,7 +216,11 @@ function AttendancePage() {
       let usedCameraId = cameraId || localStorage.getItem("preferred_camera_id") || undefined;
 
       const attemptConfigs: MediaTrackConstraints[] = usedCameraId
-        ? [{ deviceId: { exact: usedCameraId } }]
+        ? [
+            { deviceId: { exact: usedCameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            { deviceId: { exact: usedCameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
+            { deviceId: { exact: usedCameraId } }
+          ]
         : [
             { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
             { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -226,19 +230,20 @@ function AttendancePage() {
 
       for (const config of attemptConfigs) {
         try {
-          if (!(config as any).focusMode) (config as any).focusMode = "continuous";
+          // Note: DO NOT set focusMode directly on config here, it causes OverconstrainedError on many devices (iOS Safari).
+          // We will attempt to set it safely after camera start via applyVideoConstraints.
 
           await scanner.start(
             config,
             {
-              fps: 30,
+              fps: 15,
               qrbox: (viewfinderWidth, viewfinderHeight) => {
                 const isMobile = window.innerWidth < 640;
                 const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
-                let pct = isMobile ? 0.8 : isTablet ? 0.6 : 0.5;
+                let pct = isMobile ? 0.9 : isTablet ? 0.7 : 0.6; // Increased slightly for higher sensitivity area
                 const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
                 let size = Math.floor(minEdge * pct);
-                if (!isMobile && size > 400) size = 400;
+                if (!isMobile && size > 500) size = 500;
                 return { width: size, height: size };
               },
               aspectRatio: 1.0,
@@ -281,6 +286,12 @@ function AttendancePage() {
             setZoom(trackSettings.zoom || (trackCaps as any).zoom.min || 1);
           } else {
             setHasZoom(false);
+          }
+          
+          if ((trackCaps as any).focusMode && Array.isArray((trackCaps as any).focusMode) && (trackCaps as any).focusMode.includes("continuous")) {
+            scannerRef.current.applyVideoConstraints({
+              advanced: [{ focusMode: "continuous" } as any]
+            }).catch(() => {});
           }
         } catch (e) {
           console.warn("Capability check failed", e);

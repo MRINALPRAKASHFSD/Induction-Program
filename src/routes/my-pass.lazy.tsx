@@ -63,6 +63,7 @@ const BADGES = [
 function MyPassPage() {
   const [profile, setProfile] = useState<LocalStudent | null>(null);
   const [livePoints, setLivePoints] = useState<number | null>(null);
+  const [liveRoom, setLiveRoom] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -73,11 +74,18 @@ function MyPassPage() {
     if (p) {
       setProfile(p);
       
-      // Fetch live points from server
+      // Fetch live points + room assignment from server
       lookupStudent({ data: { enrollment_no: p.enrollment_no } })
         .then((res: any) => {
           if (res.student) {
             setLivePoints(res.student.points || 0);
+            // Prefer live roomAssignment; fall back to local room_no
+            const ra = res.student.roomAssignment;
+            const room =
+              ra?.allocationStatus === 'allocated' && ra.roomNumber
+                ? ra.roomNumber
+                : res.student.room_no || p.room_no || null;
+            setLiveRoom(room);
           }
         })
         .catch(console.error)
@@ -247,20 +255,34 @@ function MyPassPage() {
             </div>
           </div>
 
-          {/* ── Streak + Points Row ─────────────────────────────── */}
+          {/* ── Streak + Points Row (or Room + Points) ───────────── */}
           <div className="grid grid-cols-2 gap-3 animate-slide-up stagger-3">
-            {/* Attendance Streak */}
-            <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
-              <div className="flex items-center justify-between w-full relative z-10">
-                <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 mb-2">
-                  <Flame className="w-4 h-4" />
+            {/* Room card (when allocated) OR Attendance Streak */}
+            {liveRoom ? (
+              <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="flex items-center justify-between w-full relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mb-2">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="relative z-10">
+                  <div className="text-hero-heading text-primary font-bold">{liveRoom}</div>
+                  <div className="text-label text-tertiary">Your Room</div>
                 </div>
               </div>
-              <div className="relative z-10">
-                <div className="text-hero-heading text-primary">3</div>
-                <div className="text-label text-tertiary">Day Streak</div>
+            ) : (
+              <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <div className="flex items-center justify-between w-full relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 mb-2">
+                    <Flame className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="relative z-10">
+                  <div className="text-hero-heading text-primary">3</div>
+                  <div className="text-label text-tertiary">Day Streak</div>
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Reward Points */}
             <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">

@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { m, LazyMotion, domAnimation, AnimatePresence } from "framer-motion";
-import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight } from "lucide-react";
+import { m, LazyMotion, domAnimation, AnimatePresence, animate } from "framer-motion";
+import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight, Database, MapPin } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
 import React, { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { usePlatformAnalytics } from "@/hooks/use-platform-analytics";
 
 
 export const Route = createFileRoute("/")({
@@ -85,33 +86,51 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
   );
 });
 
-function Landing() {
-  const [stats, setStats] = useState<{ students: number | null, attendance: number | null, clubs: number | null }>({
-    students: null,
-    attendance: null,
-    clubs: null
-  });
+function getRelativeTime(isoString: string) {
+  const date = new Date(isoString);
+  const diffInSeconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diffInSeconds < 10) return "just now";
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+  return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }).format(date);
+}
+
+function AnimatedCounter({ value }: { value: number }) {
+  const nodeRef = React.useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch("/api/live-impact");
-        if (!res.ok) return;
-        const data = await res.json();
-        setStats({
-          students: data.students ?? 0,
-          attendance: data.attendance ?? 0,
-          clubs: data.clubs ?? 0,
-        });
-      } catch {
-        // silently fail — keep showing previous values
-      }
-    }
+    const node = nodeRef.current;
+    if (node) {
+      const controls = animate(0, value, {
+        duration: 1.5,
+        ease: "easeOut",
+        onUpdate: (v: number) => {
+          node.textContent = Math.round(v).toString();
+        }
+      });
 
-    fetchStats();
-    const interval = setInterval(fetchStats, 15000);
-    return () => clearInterval(interval);
-  }, []);
+      return () => controls?.stop?.();
+    }
+  }, [value]);
+
+  return <span ref={nodeRef}>{value}</span>;
+}
+
+function Landing() {
+
+  const { data, isLoading, error } = usePlatformAnalytics();
+  const [relativeTime, setRelativeTime] = useState("just now");
+
+  useEffect(() => {
+    if (data?.generatedAt) {
+      setRelativeTime(getRelativeTime(data.generatedAt));
+      const interval = setInterval(() => {
+        setRelativeTime(getRelativeTime(data.generatedAt));
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [data?.generatedAt]);
 
   const [isBgLoaded, setIsBgLoaded] = useState(false);
   const isMobile = useIsMobile();
@@ -123,9 +142,7 @@ function Landing() {
     return () => clearTimeout(timer);
   }, []);
 
-  const students = stats.students;
-  const scans = stats.attendance;
-  const clubs = stats.clubs;
+
 
   return (
     <LazyMotion features={domAnimation}>
@@ -282,38 +299,60 @@ function Landing() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8a4a22]/8 border border-[#8a4a22]/12 mb-5">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#c87038] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#a84a25]"></span>
+              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${error ? 'bg-red-500' : 'bg-[#c87038] animate-ping'}`}></span>
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${error ? 'bg-red-600' : 'bg-[#a84a25]'}`}></span>
             </span>
-            <span className="text-label text-[#8a4a22] uppercase font-bold tracking-wider mt-0">Live Updates</span>
+            <span className="text-label text-[#8a4a22] uppercase font-bold tracking-wider mt-0">
+              {error ? "Unable to refresh" : `LIVE — Updated ${relativeTime}`}
+            </span>
           </div>
-          <h2 className="text-hero-heading text-primary font-bold">Real-time Impact</h2>
+          <h2 className="text-hero-heading text-primary font-bold">Live Platform Impact</h2>
           <p className="text-body-primary text-secondary mt-4 max-w-lg mx-auto">
-            Watch our community grow instantly as new students register, scan in, and join clubs.
+            Watch the Aarambh platform come to life as students register, complete attendance, join communities, and participate in university events in real time.
           </p>
         </div>
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
-            { value: students ?? "—", label: "Registered", icon: Users, variant: "kpi-yellow" },
-            { value: scans ?? "—", label: "QR Scans", icon: ScanLine, variant: "kpi-emerald" },
-            { value: clubs ?? "—", label: "Club Joins", icon: UsersRound, variant: "kpi-blue" },
-            { value: "5", label: "Days", icon: Calendar, variant: "kpi-purple" },
+            { id: 'students', value: data?.stats.students, label: "Students Registered", icon: Users, variant: "kpi-yellow", emptyLabel: "" },
+            { id: 'scans', value: data?.stats.attendance, label: "Attendance Marked", icon: ScanLine, variant: "kpi-emerald", emptyLabel: "" },
+            { id: 'events', value: data?.stats.liveEvents, label: "Live Events", icon: Calendar, variant: "kpi-purple", emptyLabel: "No Active Events" },
+            { id: 'participants', value: data?.stats.participants, label: "Orientation Participants", icon: UsersRound, variant: "kpi-yellow", emptyLabel: "" },
+            { id: 'datasets', value: data?.stats.datasets, label: "Student Datasets", icon: Database, variant: "kpi-blue", emptyLabel: "No Datasets" },
+            { id: 'communities', value: data?.stats.communities, label: "Student Communities", icon: UsersRound, variant: "kpi-emerald", emptyLabel: "Not Configured" },
+            { id: 'clubs', value: data?.stats.clubRegistrations, label: "Club Registrations", icon: Users, variant: "kpi-purple", emptyLabel: "" },
+            { id: 'announcements', value: data?.stats.announcements, label: "Announcements", icon: Megaphone, variant: "kpi-blue", emptyLabel: "No Active Announcements" },
+            ...(data?.stats.campusLocations || isLoading ? [{ id: 'locations', value: data?.stats.campusLocations, label: "Campus Locations", icon: MapPin, variant: "kpi-yellow", emptyLabel: "Not Configured" }] : [])
           ].map((kpi, i) => (
             <div
-              key={kpi.label}
-              className={`kpi-card ${kpi.variant} animate-slide-up stagger-${i + 1}`}
+              key={kpi.id}
+              className={`kpi-card ${kpi.variant} animate-slide-up stagger-${(i % 5) + 1}`}
             >
               <div className="kpi-icon">
                 <kpi.icon className="w-5 h-5" />
               </div>
-              <div className="kpi-value">{kpi.value}</div>
+              
+              {isLoading ? (
+                <div className="h-10 w-24 bg-[#8a4a22]/10 rounded-md animate-pulse my-1" />
+              ) : error && !data ? (
+                <div className="kpi-value">—</div>
+              ) : (
+                <div className="kpi-value">
+                  {kpi.value === 0 && kpi.emptyLabel ? (
+                    <span className="text-lg font-medium text-muted-foreground/80">{kpi.emptyLabel}</span>
+                  ) : (
+                    <AnimatedCounter value={kpi.value ?? 0} />
+                  )}
+                </div>
+              )}
+              
               <div className="kpi-label">{kpi.label}</div>
             </div>
           ))}
         </div>
       </section>
+
 
       {/* Features */}
       <section className="container mx-auto max-w-6xl px-4 py-24">
