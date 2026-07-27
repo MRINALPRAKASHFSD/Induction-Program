@@ -38,6 +38,7 @@ import { getRedis } from '../server/redis.js';
 import { publishAttendanceJob } from '../server/qstash.js';
 import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token.js';
 import { decodeQrPayload, verifyQrSignature, isQrExpired } from '../server/qr-crypto.js';
+import { processAttendanceFirestoreTransaction } from '../server/attendance-core.js';
 import crypto from 'crypto';
 
 // ── Firebase Admin — module-level singleton ───────────────────────────────────
@@ -409,8 +410,32 @@ export default async function handler(req: any, res: any) {
         verificationResult: nonceUnchecked ? 'nonce_unchecked' : 'verified'
       });
     } catch (e: any) {
-      console.error(JSON.stringify({ requestId, layer: 'qstash', error: e.message }));
-      return res.status(500).json({ ok: false, error: 'Failed to enqueue attendance. Please try again.' });
+      console.warn(JSON.stringify({ requestId, layer: 'qstash', error: e.message, status: 'fallback_to_sync' }));
+      
+      // Fallback: If QStash is down, misconfigured, or unreachable, process the attendance synchronously
+      try {
+        await processAttendanceFirestoreTransaction({
+          sessionId,
+          studentId: enrollmentClean,
+          enrollmentNo: enrollmentClean,
+          studentName: studentData.full_name,
+          school: studentData.school || '',
+          department: studentData.department_id || '',
+          programme: studentData.programme || '',
+          semester: studentData.semester || '',
+          section: studentData.section || '',
+          email: studentData.email || '',
+          scanTimeIso: now.toISOString(),
+          qrVersion: payload.v || 1,
+          scannerDeviceId: decodedToken.uid,
+          ipAddress: clientIp,
+          userAgent: uaTruncated,
+          verificationResult: nonceUnchecked ? 'nonce_unchecked' : 'verified'
+        });
+      } catch (syncError: any) {
+        console.error(JSON.stringify({ requestId, layer: 'sync_fallback', error: syncError.message }));
+        return res.status(500).json({ ok: false, error: `Failed to record attendance. Please try again. [QStash error: ${e.message}]` });
+      }
     }
 
     // Warm Redis dedup cache

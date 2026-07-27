@@ -17,6 +17,7 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { Receiver } from '@upstash/qstash';
 import type { AttendanceJobPayload } from '../server/qstash.js';
+import { processAttendanceFirestoreTransaction } from '../server/attendance-core.js';
 import crypto from 'crypto';
 
 // ── Firebase Admin Singleton ──────────────────────────────────────────────────
@@ -90,69 +91,8 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const db = getFirestore();
-
-    // Idempotency Check using a Transaction
-    await db.runTransaction(async (transaction) => {
-      const processedJobRef = db.collection('processed_jobs').doc(messageId);
-      const jobDoc = await transaction.get(processedJobRef);
-      
-      if (jobDoc.exists) {
-        console.log(`[attendance-worker] Job ${messageId} already processed. Skipping.`);
-        return;
-      }
-
-      const logId = `${payload.sessionId}_${payload.studentId}`;
-      const logRef = db.collection('attendance_logs').doc(logId);
-      const logDoc = await transaction.get(logRef);
-      
-      if (!logDoc.exists) {
-        // Write the immutable attendance log
-        transaction.set(logRef, {
-          schema_version: 1,
-          session_id: payload.sessionId,
-          student_id: payload.studentId,
-          enrollment_no: payload.enrollmentNo,
-          student_name: payload.studentName,
-          school: payload.school,
-          department: payload.department,
-          programme: payload.programme,
-          semester: payload.semester,
-          section: payload.section,
-          email: payload.email,
-          scan_time: FieldValue.serverTimestamp(),
-          qr_version: payload.qrVersion,
-          scanner_device_id: payload.scannerDeviceId,
-          ip_address: payload.ipAddress,
-          user_agent: payload.userAgent,
-          verification_result: payload.verificationResult,
-          created_at: FieldValue.serverTimestamp(),
-        });
-
-        // Fetch shard count dynamically from session config (default 64)
-        const sessionRef = db.collection('attendance_sessions').doc(payload.sessionId);
-        const sessionDoc = await transaction.get(sessionRef);
-        const numShards = sessionDoc.exists ? (sessionDoc.data()?.num_shards || 64) : 64;
-        
-        // Pick a random shard
-        const shardId = Math.floor(Math.random() * numShards).toString();
-        const shardRef = db.collection('attendance_stats').doc(payload.sessionId).collection('shards').doc(shardId);
-        
-        // Increment the shard
-        transaction.set(shardRef, {
-          total_present: FieldValue.increment(1)
-        }, { merge: true });
-      }
-
-      // Record job as processed with a TTL (e.g., 7 days)
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7);
-      
-      transaction.set(processedJobRef, {
-        processed_at: FieldValue.serverTimestamp(),
-        expires_at: expiresAt
-      });
-    });
+    // Process using core logic (shared with synchronous fallback)
+    await processAttendanceFirestoreTransaction(payload, messageId);
 
     console.log(`[attendance-worker] ✓ Processed: ${payload.studentId} @ Session ${payload.sessionId}`);
     return res.status(200).json({ ok: true, message: 'Job processed successfully.' });

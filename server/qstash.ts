@@ -36,12 +36,12 @@ export interface AttendanceJobPayload {
 
 let _client: Client | null = null;
 
-function getQStash(): Client | null {
+function getQStash(): Client {
   if (_client) return _client;
 
   const token = process.env.QSTASH_TOKEN;
   if (!token) {
-    return null;
+    throw new Error('QStash token not configured. Set QSTASH_TOKEN.');
   }
 
   _client = new Client({ token });
@@ -62,20 +62,6 @@ export async function publishAttendanceJob(payload: AttendanceJobPayload): Promi
   const baseUrl =
     process.env.APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-
-  if (!client) {
-    console.warn('[qstash] QSTASH_TOKEN not set. Bypassing QStash and calling worker directly (Local Dev Mode).');
-    const res = await fetch(`${baseUrl}/api/attendance-worker`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Direct worker call failed with status: ${res.status}`);
-    }
-    return;
-  }
 
   await client.publishJSON({
     url: `${baseUrl}/api/attendance-worker`,
