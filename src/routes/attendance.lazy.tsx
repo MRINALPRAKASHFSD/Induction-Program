@@ -118,6 +118,7 @@ function AttendancePage() {
   const [zoomRange, setZoomRange] = useState({ min: 1, max: 1 });
   const [hasZoom, setHasZoom] = useState(false);
   const [lowLightWarning, setLowLightWarning] = useState(false);
+  const [isSoftwareZoom, setIsSoftwareZoom] = useState(false);
   const [focusPoint, setFocusPoint] = useState<{x: number, y: number} | null>(null);
   const lightingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const initialPinchDistRef = useRef<number | null>(null);
@@ -155,28 +156,32 @@ function AttendancePage() {
     }
   }, []);
 
-  // ── Start scanning flow: GPS first, then camera ───────────────────────────
+  // ── Start scanning flow: Camera first (for iOS gesture), then GPS ───────────
   const startAttendanceFlow = async () => {
     setPhase("locating");
     setErrorMsg("");
 
     try {
-      // Step 1: Get GPS coordinates and verify campus
+      // Step 1: Start camera FIRST to preserve the synchronous user gesture context
+      // required by iOS Safari for getUserMedia.
+      const scannerStarted = await startScanner();
+      if (!scannerStarted) return;
+
+      // Step 2: Get GPS coordinates and verify campus
       const position = await verifyInsideCampus();
       locationRef.current = position;  // write synchronously — readable in scanner closure
       setLocation(position);           // update UI state
 
-      // Step 2: Start camera scanner
       setPhase("scanner");
-      await startScanner();
     } catch (e: any) {
+      stopScanner();
       setErrorMsg(e.message || "Failed to get your location");
       setPhase("error");
     }
   };
 
   // ── Camera scanner ────────────────────────────────────────────────────────
-  const startScanner = async (cameraId?: string) => {
+  const startScanner = async (cameraId?: string): Promise<boolean> => {
     try {
       await new Promise(r => setTimeout(r, 100));
 
@@ -189,14 +194,6 @@ function AttendancePage() {
         clearInterval(lightingIntervalRef.current);
         lightingIntervalRef.current = null;
       }
-
-      const scanner = new Html5Qrcode(scannerContainerId, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-        verbose: false,
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-      });
-
-      scannerRef.current = scanner;
 
       let currentCameras = cameras;
       if (currentCameras.length === 0) {
@@ -215,21 +212,42 @@ function AttendancePage() {
       let lastError: any = null;
       let usedCameraId = cameraId || localStorage.getItem("preferred_camera_id") || undefined;
 
+      // Ensure that even if we try a preferred camera ID and it fails, we fall back to generic constraints.
+      const fallbackConfigs: MediaTrackConstraints[] = [
+        { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+        { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        { facingMode: "environment" },
+        { width: { ideal: 1920 }, height: { ideal: 1080 } },
+        { width: { ideal: 1280 }, height: { ideal: 720 } },
+        {} // Any camera
+      ];
+
       const attemptConfigs: MediaTrackConstraints[] = usedCameraId
         ? [
             { deviceId: { exact: usedCameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
             { deviceId: { exact: usedCameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            { deviceId: { exact: usedCameraId } }
+            { deviceId: { exact: usedCameraId } },
+            ...fallbackConfigs
           ]
-        : [
-            { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-            { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-            { facingMode: "environment" },
-            {} // Any camera
-          ];
+        : fallbackConfigs;
 
       for (const config of attemptConfigs) {
         try {
+          // Clean up any failed previous instance in the loop
+          if (scannerRef.current) {
+            try { await scannerRef.current.stop(); } catch(err) {}
+            try { scannerRef.current.clear(); } catch(err) {}
+            scannerRef.current = null;
+          }
+
+          // Instantiate a fresh scanner for each attempt to avoid 'already under transition' errors
+          const scanner = new Html5Qrcode(scannerContainerId, {
+            formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+            verbose: false,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+          });
+          scannerRef.current = scanner;
+
           // Note: DO NOT set focusMode directly on config here, it causes OverconstrainedError on many devices (iOS Safari).
           // We will attempt to set it safely after camera start via applyVideoConstraints.
 
@@ -265,7 +283,6 @@ function AttendancePage() {
         } catch (e) {
           lastError = e;
           console.warn("Camera init attempt failed:", config, e);
-          try { await scanner.stop(); scanner.clear(); } catch(err){}
         }
       }
 
@@ -282,10 +299,15 @@ function AttendancePage() {
 
           if ((trackCaps as any).zoom) {
             setHasZoom(true);
+            setIsSoftwareZoom(false);
             setZoomRange({ min: (trackCaps as any).zoom.min || 1, max: (trackCaps as any).zoom.max || 5 });
             setZoom(trackSettings.zoom || (trackCaps as any).zoom.min || 1);
           } else {
-            setHasZoom(false);
+            // Enable high-quality software (CSS) zoom as a fallback
+            setHasZoom(true);
+            setIsSoftwareZoom(true);
+            setZoomRange({ min: 1, max: 3 });
+            setZoom(1);
           }
           
           if ((trackCaps as any).focusMode && Array.isArray((trackCaps as any).focusMode) && (trackCaps as any).focusMode.includes("continuous")) {
@@ -318,15 +340,18 @@ function AttendancePage() {
         } catch(e) {}
       }, 1000);
 
+      return true;
+
     } catch (e: any) {
       console.error("Scanner error:", e);
-      let errMsg = "Failed to start camera. Please check your device permissions.";
-      if (e.name === "NotAllowedError" || e.message?.includes("NotAllowed")) errMsg = "Camera permission denied. Please enable camera access in your browser settings.";
-      if (e.name === "NotReadableError") errMsg = "Camera is already in use by another app or tab.";
-      if (e.name === "NotFoundError") errMsg = "No camera found on this device.";
+      let errMsg = `Failed to start camera. Error: ${e?.message || e?.name || String(e)}`;
+      if (e?.name === "NotAllowedError" || e?.message?.includes("NotAllowed")) errMsg = "Camera permission denied. Please enable camera access in your browser settings.";
+      if (e?.name === "NotReadableError") errMsg = "Camera is already in use by another app or tab.";
+      if (e?.name === "NotFoundError") errMsg = "No camera found on this device.";
       
       setErrorMsg(errMsg);
       setPhase("error");
+      return false;
     }
   };
 
@@ -346,7 +371,7 @@ function AttendancePage() {
   const handleZoomChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newZoom = parseFloat(e.target.value);
     setZoom(newZoom);
-    if (!scannerRef.current || !hasZoom) return;
+    if (!scannerRef.current || !hasZoom || isSoftwareZoom) return;
     try {
       await scannerRef.current.applyVideoConstraints({
         advanced: [{ zoom: newZoom } as any]
@@ -395,7 +420,7 @@ function AttendancePage() {
       setZoom(newZoom);
       initialPinchDistRef.current = dist;
       
-      if (scannerRef.current) {
+      if (scannerRef.current && !isSoftwareZoom) {
         scannerRef.current.applyVideoConstraints({ advanced: [{ zoom: newZoom } as any] }).catch(()=>{});
       }
     }
@@ -598,15 +623,20 @@ function AttendancePage() {
 
           <div className="flex flex-col items-center justify-center min-h-screen px-4 pt-16 pb-8 relative">
             <div 
-              className="relative w-full max-w-sm"
+              className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-black transition-colors"
+              style={{ minHeight: "300px" }}
               onTouchStart={handleContainerTouchStart}
               onTouchMove={handleContainerTouchMove}
               onClick={handleContainerClick}
             >
               <div
                 id={scannerContainerId}
-                className={`w-full rounded-2xl overflow-hidden bg-black transition-colors ${phase === 'success' ? 'border-4 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : ''}`}
-                style={{ minHeight: "300px" }}
+                className={`w-full h-full ${phase === 'success' ? 'border-4 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : ''}`}
+                style={{ 
+                  transform: isSoftwareZoom ? `scale(${zoom})` : 'none', 
+                  transformOrigin: 'center',
+                  transition: 'transform 0.1s ease-out' 
+                }}
               />
               
               <AnimatePresence>
