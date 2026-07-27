@@ -254,11 +254,12 @@ function AttendancePage() {
           await scanner.start(
             config,
             {
-              fps: 15,
+              fps: 30, // Increased to 30 for extreme sensitivity and fast capture
               qrbox: (viewfinderWidth, viewfinderHeight) => {
                 const isMobile = window.innerWidth < 640;
                 const isTablet = window.innerWidth >= 640 && window.innerWidth < 1024;
-                let pct = isMobile ? 0.9 : isTablet ? 0.7 : 0.6; // Increased slightly for higher sensitivity area
+                // Slightly tighter box to focus the scanner strictly on the QR and ignore background
+                let pct = isMobile ? 0.75 : isTablet ? 0.6 : 0.5; 
                 const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
                 let size = Math.floor(minEdge * pct);
                 if (!isMobile && size > 500) size = 500;
