@@ -56,7 +56,7 @@
     "dotenv": "^17.4.2",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^12.14.0",
-    "firebase-admin": "^14.0.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^12.40.0",
     "html5-qrcode": "^2.3.8",
     "iconsax-react": "^0.0.8",
