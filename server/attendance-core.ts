@@ -20,6 +20,11 @@ export async function processAttendanceFirestoreTransaction(payload: AttendanceJ
     const logDoc = await transaction.get(logRef);
     
     if (!logDoc.exists) {
+      // READS MUST HAPPEN BEFORE WRITES IN FIRESTORE TRANSACTIONS
+      const sessionRef = db.collection('attendance_sessions').doc(payload.sessionId);
+      const sessionDoc = await transaction.get(sessionRef);
+      const numShards = sessionDoc.exists ? (sessionDoc.data()?.num_shards || 64) : 64;
+      
       transaction.set(logRef, {
         schema_version: 1,
         session_id: payload.sessionId,
@@ -41,10 +46,6 @@ export async function processAttendanceFirestoreTransaction(payload: AttendanceJ
         created_at: FieldValue.serverTimestamp(),
       });
 
-      const sessionRef = db.collection('attendance_sessions').doc(payload.sessionId);
-      const sessionDoc = await transaction.get(sessionRef);
-      const numShards = sessionDoc.exists ? (sessionDoc.data()?.num_shards || 64) : 64;
-      
       const shardId = Math.floor(Math.random() * numShards).toString();
       const shardRef = db.collection('attendance_stats').doc(payload.sessionId).collection('shards').doc(shardId);
       
