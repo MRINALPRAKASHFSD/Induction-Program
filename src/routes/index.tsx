@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { m, LazyMotion, domAnimation, AnimatePresence, animate } from "framer-motion";
-import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight, Database, MapPin } from "lucide-react";
+import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight, Database, MapPin, ArrowRightIcon, BarChart3, UserPlus } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
@@ -194,7 +194,7 @@ function Landing() {
             <div className="orbit-system">
               <div className="orbit-ring orbit-ring-1"><div className="orbit-node node-1-a orbit-node-trail-cw node-secondary" /><div className="orbit-node node-1-b" /></div>
               <div className="orbit-ring orbit-ring-2"><div className="orbit-node node-2-a orbit-node-trail-ccw node-primary living-node" /><div className="orbit-node node-2-b" /><div className="orbit-node node-2-c" /></div>
-              <div className="orbit-ring orbit-ring-3"><div className="orbit-node node-3-a orbit-node-trail-cw node-accent" /></div>
+              <div className="orbit-ring orbit-ring-3"><div className="orbit-node node-3-a orbit-node-trail-cw node-accent" /><div className="orbit-node node-3-b node-primary" /></div>
               <div className="orbit-ring orbit-ring-4"><div className="orbit-node node-4-a orbit-node-trail-ccw node-accent living-node" /><div className="orbit-node node-4-b" /></div>
               <div className="orbit-ring orbit-ring-5"><div className="orbit-node node-5-a" /><div className="orbit-node node-5-b" /><div className="orbit-node node-5-c orbit-node-trail-cw node-secondary" /></div>
               <div className="orbit-ring orbit-ring-6"><div className="orbit-node node-6-a orbit-node-trail-ccw node-primary" /></div>
@@ -238,8 +238,8 @@ function Landing() {
             <div className="css-animate-fade-in-up mt-8 relative z-20">
               <div className="flex items-baseline flex-wrap text-[#2c1208] leading-none drop-shadow-sm">
                 <span className="font-serif text-[1.75rem] sm:text-[2.25rem] md:text-[3rem] font-light tracking-tight opacity-90">Embracing</span>
-                <span className="font-['Pinyon_Script',cursive] text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] text-[#c87038] -ml-2 -mr-1 z-10 opacity-90 rotate-[-2deg] translate-y-1 sm:translate-y-2">the</span>
-                <span className="font-serif text-[1.75rem] sm:text-[2.25rem] md:text-[3rem] font-bold tracking-tight text-[#1e0c06]">Horizons</span>
+                <span className="font-['Great_Vibes',cursive] text-[3rem] sm:text-[4rem] md:text-[5.5rem] text-[#c87038] mx-2 sm:mx-3 z-10 opacity-90 rotate-[-2deg] translate-y-1 sm:translate-y-2">the</span>
+                <span className="font-serif text-[1.75rem] sm:text-[2.25rem] md:text-[3rem] font-bold tracking-tight text-[#1e0c06]">New Horizon</span>
               </div>
               
               {/* Decorative line below Horizons */}
@@ -249,8 +249,8 @@ function Landing() {
                 <div className="h-[1px] w-32 sm:w-48 bg-gradient-to-l from-[#8a4a22]/50 to-transparent" />
               </div>
 
-              <p className="mt-6 text-[#7a4020]/75 text-[0.95rem] sm:text-base font-normal max-w-xs leading-relaxed">
-                Scan in. Stand out. Belong.
+              <p className="mt-6 text-[#7a4020]/80 text-[0.95rem] sm:text-base font-normal max-w-xs leading-relaxed">
+                Register. Connect. Belong.
               </p>
             </div>
 
@@ -258,12 +258,12 @@ function Landing() {
             <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row flex-wrap gap-5 css-animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <Button variant="liquidGlassWhite" size="lg" asChild className="btn-hover-arrow min-h-[56px] h-14 sm:h-14 px-9 rounded-full font-semibold w-full sm:w-auto shadow-[0_8px_30px_rgb(138,74,34,0.06)] hover:shadow-[0_12px_40px_rgb(138,74,34,0.12)] transition-all duration-500 text-[0.95rem]" aria-label="Register Now">
                 <Link to="/register">
-                  Register now <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-2 h-4 w-4 hover-arrow"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  Register Now <ArrowRight className="ml-2 h-4 w-4 hover-arrow" />
                 </Link>
               </Button>
               <Button variant="liquidGlassDark" size="lg" asChild className="min-h-[56px] h-14 sm:h-14 px-9 rounded-full font-medium w-full sm:w-auto shadow-[0_8px_30px_rgb(44,18,8,0.15)] hover:shadow-[0_12px_40px_rgb(44,18,8,0.25)] transition-all duration-500 text-[0.95rem]" aria-label="Lodge Attendance">
                 <Link to="/attendance">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2.5 h-4 w-4"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                  <QrCode className="mr-2.5 h-4 w-4" />
                   Lodge Attendance
                 </Link>
               </Button>
@@ -308,21 +308,21 @@ function Landing() {
           </div>
           <h2 className="text-hero-heading text-primary font-bold">Live Platform Impact</h2>
           <p className="text-body-primary text-secondary mt-4 max-w-lg mx-auto">
-            Watch the Aarambh platform come to life as students register, complete attendance, join communities, and participate in university events in real time.
+            Watch Aarambh come to life — students registering, attending sessions, joining clubs, and participating in university events, all in real time.
           </p>
         </div>
 
         {/* KPI Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
-            { id: 'students', value: data?.stats.students, label: "Students Registered", icon: Users, variant: "kpi-yellow", emptyLabel: "" },
-            { id: 'scans', value: data?.stats.attendance, label: "Attendance Marked", icon: ScanLine, variant: "kpi-emerald", emptyLabel: "" },
-            { id: 'events', value: data?.stats.liveEvents, label: "Live Events", icon: Calendar, variant: "kpi-purple", emptyLabel: "No Active Events" },
-            { id: 'participants', value: data?.stats.participants, label: "Orientation Participants", icon: UsersRound, variant: "kpi-yellow", emptyLabel: "" },
-            { id: 'datasets', value: data?.stats.datasets, label: "Student Datasets", icon: Database, variant: "kpi-blue", emptyLabel: "No Datasets" },
-            { id: 'communities', value: data?.stats.communities, label: "Student Communities", icon: UsersRound, variant: "kpi-emerald", emptyLabel: "Not Configured" },
-            { id: 'clubs', value: data?.stats.clubRegistrations, label: "Club Registrations", icon: Users, variant: "kpi-purple", emptyLabel: "" },
-            { id: 'announcements', value: data?.stats.announcements, label: "Announcements", icon: Megaphone, variant: "kpi-blue", emptyLabel: "No Active Announcements" },
+                      { id: 'students',     value: data?.stats.students,           label: "Students Registered",     icon: Users,      variant: "kpi-yellow",  emptyLabel: "" },
+            { id: 'scans',        value: data?.stats.attendance,          label: "Attendance Marked",       icon: ScanLine,   variant: "kpi-emerald", emptyLabel: "" },
+            { id: 'events',       value: data?.stats.liveEvents,          label: "Live Events",             icon: Calendar,   variant: "kpi-purple",  emptyLabel: "No Active Events" },
+            { id: 'participants', value: data?.stats.participants,        label: "Orientation Participants",icon: UsersRound, variant: "kpi-yellow",  emptyLabel: "" },
+            { id: 'datasets',     value: data?.stats.datasets,            label: "Student Datasets",        icon: Database,   variant: "kpi-blue",    emptyLabel: "No Datasets" },
+            { id: 'communities',  value: data?.stats.communities,         label: "Student Communities",     icon: UsersRound, variant: "kpi-emerald", emptyLabel: "Not Configured" },
+            { id: 'clubs',        value: data?.stats.clubRegistrations,   label: "Club Registrations",      icon: Users,      variant: "kpi-purple",  emptyLabel: "" },
+            { id: 'announcements',value: data?.stats.announcements,       label: "Announcements",           icon: Megaphone,  variant: "kpi-blue",    emptyLabel: "No Active Announcements" },
             ...(data?.stats.campusLocations || isLoading ? [{ id: 'locations', value: data?.stats.campusLocations, label: "Campus Locations", icon: MapPin, variant: "kpi-yellow", emptyLabel: "Not Configured" }] : [])
           ].map((kpi, i) => (
             <div
@@ -365,9 +365,9 @@ function Landing() {
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
           {[
-            { icon: QrCode, title: "Instant QR attendance", body: "Scan a poster, mark attendance in under a second. Duplicates blocked automatically." },
-            { icon: Activity, title: "Realtime dashboards", body: "Admins watch registrations flow in live — no refresh, no waiting." },
-            { icon: Users, title: "Clubs in one tap", body: "Browse 30+ clubs and societies. Join your tribe before classes start." },
+            { icon: ScanLine,  title: "Instant QR Attendance", body: "Scan a poster, mark attendance in under a second. Duplicates are blocked automatically." },
+            { icon: BarChart3, title: "Real-Time Dashboards",   body: "Admins watch registrations flow in live — no refresh, no waiting." },
+            { icon: UserPlus,  title: "Clubs in One Tap",       body: "Browse 30+ clubs and societies. Join your community before classes even begin." },
           ].map((f, i) => (
             <div key={f.title} className={`glass-premium-v2 p-6 rounded-3xl group transition-transform hover:scale-[1.01] animate-slide-up stagger-${i + 1}`}>
               <div className="feature-card-icon relative z-10">

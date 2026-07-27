@@ -685,16 +685,15 @@
 }
 
 /* 10 Rings with varied properties matching requested opacity profiles */
-.orbit-ring-1 { width: 1000px; height: 1000px; margin: -500px 0 0 -500px; border: 1px solid rgba(138, 74, 34, 0.04); border-top-color: rgba(168, 74, 37, 0.08); animation: orbit-cw 80s linear infinite; }
-.orbit-ring-2 { width: 880px; height: 880px; margin: -440px 0 0 -440px; border: 1px dashed rgba(138, 74, 34, 0.05); border-right-color: rgba(200, 112, 56, 0.08); animation: orbit-ccw 72s linear infinite; }
-.orbit-ring-3 { width: 780px; height: 780px; margin: -390px 0 0 -390px; border: 1px solid rgba(138, 74, 34, 0.04); border-bottom-color: rgba(168, 74, 37, 0.08); animation: orbit-cw 65s linear infinite; }
-.orbit-ring-4 { width: 680px; height: 680px; margin: -340px 0 0 -340px; border: 1px dashed rgba(168, 74, 37, 0.06); border-left-color: rgba(200, 140, 80, 0.11); animation: orbit-ccw 58s linear infinite; }
-.orbit-ring-5 { width: 590px; height: 590px; margin: -295px 0 0 -295px; border: 1px solid rgba(138, 74, 34, 0.06); border-top-color: rgba(200, 112, 56, 0.11); animation: orbit-cw 52s linear infinite; }
-.orbit-ring-6 { width: 510px; height: 510px; margin: -255px 0 0 -255px; border: 1px dashed rgba(138, 74, 34, 0.06); border-right-color: rgba(168, 74, 37, 0.11); animation: orbit-ccw 47s linear infinite; }
-.orbit-ring-7 { width: 420px; height: 420px; margin: -210px 0 0 -210px; border: 1px solid rgba(138, 74, 34, 0.08); border-bottom-color: rgba(200, 112, 56, 0.11); animation: orbit-cw 42s linear infinite; }
-.orbit-ring-8 { width: 340px; height: 340px; margin: -170px 0 0 -170px; border: 1px dashed rgba(168, 74, 37, 0.08); border-left-color: rgba(200, 140, 80, 0.14); animation: orbit-ccw 38s linear infinite; }
-.orbit-ring-9 { width: 260px; height: 260px; margin: -130px 0 0 -130px; border: 1px solid rgba(138, 74, 34, 0.09); border-top-color: rgba(200, 112, 56, 0.14); animation: orbit-cw 34s linear infinite; }
-.orbit-ring-10 { width: 170px; height: 170px; margin: -85px 0 0 -85px; border: 1px dashed rgba(138, 74, 34, 0.1); border-right-color: rgba(168, 74, 37, 0.14); animation: orbit-ccw 30s linear infinite; }
+/* 5 rings, widely spaced 200px apart — clean solar-system look */
+.orbit-ring-1  { width: 980px;  height: 980px;  margin: -490px 0 0 -490px; border: 1px solid rgba(138, 74, 34, 0.22); border-top-color:   rgba(168, 74, 37, 0.35); animation: orbit-cw  40s linear infinite; }
+.orbit-ring-2  { width: 780px;  height: 780px;  margin: -390px 0 0 -390px; border: 1px dashed rgba(138, 74, 34, 0.25); border-right-color:  rgba(200, 112, 56, 0.40); animation: orbit-ccw 32s linear infinite; }
+.orbit-ring-3  { width: 580px;  height: 580px;  margin: -290px 0 0 -290px; border: 1px solid rgba(138, 74, 34, 0.28); border-bottom-color: rgba(168, 74, 37, 0.45); animation: orbit-cw  26s linear infinite; }
+.orbit-ring-4  { width: 380px;  height: 380px;  margin: -190px 0 0 -190px; border: 1px dashed rgba(168, 74, 37, 0.32); border-left-color:   rgba(200, 140, 80, 0.52); animation: orbit-ccw 20s linear infinite; }
+.orbit-ring-5  { width: 200px;  height: 200px;  margin: -100px 0 0 -100px; border: 1px solid rgba(138, 74, 34, 0.38); border-top-color:    rgba(200, 112, 56, 0.60); animation: orbit-cw  14s linear infinite; }
+
+/* Rings 6-10: hidden — only 5 visible rings */
+.orbit-ring-6, .orbit-ring-7, .orbit-ring-8, .orbit-ring-9, .orbit-ring-10 { display: none; }
 
 /* Nodes on rings */
 .orbit-node {
@@ -752,36 +751,34 @@
   animation: living-pulse 11s ease-in-out infinite alternate;
 }
 
-/* Positioning 20+ nodes */
-.node-1-a { width: 4px; height: 4px; top: -2px; left: 50%; background: rgba(200,112,56,0.6); }
-.node-1-b { width: 3px; height: 3px; top: 50%; right: -1.5px; background: rgba(138,74,34,0.4); }
+/* Node positions — bold, visible dots on 5 rings */
 
-.node-2-a { width: 6px; height: 6px; bottom: -3px; left: 40%; }
-.node-2-b { width: 4px; height: 4px; top: 20%; left: 10%; background: rgba(168,74,37,0.7); }
-.node-2-c { width: 2px; height: 2px; top: 70%; right: 5%; background: rgba(240,220,190,0.6); }
+/* Ring 1 (outermost, 980px) */
+.node-1-a { width: 12px; height: 12px; top: -6px;   left: 50%;  background: rgba(200,112,56,0.85); box-shadow: 0 0 14px 4px rgba(200,112,56,0.40); }
+.node-1-b { width: 9px;  height: 9px;  top: 50%;    right: -4.5px; background: rgba(138,74,34,0.70); box-shadow: 0 0 10px 3px rgba(138,74,34,0.30); }
 
-.node-3-a { width: 5px; height: 5px; top: -2.5px; left: 60%; }
+/* Ring 2 (780px) */
+.node-2-a { width: 14px; height: 14px; bottom: -7px; left: 38%; background: rgba(168,74,37,0.90); box-shadow: 0 0 18px 5px rgba(168,74,37,0.40); }
+.node-2-b { width: 10px; height: 10px; top: 22%;    left: 8%;  background: rgba(200,140,80,0.80); box-shadow: 0 0 12px 3px rgba(200,140,80,0.35); }
+.node-2-c { width: 8px;  height: 8px;  top: 68%;    right: 6%; background: rgba(220,160,80,0.75); box-shadow: 0 0 10px 3px rgba(220,160,80,0.30); }
 
-.node-4-a { width: 8px; height: 8px; top: 50%; left: -4px; }
-.node-4-b { width: 3px; height: 3px; bottom: 15%; right: 15%; background: rgba(200,112,56,0.5); }
+/* Ring 3 (580px) */
+.node-3-a { width: 13px; height: 13px; top: -6.5px; left: 62%; background: rgba(200,112,56,0.90); box-shadow: 0 0 16px 5px rgba(200,112,56,0.42); }
+.node-3-b { width: 9px;  height: 9px;  top: 55%;    left: -4.5px; background: rgba(168,74,37,0.75); box-shadow: 0 0 10px 3px rgba(168,74,37,0.32); }
 
-.node-5-a { width: 4px; height: 4px; bottom: -2px; left: 50%; background: rgba(240,220,190,0.7); }
-.node-5-b { width: 5px; height: 5px; top: 10%; right: 20%; background: rgba(168,74,37,0.6); }
-.node-5-c { width: 3px; height: 3px; top: 40%; left: 5%; background: rgba(138,74,34,0.4); }
+/* Ring 4 (380px) */
+.node-4-a { width: 16px; height: 16px; top: 50%;    left: -8px;  background: rgba(220,130,60,0.92); box-shadow: 0 0 20px 6px rgba(220,130,60,0.45); }
+.node-4-b { width: 10px; height: 10px; bottom: 14%; right: 12%;  background: rgba(200,112,56,0.80); box-shadow: 0 0 12px 4px rgba(200,112,56,0.36); }
 
-.node-6-a { width: 7px; height: 7px; top: -3.5px; left: 30%; }
+/* Ring 5 (innermost visible, 200px) */
+.node-5-a { width: 11px; height: 11px; bottom: -5.5px; left: 50%; background: rgba(240,200,100,0.90); box-shadow: 0 0 14px 4px rgba(240,200,100,0.42); }
+.node-5-b { width: 9px;  height: 9px;  top: 12%;    right: 18%; background: rgba(180,60,30,0.85); box-shadow: 0 0 12px 3px rgba(180,60,30,0.38); }
+.node-5-c { width: 8px;  height: 8px;  top: 42%;    left: 4%;   background: rgba(138,74,34,0.80); box-shadow: 0 0 10px 3px rgba(138,74,34,0.34); }
 
-.node-7-a { width: 3px; height: 3px; top: 50%; right: -1.5px; background: rgba(168,74,37,0.8); }
-.node-7-b { width: 4px; height: 4px; bottom: 10%; left: 20%; background: rgba(200,112,56,0.6); }
-
-.node-8-a { width: 6px; height: 6px; bottom: -3px; left: 70%; background: rgba(240,220,190,0.8); }
-.node-8-b { width: 3px; height: 3px; top: 15%; left: 15%; background: rgba(138,74,34,0.5); }
-.node-8-c { width: 4px; height: 4px; top: 60%; right: -2px; }
-
-.node-9-a { width: 5px; height: 5px; top: -2.5px; left: 40%; background: rgba(200,112,56,0.8); }
-
-.node-10-a { width: 9px; height: 9px; top: 50%; left: -4.5px; }
-.node-10-b { width: 4px; height: 4px; bottom: -2px; left: 60%; background: rgba(180,60,30,0.6); }
+/* Rings 6-10 nodes: hidden since rings are hidden */
+.node-6-a, .node-7-a, .node-7-b,
+.node-8-a, .node-8-b, .node-8-c,
+.node-9-a, .node-10-a, .node-10-b { display: none; }
 
 /* Premium Focal Center */
 .orbit-center {
@@ -1337,11 +1334,11 @@
   z-index: 1;
 }
 
-/* KPI accent variants */
-.kpi-yellow { --kpi-accent: rgba(255, 183, 94, 0.12); --kpi-glow: rgba(255, 183, 94, 0.2); --kpi-icon-bg: rgba(255, 183, 94, 0.15); --kpi-icon-color: #c87038; --kpi-icon-shadow: rgba(200, 112, 56, 0.12); }
-.kpi-emerald { --kpi-accent: rgba(52, 211, 153, 0.1); --kpi-glow: rgba(52, 211, 153, 0.18); --kpi-icon-bg: rgba(52, 211, 153, 0.12); --kpi-icon-color: #059669; --kpi-icon-shadow: rgba(5, 150, 105, 0.1); }
-.kpi-blue { --kpi-accent: rgba(96, 165, 250, 0.1); --kpi-glow: rgba(96, 165, 250, 0.18); --kpi-icon-bg: rgba(96, 165, 250, 0.12); --kpi-icon-color: #2563eb; --kpi-icon-shadow: rgba(37, 99, 235, 0.1); }
-.kpi-purple { --kpi-accent: rgba(168, 85, 247, 0.1); --kpi-glow: rgba(168, 85, 247, 0.18); --kpi-icon-bg: rgba(168, 85, 247, 0.12); --kpi-icon-color: #7c3aed; --kpi-icon-shadow: rgba(124, 58, 237, 0.1); }
+/* KPI accent variants — golden/brown palette only */
+.kpi-yellow { --kpi-accent: rgba(200, 112, 56, 0.10); --kpi-glow: rgba(200, 112, 56, 0.18); --kpi-icon-bg: rgba(200, 112, 56, 0.12); --kpi-icon-color: #c87038; --kpi-icon-shadow: rgba(200, 112, 56, 0.12); }
+.kpi-emerald { --kpi-accent: rgba(168, 74, 37, 0.10); --kpi-glow: rgba(168, 74, 37, 0.16); --kpi-icon-bg: rgba(168, 74, 37, 0.12); --kpi-icon-color: #8a4a22; --kpi-icon-shadow: rgba(138, 74, 34, 0.12); }
+.kpi-blue    { --kpi-accent: rgba(138, 74, 34, 0.08); --kpi-glow: rgba(138, 74, 34, 0.14); --kpi-icon-bg: rgba(138, 74, 34, 0.10); --kpi-icon-color: #6b3418; --kpi-icon-shadow: rgba(107, 52, 24, 0.10); }
+.kpi-purple  { --kpi-accent: rgba(200, 140, 80, 0.12); --kpi-glow: rgba(200, 140, 80, 0.20); --kpi-icon-bg: rgba(200, 140, 80, 0.14); --kpi-icon-color: #a06020; --kpi-icon-shadow: rgba(160, 96, 32, 0.12); }
 
 /* ─── Glass Action Cards ─────────────────────────────────────────── */
 
