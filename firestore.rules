@@ -170,26 +170,21 @@ service cloud.firestore {
     // Therefore client rules are read-only (admins only).
     match /event_attendance/{docId} {
       // Admins and coordinators can list records (for the admin panel)
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       // No client writes — server only (Firebase Admin SDK bypasses rules)
       allow write: if false;
     }
 
     // 14. EVENT ATTENDANCE LOGS (audit trail — append-only via server)
     match /event_attendance_logs/{logId} {
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token && request.auth.token.role == 'super_admin');
+      allow read: if isSuperAdmin();
       // No client writes — server only
       allow write: if false;
     }
     // 15. EVENT DATASETS (Admin upload & management)
     match /event_datasets/{datasetId} {
       // Admins and coordinators can read all dataset records
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       // No direct client writes — all writes go through the Admin SDK (server-side APIs)
       allow write: if false;
     }
@@ -197,9 +192,7 @@ service cloud.firestore {
     // 16. EVENT PARTICIPANTS (imported from datasets — server only)
     match /event_participants/{participantId} {
       // Admins and coordinators can read participant records
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       // No direct client writes — populated by the import API via Admin SDK
       allow write: if false;
     }
@@ -221,9 +214,7 @@ service cloud.firestore {
     // Created/updated exclusively by the unified upload/import/activate/delete APIs
     // via Firebase Admin SDK. Clients (including admins in the browser) can only read.
     match /induction_datasets/{datasetId} {
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       allow write: if false; // Admin SDK only
     }
 
@@ -233,11 +224,8 @@ service cloud.firestore {
     // Clients CANNOT read the list (PII protection); the server exposes masked data
     // via /api/induction-lookup. Admins can read individual documents.
     match /induction_participants/{applicationNumber} {
-      allow get: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
-      allow list: if request.auth != null &&
-        ('role' in request.auth.token && request.auth.token.role == 'super_admin');
+      allow get: if isAdminOrCoordinator();
+      allow list: if isSuperAdmin();
       allow write: if false; // Admin SDK only (import + register APIs)
     }
 
@@ -245,9 +233,7 @@ service cloud.firestore {
     // Single-document config at induction_platform_config/settings.
     // Holds active_dataset_id and import_lock. Server-side only.
     match /induction_platform_config/{docId} {
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       allow write: if false; // Admin SDK only
     }
 
@@ -262,18 +248,14 @@ service cloud.firestore {
     // ── 23. SECURITY EVENTS ───────────────────────────────────────────────────
     // Rate limit and auth attempt logs for abuse detection
     match /security_events/{eventId} {
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       allow write: if false; // Admin SDK only
     }
 
     // ── 24. CONFLICT LOGS ─────────────────────────────────────────────────────
     // Dataset import collisions and overwrites
     match /conflict_logs/{logId} {
-      allow read: if request.auth != null &&
-        ('role' in request.auth.token &&
-         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow read: if isAdminOrCoordinator();
       allow write: if false; // Admin SDK only
     }
   }
