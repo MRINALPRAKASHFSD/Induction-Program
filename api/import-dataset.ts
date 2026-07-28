@@ -1,5 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
 let firebaseInitError = '';
