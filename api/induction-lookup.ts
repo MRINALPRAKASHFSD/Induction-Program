@@ -30,10 +30,9 @@ try {
 }
 
 // ── Upstash Redis Initialization ──────────────────────────────────────────────
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || '';
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
 function apiResponse(res: any, status: number, ok: boolean, message: string, data: any = null) {
   return res.status(status).json({ ok, message, data, timestamp: new Date().toISOString() });
@@ -81,30 +80,39 @@ export default async function handler(req: any, res: any) {
     const deviceHash = crypto.createHash('sha256').update(ua).digest('hex');
 
     // ── Upstash Redis Rate Limiting ───────────────────────────────────────────
-    const now = new Date();
-    const hourKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}-${now.getUTCHours()}`;
-
-    const rkIp = `rl:lookup:ip:${ipHash}:${hourKey}`;
-    const rkDevice = `rl:lookup:dev:${deviceHash}:${hourKey}`;
-    const rkApp = `rl:lookup:app:${normalizedAppNo}:${hourKey}`;
-
-    const pipeline = redis.pipeline();
-    pipeline.incr(rkIp);
-    pipeline.expire(rkIp, 3600);
-    pipeline.incr(rkDevice);
-    pipeline.expire(rkDevice, 3600);
-    pipeline.incr(rkApp);
-    pipeline.expire(rkApp, 3600);
-
-    const results = await pipeline.exec();
-    const ipCount = results[0] as number;
-    const devCount = results[2] as number;
-    const appCount = results[4] as number;
-
     let blockedReason = null;
-    if (appCount > 5) blockedReason = 'Too many attempts for this Application Number. Try again later.';
-    else if (devCount > 20) blockedReason = 'Too many attempts from this device. Try again later.';
-    else if (ipCount > 50) blockedReason = 'Too many attempts from this network. Try again later.';
+    
+    if (redis) {
+      try {
+        const now = new Date();
+        const hourKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}-${now.getUTCHours()}`;
+
+        const rkIp = `rl:lookup:ip:${ipHash}:${hourKey}`;
+        const rkDevice = `rl:lookup:dev:${deviceHash}:${hourKey}`;
+        const rkApp = `rl:lookup:app:${normalizedAppNo}:${hourKey}`;
+
+        const pipeline = redis.pipeline();
+        pipeline.incr(rkIp);
+        pipeline.expire(rkIp, 3600);
+        pipeline.incr(rkDevice);
+        pipeline.expire(rkDevice, 3600);
+        pipeline.incr(rkApp);
+        pipeline.expire(rkApp, 3600);
+
+        const results = await pipeline.exec();
+        const ipCount = results[0] as number;
+        const devCount = results[2] as number;
+        const appCount = results[4] as number;
+
+        if (appCount > 5) blockedReason = 'Too many attempts for this Application Number. Try again later.';
+        else if (devCount > 20) blockedReason = 'Too many attempts from this device. Try again later.';
+        else if (ipCount > 50) blockedReason = 'Too many attempts from this network. Try again later.';
+      } catch (redisErr: any) {
+        console.error('[induction-lookup] Redis error during rate limiting:', redisErr.message);
+      }
+    } else {
+      console.warn('[induction-lookup] Upstash Redis credentials missing. Bypassing rate limits.');
+    }
 
     const db = getFirestore();
 
