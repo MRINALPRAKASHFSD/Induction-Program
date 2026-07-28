@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { localDb } from "@/lib/local-db";
 import { registerStudent } from "@/lib/students.functions";
+import { lookupInductionParticipant, registerInductionStudent } from "@/lib/admin.functions";
 
 import { auth } from "@/lib/firebase/config";
 import { signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
@@ -29,6 +30,9 @@ import {
   Ticket,
   QrCode,
   Sparkles,
+  Search,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/register")({
@@ -92,6 +96,23 @@ function RegisterPage() {
   const [storedCustomToken, setStoredCustomToken] = useState<string | null>(null);
   const [storedRegToken, setStoredRegToken]   = useState<string | null>(null);
 
+  // ── Phase 0 — Application Number gate ────────────────────────────────────────
+  // 'lookup'      → Phase 0: Enter Application Number
+  // 'fast_track'  → Phase 1A: OTP-only fast-track (student found in induction_participants)
+  // 'full_form'   → Phase 1B: Standard registration form (student not found)
+  type AppPhase = 'lookup' | 'fast_track' | 'full_form';
+  const [appPhase, setAppPhase]           = useState<AppPhase>('lookup');
+  const [appNumber, setAppNumber]         = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [inductionRecord, setInductionRecord] = useState<any | null>(null);
+
+  // Fast-track OTP states (reuses same OTP flow as full form, separate state namespace)
+  const [ftVerifyingEmail, setFtVerifyingEmail]   = useState(false);
+  const [ftEmailOtp, setFtEmailOtp]               = useState('');
+  const [ftSendingOtp, setFtSendingOtp]           = useState(false);
+  const [ftRegToken, setFtRegToken]               = useState<string | null>(null);
+  const [ftSubmitting, setFtSubmitting]           = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAlreadyRegistered(!!user);
@@ -118,6 +139,117 @@ function RegisterPage() {
 
   const branches  = form.department_id ? PROGRAM_LEVELS : [];
   const deptName  = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
+
+  // ── Phase 0: Lookup Application Number ───────────────────────────────────────
+  const onLookupAppNumber = async () => {
+    const normalized = appNumber.trim().toUpperCase();
+    if (normalized.length < 4) {
+      toast.error('Please enter a valid Application Number.');
+      return;
+    }
+    setLookupLoading(true);
+    try {
+      const result = await lookupInductionParticipant(normalized);
+      if (!result.data || !result.data.found) {
+        // Not in induction dataset → standard registration form
+        setAppPhase('full_form');
+        return;
+      }
+      const record = result.data;
+      if (record.registration_status === 'REGISTERED') {
+        // Already completed fast-track → show informational screen (handled in render)
+        setInductionRecord(record);
+        setAppPhase('fast_track');
+        return;
+      }
+      // Found + PENDING → fast-track
+      setInductionRecord(record);
+      setAppPhase('fast_track');
+    } catch (err: any) {
+      toast.error('Lookup failed: ' + err.message);
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // ── Fast-track: Send OTP to stored email ─────────────────────────────────────
+  const onFtSendOtp = async () => {
+    if (!inductionRecord?.email) return;
+    setFtSendingOtp(true);
+    try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inductionRecord.email, type: 'register' }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to send OTP');
+      setFtVerifyingEmail(true);
+      toast.success('Verification code sent!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send OTP.');
+    } finally {
+      setFtSendingOtp(false);
+    }
+  };
+
+  // ── Fast-track: Verify OTP and create account ─────────────────────────────────
+  const onFtVerifyAndRegister = async () => {
+    if (!ftEmailOtp || ftEmailOtp.length !== 6) {
+      toast.error('Please enter the 6-digit code.');
+      return;
+    }
+    setFtSendingOtp(true);
+    try {
+      // 1. Verify OTP
+      const verifyRes = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inductionRecord.email, otp: ftEmailOtp }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) throw new Error(verifyData.error || 'Invalid OTP');
+
+      if (verifyData.userExists) {
+        toast.success("Your account has already been activated. Continue to Sign In.");
+        navigate({ to: '/login' });
+        return;
+      }
+
+      setFtRegToken(verifyData.regToken);
+      setFtVerifyingEmail(false);
+      setFtEmailOtp('');
+      toast.success('Identity verified ✓ Creating your account...');
+
+      // 2. Create account from induction record
+      setFtSubmitting(true);
+      const emailUid = `email:${inductionRecord.email.toLowerCase().trim()}`;
+      await registerInductionStudent(verifyData.regToken, {
+        application_number: inductionRecord.application_number,
+        email: inductionRecord.email,
+        auth_uid: emailUid,
+      });
+
+      // 3. Save to local device storage
+      localDb.saveStudentProfile({
+        id:            inductionRecord.application_number,
+        full_name:     inductionRecord.student_name,
+        enrollment_no: inductionRecord.application_number,
+        branch:        inductionRecord.program || '',
+        semester:      `Session 2026–2027 · ${inductionRecord.course || ''}`,
+        created_at:    new Date().toISOString(),
+        department_id: inductionRecord.school || '',
+      });
+
+      setDone('success');
+    } catch (err: any) {
+      console.error('Fast-track OTP error:', err);
+      toast.error(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setFtSendingOtp(false);
+      setFtSubmitting(false);
+    }
+  };
 
   // ── Send OTP to email ──────────────────────────────────────────────────────
   const onSendEmailOtp = async () => {
@@ -262,7 +394,7 @@ function RegisterPage() {
   if (loadingAuth) return null;
 
   // ── Success screen ──────────────────────────────────────────────────────────
-  if (done === "success") {
+  if (done === 'success') {
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -276,7 +408,7 @@ function RegisterPage() {
               className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
               <SuccessBurst
                 title="Registration Complete!"
-                subtitle="Your email has been verified and your profile is ready."
+                subtitle="Your account has been activated. Your digital pass is ready."
               />
               <div className="mt-8 grid gap-3">
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
@@ -329,6 +461,185 @@ function RegisterPage() {
                   Log out
                 </Button>
               </div>
+            </motion.div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase 0 — Application Number gate ──────────────────────────────────────
+  if (appPhase === 'lookup') {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" /><div className="orb orb-2" />
+          <div className="orb orb-3" /><div className="orb orb-4" />
+        </div>
+        <div className="relative z-10">
+          <SiteHeader />
+          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10">
+              <div className="text-center mb-8">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                  <Search className="h-7 w-7" />
+                </div>
+                <h1 className="text-2xl font-bold tracking-tight">Enter Your KRMU ID</h1>
+                <p className="text-muted-foreground mt-2 text-[14px]">
+                  Enter your Application Number to get started.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label className="text-sm font-semibold pl-1">Application Number *</Label>
+                  <Input
+                    value={appNumber}
+                    onChange={(e) => setAppNumber(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && onLookupAppNumber()}
+                    placeholder="e.g. KRMU2639407"
+                    className="h-12 text-[15px] uppercase bg-background/50 border-border/50 focus-visible:border-primary/50 focus-visible:ring-primary/20"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  onClick={onLookupAppNumber}
+                  disabled={lookupLoading || appNumber.trim().length < 4}
+                  className="w-full h-12 text-[15px] font-bold rounded-xl"
+                  variant="liquidGlassMaroon"
+                >
+                  {lookupLoading
+                    ? <><svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Checking...</>
+                    : <>Continue <ArrowRight className="h-4 w-4 ml-1" /></>}
+                </Button>
+                <p className="text-center text-[13px] text-muted-foreground">
+                  Already have an account?{' '}
+                  <Link to="/login" className="text-primary hover:underline font-semibold">Sign in here</Link>
+                </p>
+              </div>
+            </motion.div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase 1A — Fast-track: Student found in induction_participants ──────────
+  if (appPhase === 'fast_track' && inductionRecord) {
+    // Already REGISTERED → informational screen
+    if (inductionRecord.registration_status === 'REGISTERED') {
+      return (
+        <div className="min-h-screen bg-background relative overflow-hidden">
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" /><div className="orb orb-4" />
+          </div>
+          <div className="relative z-10">
+            <SiteHeader />
+            <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-6">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
+                <h1 className="text-2xl font-bold mb-3">Your account has already been activated.</h1>
+                <p className="text-muted-foreground mb-8 text-[15px]">
+                  Hi {inductionRecord.student_name}, your induction registration is complete. Sign in to access your digital pass.
+                </p>
+                <Button variant="liquidGlassMaroon" asChild size="lg" className="w-full rounded-full font-semibold h-12">
+                  <Link to="/login">Continue to Sign In</Link>
+                </Button>
+              </motion.div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+
+    // PENDING → OTP verification
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" /><div className="orb orb-4" />
+        </div>
+        <div className="relative z-10">
+          <SiteHeader />
+          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 space-y-6">
+              {/* Admission record found banner */}
+              <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                  <span className="text-[14px] font-semibold text-emerald-600 dark:text-emerald-400">Admission Record Found</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]">
+                  <span className="text-muted-foreground">Name</span>
+                  <span className="font-medium">{inductionRecord.student_name}</span>
+                  <span className="text-muted-foreground">Email</span>
+                  <span className="font-medium">{inductionRecord.masked_email}</span>
+                  <span className="text-muted-foreground">Mobile</span>
+                  <span className="font-medium">{inductionRecord.masked_mobile}</span>
+                  <span className="text-muted-foreground">Course</span>
+                  <span className="font-medium">{inductionRecord.course}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold tracking-tight text-center">Verify Your Identity</h2>
+                <p className="text-center text-[14px] text-muted-foreground">
+                  We'll send a verification code to your registered email.
+                </p>
+              </div>
+
+              {!ftVerifyingEmail ? (
+                <Button
+                  onClick={onFtSendOtp}
+                  disabled={ftSendingOtp}
+                  className="w-full h-12 text-[15px] font-bold rounded-xl"
+                  variant="liquidGlassMaroon"
+                >
+                  {ftSendingOtp
+                    ? <><svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Sending...</>
+                    : 'Send Verification Code'}
+                </Button>
+              ) : (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                  <p className="text-[13px] text-foreground/70 text-center">
+                    Enter the 6-digit code sent to <span className="font-semibold">{inductionRecord.masked_email}</span>.{' '}
+                    <span className="text-yellow-600 dark:text-yellow-500">Check spam if not received.</span>
+                  </p>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={ftEmailOtp}
+                    onChange={(e) => setFtEmailOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                    onKeyDown={(e) => e.key === 'Enter' && ftEmailOtp.length === 6 && onFtVerifyAndRegister()}
+                    placeholder="——————"
+                    autoFocus
+                    className="text-center text-xl tracking-[0.5em] font-mono h-12 bg-background/80 border-border/60 rounded-xl focus-visible:ring-primary/30"
+                  />
+                  <Button
+                    onClick={onFtVerifyAndRegister}
+                    disabled={ftEmailOtp.length !== 6 || ftSendingOtp || ftSubmitting}
+                    className="w-full h-12 text-[15px] font-bold rounded-xl"
+                    variant="liquidGlassMaroon"
+                  >
+                    {(ftSendingOtp || ftSubmitting)
+                      ? <><svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Activating account...</>
+                      : 'Verify & Activate Account'}
+                  </Button>
+                  <button type="button" onClick={() => { setFtVerifyingEmail(false); setFtEmailOtp(''); }}
+                    className="w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4">
+                    Resend code
+                  </button>
+                </motion.div>
+              )}
+
+              <button type="button" onClick={() => { setAppPhase('lookup'); setInductionRecord(null); }}
+                className="w-full text-center text-[13px] text-muted-foreground hover:text-foreground transition-colors">
+                ← Back to Application Number lookup
+              </button>
             </motion.div>
           </main>
         </div>

@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp, FieldValue } from 'firebase-admin/firestore';
 import { Resend } from 'resend';
+import crypto from 'crypto';
 import { getRedis } from '../server/redis.js';
 
 let firebaseInitialized = false;
@@ -43,12 +44,20 @@ export default async function handler(req: any, res: any) {
     return res.status(500).json({ error: `Backend configuration error: ${firebaseInitError}` });
   }
 
+  const request_id = crypto.randomUUID();
+
   const { email, type } = req.body || {};
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'Valid email is required' });
   }
 
   const emailKey = email.toLowerCase().trim();
+
+  const ipRaw = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').toString().split(',')[0].trim();
+  const uaRaw = req.headers['user-agent'] || 'unknown';
+
+  const ipHash = crypto.createHash('sha256').update(ipRaw).digest('hex');
+  const deviceHash = crypto.createHash('sha256').update(uaRaw).digest('hex');
 
   // ── Check if email exists for Login / Register restrictions ──────────────
   try {
@@ -69,17 +78,35 @@ export default async function handler(req: any, res: any) {
     console.error("Firestore email check error:", err);
   }
 
-  // ── Rate limiting: 5 OTP requests per email per 10 minutes ───────────────
+  // ── Rate limiting: 3 OTP requests per email per hour ───────────────
   // Prevents email flooding attacks. Fails OPEN if Redis is unavailable so
   // legitimate users are never blocked due to a Redis outage.
   try {
     const redis = getRedis();
-    const rateLimitKey = `ratelimit:otp:${emailKey}`;
+    const now = new Date();
+    const hourKey = `${now.getUTCFullYear()}-${now.getUTCMonth()}-${now.getUTCDate()}-${now.getUTCHours()}`;
+    const rateLimitKey = `rl:otp:email:${emailKey}:${hourKey}`;
     const attempts = await redis.incr(rateLimitKey);
-    if (attempts === 1) await redis.expire(rateLimitKey, 600); // 10-minute window
-    if (attempts > 5) {
+    if (attempts === 1) await redis.expire(rateLimitKey, 3600); // 1-hour window
+    if (attempts > 3) {
+      const db = getFirestore();
+      db.collection('security_events').add({
+        request_id,
+        event_type: 'OTP_LIMIT',
+        severity: 'WARNING',
+        ip_hash: ipHash,
+        device_hash: deviceHash,
+        application_number: null,
+        timestamp: FieldValue.serverTimestamp(),
+        metadata: {
+          endpoint: '/api/send-otp',
+          email: emailKey,
+          reason: 'Too many OTP requests for this email. Max 3 per hour.'
+        }
+      }).catch(e => console.error('[send-otp] security_events log error:', e));
+
       return res.status(429).json({
-        error: 'Too many verification requests. Please wait 10 minutes before requesting another code.',
+        error: 'Too many verification requests. Please wait an hour before requesting another code.',
       });
     }
   } catch (redisErr: any) {

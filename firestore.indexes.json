@@ -196,6 +196,44 @@
         { "fieldPath": "room_number", "order": "ASCENDING" },
         { "fieldPath": "allocated_at","order": "DESCENDING" }
       ]
+    },
+
+    /* ── INDUCTION DATASETS ──────────────────────────────────────────────── */
+
+    {
+      "collectionGroup": "induction_datasets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "version", "order": "DESCENDING" },
+        { "fieldPath": "status",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "induction_datasets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "checksum", "order": "ASCENDING" },
+        { "fieldPath": "status",   "order": "ASCENDING" }
+      ]
+    },
+
+    /* ── INDUCTION PARTICIPANTS ──────────────────────────────────────────── */
+
+    {
+      "collectionGroup": "induction_participants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dataset_id",           "order": "ASCENDING" },
+        { "fieldPath": "registration_status",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "induction_participants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dataset_id",  "order": "ASCENDING" },
+        { "fieldPath": "imported_at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

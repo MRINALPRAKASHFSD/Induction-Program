@@ -452,110 +452,193 @@ export const getAnalyticsSnapshot = (token: string) => fetchAnalyticsEndpoint('a
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-export const uploadDataset = async (token: string, file: File, event_id: string, adminName: string) => {
+// ─── Shared file-to-base64 helper ────────────────────────────────────────────
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  return btoa(new Uint8Array(buf).reduce((d, b) => d + String.fromCharCode(b), ''));
+}
+
+// ─── Shared API caller for dataset endpoints ─────────────────────────────────
+async function callDatasetApi(endpoint: string, token: string, payload: any): Promise<any> {
+  const res = await fetch(`/api/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
+ * Upload an Orientation dataset for a specific event.
+ * Calls the unified /api/upload-dataset with dataset_scope='event'.
+ */
+export const uploadDataset = async (
+  token: string, 
+  file: File, 
+  event_id: string, 
+  adminName: string,
+  uploaded_source: "ERP" | "CRM" | "CSV" | "XLSX" | "MANUAL" | "API" = "CSV",
+  dataset_origin: string = "Manual Upload",
+  parent_dataset_id: string | null = null
+) => {
   const storage = getStorage();
   const fileExt = file.name.split('.').pop();
   const uniqueName = `datasets/${event_id}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
   const storageRef = ref(storage, uniqueName);
 
-  // Upload to Storage for archival purposes
   await uploadBytes(storageRef, file);
   const download_url = await getDownloadURL(storageRef);
+  const file_base64 = await fileToBase64(file);
 
-  // Read file as base64 so the API can process it directly
-  // (avoids the server needing to re-download from an auth-gated Storage URL)
-  const fileArrayBuffer = await file.arrayBuffer();
-  const fileBase64 = btoa(
-    new Uint8Array(fileArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-  );
-
-  const payload = {
-    event_id,
-    filename: file.name,
-    file_size: file.size,
-    mime_type: file.type,
+  return callDatasetApi('upload-dataset', token, {
+    dataset_scope: 'event',
+    scope_id: event_id,
+    schema_version: 1,
+    uploaded_source,
+    dataset_origin,
+    parent_dataset_id,
+    filename:     file.name,
+    file_size:    file.size,
+    mime_type:    file.type,
     storage_path: uniqueName,
     download_url,
-    file_base64: fileBase64,
-    uploaded_by: adminName,
-    created_by_name: adminName
-  };
-
-  const res = await fetch("/api/event-dataset-upload", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
+    file_base64,
+    uploaded_by:      adminName,
+    created_by_name:  adminName,
   });
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
-  }
-  return res.json();
 };
 
-export const importDatasetBatch = async (token: string, payload: { dataset_id: string, action: 'start' | 'chunk' | 'finish', rows?: any[], batch_time_ms?: number, import_duration_ms?: number }) => {
-  const res = await fetch("/api/event-dataset-import", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+/** Chunked import for any dataset (orientation or induction). Calls unified /api/import-dataset. */
+export const importDatasetBatch = async (
+  token: string,
+  payload: { dataset_id: string; action: 'start' | 'chunk' | 'finish'; rows?: any[]; batch_time_ms?: number; import_duration_ms?: number }
+) => callDatasetApi('import-dataset', token, payload);
 
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-};
+/** Activate a dataset (orientation or induction). Calls unified /api/activate-dataset. */
+export const activateDataset = async (token: string, dataset_id: string, activated_by: string) =>
+  callDatasetApi('activate-dataset', token, { dataset_id, activated_by });
 
-export const activateDataset = async (token: string, dataset_id: string, activated_by: string) => {
-  const res = await fetch("/api/event-dataset-activate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ dataset_id, activated_by }),
-  });
+/** Delete a dataset (orientation or induction). Calls unified /api/delete-dataset. */
+export const deleteDataset = async (token: string, dataset_id: string, deleted_by: string, event_id?: string) =>
+  callDatasetApi('delete-dataset', token, { dataset_id, deleted_by, ...(event_id ? { event_id } : {}) });
 
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-};
-
-export const deleteDataset = async (token: string, dataset_id: string, event_id: string, deleted_by: string) => {
-  const res = await fetch("/api/event-dataset-delete", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ dataset_id, event_id, deleted_by }),
-  });
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    throw new Error(errBody.error || errBody.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-};
-
+/** List all orientation datasets for a specific event (sorted newest first). */
 export const listDatasets = async (event_id: string) => {
-  const datasetsRef = collection(db, "event_datasets");
-  // No orderBy to avoid composite index requirement — sort client-side instead
-  const q = query(datasetsRef, where("event_id", "==", event_id));
+  const datasetsRef = collection(db, 'event_datasets');
+  const q = query(datasetsRef, where('event_id', '==', event_id));
   const snap = await getDocs(q);
   const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  // Sort by version descending (newest first)
   rows.sort((a: any, b: any) => (b.version ?? 0) - (a.version ?? 0));
   return rows;
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Induction Dataset Functions
+   All call the same unified APIs as orientation — only dataset_scope differs.
+───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Upload an Induction dataset (platform-wide, no event_id required).
+ * Calls the unified /api/upload-dataset with dataset_scope='induction'.
+ */
+export const uploadInductionDataset = async (
+  token: string, 
+  file: File, 
+  adminName: string,
+  uploaded_source: "ERP" | "CRM" | "CSV" | "XLSX" | "MANUAL" | "API" = "CSV",
+  dataset_origin: string = "Manual Upload",
+  parent_dataset_id: string | null = null
+) => {
+  const storage = getStorage();
+  const fileExt = file.name.split('.').pop();
+  const uniqueName = `datasets/induction/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+  const storageRef = ref(storage, uniqueName);
+
+  await uploadBytes(storageRef, file);
+  const download_url = await getDownloadURL(storageRef);
+  const file_base64 = await fileToBase64(file);
+
+  return callDatasetApi('upload-dataset', token, {
+    dataset_scope: 'induction',
+    scope_id: null,
+    schema_version: 1,
+    uploaded_source,
+    dataset_origin,
+    parent_dataset_id,
+    filename:     file.name,
+    file_size:    file.size,
+    mime_type:    file.type,
+    storage_path: uniqueName,
+    download_url,
+    file_base64,
+    uploaded_by:      adminName,
+    created_by_name:  adminName,
+  });
+};
+
+/** Chunked import for an induction dataset. Same API as orientation. */
+export const importInductionDatasetBatch = async (
+  token: string,
+  payload: { dataset_id: string; action: 'start' | 'chunk' | 'finish'; rows?: any[]; batch_time_ms?: number; import_duration_ms?: number }
+) => callDatasetApi('import-dataset', token, payload);
+
+/** Activate an induction dataset (platform-level). */
+export const activateInductionDataset = async (token: string, dataset_id: string, activated_by: string) =>
+  callDatasetApi('activate-dataset', token, { dataset_id, activated_by });
+
+/** Delete an induction dataset (blocks if any participant is REGISTERED). */
+export const deleteInductionDataset = async (token: string, dataset_id: string, deleted_by: string) =>
+  callDatasetApi('delete-dataset', token, { dataset_id, deleted_by });
+
+/** List all induction datasets (platform-wide, sorted newest first). */
+export const listInductionDatasets = async () => {
+  const datasetsRef = collection(db, 'induction_datasets');
+  const snap = await getDocs(datasetsRef);
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  rows.sort((a: any, b: any) => (b.version ?? 0) - (a.version ?? 0));
+  return rows;
+};
+
+/**
+ * Lookup an induction participant by application number.
+ * Used during the registration Phase 0 gate.
+ * Returns { found, student_name, masked_email, masked_mobile, email, ... }
+ */
+export const lookupInductionParticipant = async (application_number: string) => {
+  const res = await fetch('/api/induction-lookup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ application_number }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+};
+
+/**
+ * Fast-track induction registration.
+ * Creates a student account from induction_participants data.
+ * Requires a valid reg_token from /api/verify-otp.
+ */
+export const registerInductionStudent = async (
+  token: string,
+  payload: { application_number: string; email: string; auth_uid?: string }
+) => {
+  const res = await fetch('/api/induction-register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
 };
 

@@ -215,6 +215,67 @@ service cloud.firestore {
       allow read: if isAdminOrCoordinator();
       allow write: if false;
     }
+
+    // ── 19. INDUCTION DATASETS ────────────────────────────────────────────────
+    // Platform-wide dataset metadata records (no event_id — induction only).
+    // Created/updated exclusively by the unified upload/import/activate/delete APIs
+    // via Firebase Admin SDK. Clients (including admins in the browser) can only read.
+    match /induction_datasets/{datasetId} {
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow write: if false; // Admin SDK only
+    }
+
+    // ── 20. INDUCTION PARTICIPANTS ────────────────────────────────────────────
+    // Document ID = Application Number (KRMU ID) — O(1) lookup, no composite index.
+    // Populated by the chunked import API. registration_status: PENDING → REGISTERED.
+    // Clients CANNOT read the list (PII protection); the server exposes masked data
+    // via /api/induction-lookup. Admins can read individual documents.
+    match /induction_participants/{applicationNumber} {
+      allow get: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow list: if request.auth != null &&
+        ('role' in request.auth.token && request.auth.token.role == 'super_admin');
+      allow write: if false; // Admin SDK only (import + register APIs)
+    }
+
+    // ── 21. INDUCTION PLATFORM CONFIG ────────────────────────────────────────
+    // Single-document config at induction_platform_config/settings.
+    // Holds active_dataset_id and import_lock. Server-side only.
+    match /induction_platform_config/{docId} {
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow write: if false; // Admin SDK only
+    }
+
+    // ── 22. REGISTRATION SESSIONS ─────────────────────────────────────────────
+    // Short-lived tokens used to authorise the induction fast-track registration.
+    // Created by /api/verify-otp; consumed (deleted) by /api/induction-register.
+    // Never readable or writable by clients — 100% server-side.
+    match /registration_sessions/{sessionId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // ── 23. SECURITY EVENTS ───────────────────────────────────────────────────
+    // Rate limit and auth attempt logs for abuse detection
+    match /security_events/{eventId} {
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow write: if false; // Admin SDK only
+    }
+
+    // ── 24. CONFLICT LOGS ─────────────────────────────────────────────────────
+    // Dataset import collisions and overwrites
+    match /conflict_logs/{logId} {
+      allow read: if request.auth != null &&
+        ('role' in request.auth.token &&
+         (request.auth.token.role == 'super_admin' || request.auth.token.role == 'coordinator'));
+      allow write: if false; // Admin SDK only
+    }
   }
 }
 
