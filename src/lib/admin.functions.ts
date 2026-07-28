@@ -531,14 +531,14 @@ export const activateDataset = async (token: string, dataset_id: string, activat
   return res.json();
 };
 
-export const deleteDataset = async (token: string, dataset_id: string, deleted_by: string) => {
+export const deleteDataset = async (token: string, dataset_id: string, event_id: string, deleted_by: string) => {
   const res = await fetch("/api/event-dataset-delete", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ dataset_id, deleted_by }),
+    body: JSON.stringify({ dataset_id, event_id, deleted_by }),
   });
 
   if (!res.ok) {

@@ -15,6 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { 
+  AlertDialog, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { UploadCloud, CheckCircle2, AlertCircle, Loader2, Play, Trash2, Check, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -39,6 +48,10 @@ function DatasetsManager() {
   
   const [importingDatasetId, setImportingDatasetId] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState(0);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [datasetToDelete, setDatasetToDelete] = useState<any>(null);
+  const [deletingDatasetId, setDeletingDatasetId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,22 +164,44 @@ function DatasetsManager() {
       const email = getAuth().currentUser?.email || "Admin";
       await activateDataset(token, datasetId, email);
       toast.success("Dataset activated successfully!");
-      loadDatasets();
+      await Promise.all([
+        loadEvents(),
+        loadDatasets(),
+      ]);
     } catch (err: any) {
       toast.error("Failed to activate: " + err.message);
     }
   };
 
-  const handleDelete = async (datasetId: string) => {
-    if (!confirm("Are you sure you want to delete this dataset?")) return;
+  const promptDelete = (dataset: any) => {
+    setDatasetToDelete(dataset);
+    setDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!datasetToDelete || !selectedEventId) return;
+    setDeletingDatasetId(datasetToDelete.id);
+    
+    const toastId = toast.loading("Deleting dataset and removing participants...");
+    
     try {
       const token = await getToken();
       const email = getAuth().currentUser?.email || "Admin";
-      await deleteDataset(token, datasetId, email);
-      toast.success("Dataset deleted.");
-      loadDatasets();
+      const result = await deleteDataset(token, datasetToDelete.id, selectedEventId, email);
+      
+      toast.success(`Dataset deleted. Removed ${result.data?.participants_deleted || 0} participants.`, { id: toastId });
+      
+      setDeleteModalOpen(false);
+      setDatasetToDelete(null);
+      
+      await Promise.all([
+        loadEvents(),
+        loadDatasets(),
+      ]);
     } catch (err: any) {
-      toast.error("Failed to delete: " + err.message);
+      toast.error("Failed to delete: " + err.message, { id: toastId });
+    } finally {
+      setDeletingDatasetId(null);
     }
   };
 
@@ -219,7 +254,7 @@ function DatasetsManager() {
               />
               <Button 
                 onClick={handleUpload} 
-                disabled={!file || uploading || importingDatasetId !== null}
+                disabled={!file || uploading || importingDatasetId !== null || deletingDatasetId !== null}
               >
                 {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Upload & Validate
@@ -268,7 +303,8 @@ function DatasetsManager() {
                   <TableBody>
                     {datasets.filter(d => d.status !== 'DELETED').map((dataset) => {
                       const isImporting = importingDatasetId === dataset.id;
-                      const isLockActive = dataset.status === 'IMPORTING'; // From other tabs
+                      const isDeleting = deletingDatasetId === dataset.id;
+                      const disableActions = isImporting || importingDatasetId !== null || deletingDatasetId !== null;
                       
                       return (
                         <TableRow key={dataset.id} className={dataset.status === 'ACTIVE' ? "bg-primary/5" : ""}>
@@ -308,13 +344,13 @@ function DatasetsManager() {
                           </TableCell>
                           <TableCell className="text-right space-x-2 whitespace-nowrap">
                             {(dataset.status === 'PREVIEW' || dataset.status === 'FAILED') && (
-                              <Button size="sm" onClick={() => handleImport(dataset)} disabled={isImporting || importingDatasetId !== null}>
+                              <Button size="sm" onClick={() => handleImport(dataset)} disabled={disableActions}>
                                 {isImporting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
                                 Import
                               </Button>
                             )}
                             {(dataset.status === 'READY' || dataset.status === 'ARCHIVED') && (
-                              <Button size="sm" variant="secondary" onClick={() => handleActivate(dataset.id)} disabled={importingDatasetId !== null}>
+                              <Button size="sm" variant="secondary" onClick={() => handleActivate(dataset.id)} disabled={disableActions}>
                                 <Check className="h-4 w-4 mr-1" />
                                 Activate
                               </Button>
@@ -328,10 +364,10 @@ function DatasetsManager() {
                               size="icon" 
                               variant="ghost" 
                               className="text-destructive hover:bg-destructive/10"
-                              disabled={dataset.status === 'ACTIVE' || isImporting || importingDatasetId !== null}
-                              onClick={() => handleDelete(dataset.id)}
+                              disabled={disableActions}
+                              onClick={() => promptDelete(dataset)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -344,6 +380,25 @@ function DatasetsManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Dataset?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this dataset and every participant imported from it. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingDatasetId !== null}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={executeDelete} disabled={deletingDatasetId !== null}>
+              {deletingDatasetId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Delete Dataset
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -452,14 +452,36 @@ function Landing() {
           </div>
 
           {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-[#8a4a22]/10">
-            <div className="text-caption text-[#7a4020]/70 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
-              &copy; 2026 EOZKA. <span className="mx-3 text-[#7a4020]/30 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-10 border-t border-[#8a4a22]/10">
+            <div className="text-xs text-[#7a4020]/50 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
+              &copy; 2026 EOZKA. <span className="mx-3 text-[#7a4020]/20 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
             </div>
-            <a href="https://eozka.com" target="_blank" rel="noreferrer" className="group glass-premium-v2 rounded-full px-6 sm:px-8 py-3.5 flex flex-col sm:flex-row items-center gap-3 sm:gap-5 hover-lift text-center">
-              <span className="text-label text-secondary uppercase font-bold tracking-wider mt-0 relative z-10">Engineered & powered by</span>
-              <div className="w-[1px] h-8 bg-[#8a4a22]/15 group-hover:bg-[#8a4a22]/30 transition-colors relative z-10"></div>
-              <img src="/eozka-logo.webp" alt="eOzka" loading="lazy" className="h-10 w-auto mix-blend-multiply object-contain scale-[1.25] group-hover:scale-[1.35] transition-transform relative z-10" />
+            
+            <a 
+              href="https://eozka.com" 
+              target="_blank" 
+              rel="noreferrer" 
+              className="group relative bg-gradient-to-b from-white/80 to-white/40 border border-[#c87038]/20 backdrop-blur-xl rounded-[2rem] sm:rounded-[2.5rem] px-10 sm:px-10 py-4 sm:py-3.5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 transition-all duration-500 shadow-[0_8px_30px_rgb(200,112,56,0.12)] hover:shadow-[0_12px_40px_rgb(200,112,56,0.2)] hover:-translate-y-1"
+            >
+              {/* Subtle premium inner glow */}
+              <div className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] shadow-[inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-none"></div>
+
+              <span className="text-[12px] sm:text-[14px] text-[#b06f3b] font-black uppercase tracking-[0.25em] drop-shadow-sm flex-shrink-0 relative z-10 pt-1 sm:pt-0">
+                Engineered & Powered By
+              </span>
+              
+              {/* Desktop Divider */}
+              <div className="hidden sm:block w-[1.5px] h-12 bg-gradient-to-b from-transparent via-[#c87038]/40 to-transparent relative z-10 flex-shrink-0 transition-opacity group-hover:opacity-100 opacity-80"></div>
+              
+              {/* Logo wrapper */}
+              <div className="flex items-center justify-center h-16 sm:h-[72px] relative z-10 flex-shrink-0 -mt-1 sm:mt-0">
+                <img 
+                  src="/eozka-logo.webp" 
+                  alt="eOzka" 
+                  loading="lazy" 
+                  className="h-full w-auto mix-blend-multiply object-contain scale-[1.4] sm:scale-[1.25] group-hover:scale-[1.35] transition-transform duration-500 ease-out" 
+                />
+              </div>
             </a>
           </div>
         </div>

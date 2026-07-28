@@ -11,6 +11,7 @@ const apiMockPlugin = (): Plugin => ({
       if (req.url?.startsWith('/api/')) {
         const url = new URL(req.url, `http://${req.headers.host}`);
         const filePath = `/api${url.pathname.replace('/api', '')}.ts`;
+        req.query = Object.fromEntries(url.searchParams);
         try {
           const module = await server.ssrLoadModule(filePath);
           

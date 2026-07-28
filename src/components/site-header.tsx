@@ -229,11 +229,16 @@ export function SiteHeader() {
         <div className="nav-inner flex items-center justify-between px-4 md:px-5">
           
           {/* Left: Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setMobileOpen(false)}>
-            <img src="/krmu-emblem.webp" alt="KRMU Emblem" className="h-9 w-auto mix-blend-multiply object-contain" />
-            <span className="text-base font-semibold tracking-tight text-[#6b3517] hidden sm:inline-block">
-              Deeksharambh
-            </span>
+          <Link to="/" className="flex items-center shrink-0 pt-2 pb-1" onClick={() => setMobileOpen(false)}>
+            <m.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="deekshaarambh-brand-wordmark text-[2rem] md:text-[2.45rem] tracking-wide relative group"
+            >
+              Deekshaarambh
+              <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-[#b06f3b] to-transparent group-hover:w-1/2 transition-all duration-700 ease-out opacity-50" />
+            </m.span>
           </Link>
 
           {/* Center: Desktop Nav Links (hidden on mobile) */}

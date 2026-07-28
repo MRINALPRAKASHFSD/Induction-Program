@@ -35,7 +35,7 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  const isFresh = req.query.fresh === 'true';
+  const isFresh = req.query?.fresh === 'true';
 
   if (isFresh) {
     // Admin Dashboard: Bypass CDN cache, ensure fresh data

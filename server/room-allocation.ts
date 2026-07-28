@@ -13,6 +13,7 @@
  */
 
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
+import { getRedis } from './redis.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,44 +59,69 @@ export async function allocateRoom(
   const schoolCode = departmentId.toUpperCase();
 
   try {
-    // Fetch rooms for this school ordered by allocationOrder.
-    // Batch of 10 handles bursts where the leading room just hit capacity.
-    // In steady-state only 1 room read is needed.
-    const snap = await transaction.get(
-      db.collection('rooms')
-        .where('school', '==', departmentId)
-        .where('status', '==', 'ACTIVE')
-        .orderBy('allocationOrder', 'asc')
-        .limit(10),
+    const redis = getRedis();
+    const availableRooms = ROOM_MASTER_DATA
+      .filter(r => r.school === departmentId)
+      .sort((a,b) => a.allocationOrder - b.allocationOrder);
+
+    // Redis LUA Script for atomic sequential fill
+    const LUA_ALLOCATE = `
+      local prefix = KEYS[1]
+      local rooms = cjson.decode(ARGV[1])
+      
+      for i, room in ipairs(rooms) do
+        local key = prefix .. room.roomNumber
+        local current = redis.call('GET', key)
+        
+        if not current then
+          -- Initialize capacity and take one seat
+          redis.call('SET', key, room.capacity - 1)
+          return room.roomNumber
+        else
+          local num = tonumber(current)
+          if num > 0 then
+            redis.call('DECR', key)
+            return room.roomNumber
+          end
+        end
+      end
+      
+      return nil
+    `;
+
+    const roomsJson = JSON.stringify(
+      availableRooms.map(r => ({ roomNumber: r.roomNumber, capacity: r.capacity }))
     );
+    
+    const allocatedRoomNumber = await redis.eval(LUA_ALLOCATE, ["room_seats:"], [roomsJson]) as string | null;
 
-    for (const roomDoc of snap.docs) {
-      const room = roomDoc.data();
-      // Use pre-computed remainingSeats; fall back to capacity - occupancy
-      const remaining: number =
-        room.remainingSeats ?? (room.capacity - (room.occupancy ?? 0));
-
-      if (remaining > 0) {
-        // ── Atomic seat reservation ───────────────────────────────────────
-        transaction.update(roomDoc.ref, {
-          occupancy:      (room.occupancy ?? 0) + 1,
-          remainingSeats: remaining - 1,
+    if (allocatedRoomNumber) {
+      const room = availableRooms.find(r => r.roomNumber === allocatedRoomNumber)!;
+      
+      // Update Firestore Room Document using exact ID (avoid query index locks)
+      // This will still have 1 write/sec contention per room, but it's partitioned across rooms.
+      const roomRef = db.collection('rooms').doc(allocatedRoomNumber);
+      const roomDoc = await transaction.get(roomRef);
+      if (roomDoc.exists) {
+        const roomData = roomDoc.data()!;
+        transaction.update(roomRef, {
+          occupancy:      (roomData.occupancy ?? 0) + 1,
+          remainingSeats: (roomData.remainingSeats ?? roomData.capacity) - 1,
           updatedAt:      now,
         });
-
-        return {
-          roomNumber:       room.roomNumber as string,
-          block:            room.block as string,
-          school:           departmentId,
-          schoolCode:       (room.schoolCode as string) ?? schoolCode,
-          capacity:         room.capacity as number,
-          allocatedAt:      now,
-          allocationStatus: 'allocated',
-        };
       }
+
+      return {
+        roomNumber:       room.roomNumber,
+        block:            room.block,
+        school:           departmentId,
+        schoolCode:       room.schoolCode || schoolCode,
+        capacity:         room.capacity,
+        allocatedAt:      now,
+        allocationStatus: 'allocated',
+      };
     }
 
-    // All fetched rooms were full → pending
     return makePending(departmentId, schoolCode, now);
   } catch (err) {
     // Never block registration — log and degrade gracefully

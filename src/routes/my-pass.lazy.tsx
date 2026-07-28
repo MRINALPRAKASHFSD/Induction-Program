@@ -63,7 +63,8 @@ const BADGES = [
 function MyPassPage() {
   const [profile, setProfile] = useState<LocalStudent | null>(null);
   const [livePoints, setLivePoints] = useState<number | null>(null);
-  const [liveRoom, setLiveRoom] = useState<string | null>(null);
+  const [liveRoomAssignment, setLiveRoomAssignment] = useState<any | null>(null);
+  const [liveStudent, setLiveStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -78,14 +79,23 @@ function MyPassPage() {
       lookupStudent({ data: { enrollment_no: p.enrollment_no } })
         .then((res: any) => {
           if (res.student) {
+            setLiveStudent(res.student);
             setLivePoints(res.student.points || 0);
-            // Prefer live roomAssignment; fall back to local room_no
+            // Set the full room assignment object
             const ra = res.student.roomAssignment;
-            const room =
-              ra?.allocationStatus === 'allocated' && ra.roomNumber
-                ? ra.roomNumber
-                : res.student.room_no || p.room_no || null;
-            setLiveRoom(room);
+            if (ra) {
+              setLiveRoomAssignment(ra);
+            } else if (res.student.room_no || p.room_no) {
+              // Fallback for older records
+              setLiveRoomAssignment({
+                allocationStatus: 'allocated',
+                roomNumber: res.student.room_no || p.room_no,
+                block: res.student.block || (p as any).block || '?',
+                capacity: '?'
+              });
+            } else {
+              setLiveRoomAssignment({ allocationStatus: 'pending' });
+            }
           }
         })
         .catch(console.error)
@@ -257,32 +267,29 @@ function MyPassPage() {
 
           {/* ── Streak + Points Row (or Room + Points) ───────────── */}
           <div className="grid grid-cols-2 gap-3 animate-slide-up stagger-3">
-            {/* Room card (when allocated) OR Attendance Streak */}
-            {liveRoom ? (
-              <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="flex items-center justify-between w-full relative z-10">
-                  <div className="w-8 h-8 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mb-2">
-                    <MapPin className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="relative z-10">
-                  <div className="text-hero-heading text-primary font-bold">{liveRoom}</div>
-                  <div className="text-label text-tertiary">Your Room</div>
+            {/* Room card */}
+            <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="flex items-center justify-between w-full relative z-10">
+                <div className="w-8 h-8 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mb-2">
+                  <Landmark className="w-4 h-4" />
                 </div>
               </div>
-            ) : (
-              <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <div className="flex items-center justify-between w-full relative z-10">
-                  <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 mb-2">
-                    <Flame className="w-4 h-4" />
-                  </div>
-                </div>
-                <div className="relative z-10">
-                  <div className="text-hero-heading text-primary">3</div>
-                  <div className="text-label text-tertiary">Day Streak</div>
-                </div>
+              <div className="relative z-10">
+                {liveRoomAssignment?.allocationStatus === 'allocated' && liveRoomAssignment?.roomNumber ? (
+                  <>
+                    <div className="text-4xl text-primary font-bold tracking-tight">{liveRoomAssignment.roomNumber}</div>
+                    <div className="text-label text-tertiary mt-1">
+                      Block {liveRoomAssignment.block}{liveRoomAssignment.capacity && liveRoomAssignment.capacity !== '?' ? ` • Capacity ${liveRoomAssignment.capacity}` : ''}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xl text-primary font-bold leading-tight mt-1 mb-1">Allocation<br/>Pending</div>
+                    <div className="text-label text-tertiary">Check back later</div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
             
             {/* Reward Points */}
             <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
@@ -301,10 +308,10 @@ function MyPassPage() {
           {/* ── KPI Stats Grid ──────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { value: "—", label: "Attendance", icon: Percent, color: "text-emerald-600", bg: "bg-emerald-500/10" },
-              { value: "—", label: "Events Done", icon: Zap, color: "text-purple-600", bg: "bg-purple-500/10" },
-              { value: "Soon", label: "Global Rank", icon: Trophy, color: "text-blue-600", bg: "bg-blue-500/10" },
-              { value: "Soon", label: "Dept Rank", icon: TrendingUp, color: "text-yellow-600", bg: "bg-yellow-500/10" },
+              { value: liveStudent?.attendance_count || 0, label: "Attendance", icon: Percent, color: "text-emerald-600", bg: "bg-emerald-500/10" },
+              { value: liveStudent?.events_count || 0, label: "Events Done", icon: Zap, color: "text-purple-600", bg: "bg-purple-500/10" },
+              { value: liveStudent?.global_rank || "Unranked", label: "Global Rank", icon: Trophy, color: "text-blue-600", bg: "bg-blue-500/10" },
+              { value: liveStudent?.dept_rank || "Unranked", label: "Dept Rank", icon: TrendingUp, color: "text-yellow-600", bg: "bg-yellow-500/10" },
             ].map((kpi, i) => (
               <div
                 key={kpi.label}
@@ -324,23 +331,26 @@ function MyPassPage() {
             <div className="flex items-center justify-between px-1">
               <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Achievements</p>
               <p className="text-[10px] font-bold text-[#8a4a22]/40 uppercase tracking-wider">
-                {BADGES.filter(b => b.unlocked).length}/{BADGES.length}
+                {BADGES.filter(b => liveStudent?.badges?.includes(b.id) || b.unlocked).length}/{BADGES.length}
               </p>
             </div>
             
             <div className="grid grid-cols-3 gap-2.5">
-              {BADGES.map((badge) => (
-                <div
-                  key={badge.id}
-                  className={`glass-premium-v2 p-3 rounded-2xl flex flex-col items-center text-center transition-all ${badge.unlocked ? 'hover:scale-[1.04]' : 'opacity-60 grayscale'}`}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${badge.unlocked ? badge.bg : 'bg-black/5 dark:bg-white/5'} ${badge.unlocked ? badge.color : 'text-tertiary'}`}>
-                    <badge.icon className="w-5 h-5" />
+              {BADGES.map((badge) => {
+                const isUnlocked = liveStudent?.badges?.includes(badge.id) || badge.unlocked;
+                return (
+                  <div
+                    key={badge.id}
+                    className={`glass-premium-v2 p-3 rounded-2xl flex flex-col items-center text-center transition-all ${isUnlocked ? 'hover:scale-[1.04]' : 'opacity-60 grayscale'}`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${isUnlocked ? badge.bg : 'bg-black/5 dark:bg-white/5'} ${isUnlocked ? badge.color : 'text-tertiary'}`}>
+                      <badge.icon className="w-5 h-5" />
+                    </div>
+                    <div className="text-[11px] font-bold text-primary leading-tight mb-0.5">{badge.name}</div>
+                    <div className="text-[9px] text-tertiary leading-tight line-clamp-2">{badge.desc}</div>
                   </div>
-                  <div className="text-[11px] font-bold text-primary leading-tight mb-0.5">{badge.name}</div>
-                  <div className="text-[9px] text-tertiary leading-tight line-clamp-2">{badge.desc}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -348,9 +358,9 @@ function MyPassPage() {
           <div className="space-y-2.5 pt-2">
             <p className="text-label text-tertiary px-1">Rankings</p>
             {[
-              { label: "Global Rank", value: "Available after induction", icon: Globe, color: "text-blue-500", bg: "bg-blue-500/10" },
-              { label: "Department Rank", value: "Available after induction", icon: Landmark, color: "text-rose-500", bg: "bg-rose-500/10" },
-              { label: "Semester Rank", value: "Available after induction", icon: Library, color: "text-purple-500", bg: "bg-purple-500/10" },
+              { label: "Global Rank", value: liveStudent?.global_rank || "Unranked", icon: Globe, color: "text-blue-500", bg: "bg-blue-500/10" },
+              { label: "Department Rank", value: liveStudent?.dept_rank || "Unranked", icon: Landmark, color: "text-rose-500", bg: "bg-rose-500/10" },
+              { label: "Semester Rank", value: liveStudent?.semester_rank || "Unranked", icon: Library, color: "text-purple-500", bg: "bg-purple-500/10" },
             ].map((rank) => (
               <div key={rank.label} className="glass-premium-v2 p-4 rounded-2xl flex items-center justify-between hover:scale-[1.01] transition-transform">
                 <div className="flex items-center gap-3">
