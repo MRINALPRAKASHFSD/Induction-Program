@@ -4,9 +4,11 @@ import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Me
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePlatformAnalytics } from "@/hooks/use-platform-analytics";
+import "../memories.css";
 
 
 export const Route = createFileRoute("/")({
@@ -115,6 +117,205 @@ function AnimatedCounter({ value }: { value: number }) {
   }, [value]);
 
   return <span ref={nodeRef}>{value}</span>;
+}
+
+// Fallback images if API fails or returns no data
+const FALLBACK_IMAGES = [
+  { id: 1, url: "https://images.unsplash.com/photo-1523580494112-071d1621110c?auto=format&fit=crop&w=800&q=80", title: "Orientation 2026", desc: "The first hello.", anim: "anim-ken-burns", chip: "✨ First Day" },
+  { id: 2, url: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80", title: "Hackathon", desc: "Building something unforgettable.", anim: "anim-slide-left", chip: "" },
+  { id: 3, url: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=800&q=80", title: "Club Fair", desc: "Find your community.", anim: "anim-parallax", chip: "🏆 Clubs" },
+  { id: 4, url: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80", title: "Welcome Ceremony", desc: "A new journey begins.", anim: "anim-crossfade", chip: "🎤 Welcome" },
+  { id: 5, url: "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80", title: "Late Night Study", desc: "Quiet moments of focus.", anim: "anim-vertical-reveal", chip: "📚 Learning" },
+  { id: 6, url: "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=800&q=80", title: "Campus Life", desc: "Friendships that last.", anim: "anim-breathe", chip: "🤝 New Friends" },
+  { id: 7, url: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&w=800&q=80", title: "Cultural Fest", desc: "The energy of the crowd.", anim: "anim-polaroid", chip: "🎭 Events" },
+  { id: 8, url: "https://images.unsplash.com/photo-1519452314545-0d297587fc6b?auto=format&fit=crop&w=800&q=80", title: "Morning Walks", desc: "Exploring the campus.", anim: "anim-film", chip: "📸 Memories" },
+  { id: 9, url: "https://images.unsplash.com/photo-1506869640319-fea1a2ab8ce5?auto=format&fit=crop&w=800&q=80", title: "Workshops", desc: "Learning together.", anim: "anim-ken-burns", chip: "" },
+  { id: 10, url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80", title: "Group Projects", desc: "Ideas taking shape.", anim: "anim-slide-left", chip: "" },
+  { id: 11, url: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=800&q=80", title: "Tech Talk", desc: "Innovating the future.", anim: "anim-breathe", chip: "" },
+  { id: 12, url: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80", title: "Seminars", desc: "Words that inspire.", anim: "anim-vertical-reveal", chip: "🎓 Orientation" },
+];
+
+function MemoriesSection() {
+  const [activeIndices, setActiveIndices] = useState([0, 1, 2, 3, 4, 5, 6, 7]);
+  const [isInView, setIsInView] = useState(false);
+  const sectionRef = React.useRef<HTMLElement>(null);
+  const mouseRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch homepage media from the new API
+  const { data: mediaData, isLoading } = useQuery({
+    queryKey: ["homepageMedia"],
+    queryFn: async () => {
+      const res = await fetch("/api/media/homepage");
+      if (!res.ok) throw new Error("Failed to fetch media");
+      return res.json();
+    },
+    staleTime: 30 * 1000, // Cache for 30 seconds to sync faster
+  });
+
+  // Combine featured and random into a single pool, fallback to static images if empty/loading
+  const memoryImages = useMemo(() => {
+    if (isLoading || !mediaData || !Array.isArray(mediaData.data)) return FALLBACK_IMAGES;
+    const combined = mediaData.data;
+    if (combined.length === 0) return FALLBACK_IMAGES;
+    
+    const animTypes = ["anim-ken-burns", "anim-slide-left", "anim-parallax", "anim-crossfade", "anim-vertical-reveal", "anim-breathe", "anim-polaroid", "anim-film"];
+    
+    // Map API format to component format
+    const mapped = combined.map((asset: any, idx: number) => ({
+      id: asset.id,
+      url: asset.url,
+      title: asset.title || "Memory",
+      desc: asset.subtitle || "",
+      anim: animTypes[idx % animTypes.length],
+      chip: asset.category ? `✨ ${asset.category}` : ""
+    }));
+
+    // If there are less than 8 images, pad them with fallback images 
+    // to ensure the gallery layout always has enough unique items to render
+    if (mapped.length < 8) {
+      const padCount = 8 - mapped.length;
+      return [...mapped, ...FALLBACK_IMAGES.slice(0, padCount)];
+    }
+    
+    return mapped;
+  }, [mediaData, isLoading]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsInView(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    if (sectionRef.current) observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isInView || memoryImages.length <= 8) return;
+    const interval = setInterval(() => {
+      setActiveIndices(prev => {
+        const newIndices = [...prev];
+        const numUpdates = Math.random() > 0.5 ? 2 : 1;
+        for (let i = 0; i < numUpdates; i++) {
+          const targetSlot = Math.floor(Math.random() * 8);
+          const availablePool = memoryImages.map((_, i) => i).filter((i: number) => !newIndices.includes(i));
+          if (availablePool.length > 0) {
+            const randomPoolIndex = availablePool[Math.floor(Math.random() * availablePool.length)];
+            newIndices[targetSlot] = randomPoolIndex;
+          }
+        }
+        return newIndices;
+      });
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isInView, memoryImages.length]);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!mouseRef.current || !isInView) return;
+    const { clientX, clientY } = e;
+    const x = (clientX / window.innerWidth - 0.5) * 8;
+    const y = (clientY / window.innerHeight - 0.5) * 8;
+    mouseRef.current.style.transform = `translate(${x}px, ${y}px)`;
+  };
+
+  return (
+    <section 
+      ref={sectionRef} 
+      className="memories-section" 
+      onMouseMove={handleMouseMove}
+    >
+      <div className="container mx-auto max-w-7xl px-4 relative z-10">
+        <m.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="memories-heading-container"
+        >
+          <div className="memories-text-script">Memories</div>
+          <div className="memories-text-serif">that become</div>
+          <div className="memories-text-script-bottom">Beginnings</div>
+          
+          <m.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            className="memories-subtitle"
+          >
+            "Every registration is the beginning of friendships, discoveries, unforgettable moments, lifelong memories and a brand-new chapter at K.R. Mangalam University."
+          </m.p>
+        </m.div>
+
+        <div ref={mouseRef} className="memories-gallery transition-transform duration-700 ease-out">
+          {activeIndices.map((imgIndex, slot) => {
+            const img = memoryImages[imgIndex] || memoryImages[0];
+            if (!img) return null;
+            return (
+              <m.div
+                key={`slot-${slot}`}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.1 * slot, ease: "easeOut" }}
+                className={`memory-card mem-item-${slot} ${slot % 2 === 0 ? 'mem-item-even' : 'mem-item-odd'}`}
+              >
+                <div className="memory-image-wrapper bg-[#e8e4db]">
+                  <AnimatePresence>
+                    <m.img
+                      key={img.id}
+                      src={img.url}
+                      alt={img.title}
+                      initial={{ opacity: 0, scale: 1.05 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 1.2, ease: "easeInOut" }}
+                      className={`memory-image absolute inset-0 ${isInView ? img.anim : ''}`}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </AnimatePresence>
+                </div>
+                
+                {img.chip && (
+                  <div 
+                    className="floating-chip" 
+                    style={{ 
+                      top: `${10 + (slot * 7) % 20}%`, 
+                      left: slot % 2 === 0 ? '-10px' : 'auto',
+                      right: slot % 2 !== 0 ? '-10px' : 'auto',
+                      animationDelay: `${slot * 0.5}s` 
+                    }}
+                  >
+                    {img.chip}
+                  </div>
+                )}
+                
+                {slot === 2 && <div className="golden-light-sweep" />}
+
+                <div className="memory-caption">
+                  <div className="memory-caption-title">{img.title}</div>
+                  <div className="memory-caption-desc">{img.desc}</div>
+                </div>
+              </m.div>
+            );
+          })}
+        </div>
+
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: 0.4 }}
+        >
+          <div className="memories-quote-line" />
+          <p className="memories-quote">
+            "Years from now, you won't remember the registration process.<br/>
+            You'll remember the people you met that day."
+          </p>
+        </m.div>
+      </div>
+    </section>
+  );
 }
 
 function Landing() {
@@ -354,39 +555,8 @@ function Landing() {
       </section>
 
 
-      {/* Features */}
-      <section className="container mx-auto max-w-6xl px-4 py-24">
-        <div className="mx-auto max-w-2xl text-center mb-16 relative">
-          <h2 className="text-hero-heading text-primary font-bold">Built for the rush.</h2>
-          <div className="h-1 w-24 bg-gradient-to-r from-[#a84a25] to-[#c87038] mx-auto mt-6 rounded-full opacity-80" />
-          <p className="text-body-primary text-secondary mt-7 max-w-xl mx-auto">
-            Everything you need to onboard thousands of students without lines, paper, or chaos.
-          </p>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {[
-            { icon: ScanLine,  title: "Instant QR Attendance", body: "Scan a poster, mark attendance in under a second. Duplicates are blocked automatically." },
-            { icon: BarChart3, title: "Real-Time Dashboards",   body: "Admins watch registrations flow in live — no refresh, no waiting." },
-            { icon: UserPlus,  title: "Clubs in One Tap",       body: "Browse 30+ clubs and societies. Join your community before classes even begin." },
-          ].map((f, i) => (
-            <div key={f.title} className={`glass-premium-v2 p-6 rounded-3xl group transition-transform hover:scale-[1.01] animate-slide-up stagger-${i + 1}`}>
-              <div className="feature-card-icon relative z-10">
-                <f.icon className="h-7 w-7 stroke-[1.5]" />
-              </div>
-              <div className="relative z-10">
-                <h3 className="text-card-title text-primary font-bold transition-colors">{f.title}</h3>
-                <p className="mt-2.5 text-body-secondary text-[#7a4020]/75 leading-relaxed">{f.body}</p>
-              </div>
-              {/* Hover arrow */}
-              <div className="mt-4 relative z-10">
-                <span className="inline-flex items-center text-xs font-semibold text-[#8a4a22]/50 opacity-0 translate-x-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0" style={{ opacity: 'var(--hover-opacity, 0)' }}>
-                  Learn more <ArrowRight className="w-3 h-3 ml-1" />
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Memories Cinematic Experience */}
+      <MemoriesSection />
 
       {/* Footer */}
       <footer className="glass-premium-v2 rounded-none border-t border-[#8a4a22]/10 pt-20 pb-10 mt-16 relative overflow-hidden">

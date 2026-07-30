@@ -258,6 +258,14 @@ service cloud.firestore {
       allow read: if isAdminOrCoordinator();
       allow write: if false; // Admin SDK only
     }
+
+    // ── 25. MEDIA ASSETS ──────────────────────────────────────────────────────
+    match /media_assets/{assetId} {
+      // Public read so homepage can query media
+      allow read: if true;
+      // Admins and coordinators can upload and manage metadata
+      allow write: if isAdminOrCoordinator();
+    }
   }
 }
 

@@ -1,0 +1,337 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Manrope:wght@800&display=swap');
+
+.memories-section {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--background);
+  padding: 6rem 0;
+}
+
+.memories-heading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.memories-text-script {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(4rem, 8vw, 6.5rem);
+  color: #c87038;
+  line-height: 1;
+  transform: rotate(-3deg) translateX(-15px);
+  margin-bottom: -15px;
+  z-index: 2;
+  text-shadow: 0 4px 20px rgba(200, 112, 56, 0.2);
+}
+
+.memories-text-serif {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+  color: #7a4020;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 5px;
+  z-index: 1;
+}
+
+.memories-text-script-bottom {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(4.5rem, 9vw, 7.5rem);
+  color: #c87038;
+  line-height: 1;
+  transform: rotate(-2deg) translateX(5px);
+  margin-top: -15px;
+  z-index: 2;
+  text-shadow: 0 4px 20px rgba(200, 112, 56, 0.2);
+}
+
+.memories-subtitle {
+  color: #8a4a22;
+  opacity: 0.85;
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  max-width: 650px;
+  margin: 1.5rem auto 0;
+  line-height: 1.8;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Editorial Gallery Layout */
+.memories-gallery {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2rem 0;
+  width: 100%;
+  position: relative;
+  perspective: 1000px; /* for subtle mouse interaction */
+}
+
+/* Desktop Editorial */
+@media (min-width: 1024px) {
+  .memories-gallery {
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 240px;
+  }
+  .mem-item-0 { grid-column: span 5; grid-row: span 2; }
+  .mem-item-1 { grid-column: span 3; grid-row: span 1; }
+  .mem-item-2 { grid-column: span 4; grid-row: span 2; }
+  .mem-item-3 { grid-column: span 3; grid-row: span 2; margin-top: -120px; }
+  .mem-item-4 { grid-column: span 5; grid-row: span 1; }
+  .mem-item-5 { grid-column: span 4; grid-row: span 1; } 
+  .mem-item-6 { grid-column: span 5; grid-row: span 2; }
+  .mem-item-7 { grid-column: span 7; grid-row: span 1; }
+}
+
+/* Tablet Masonry-ish */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .memories-gallery {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 250px;
+  }
+  .mem-item-0 { grid-row: span 2; }
+  .mem-item-2 { grid-row: span 2; }
+  .mem-item-3 { grid-row: span 2; }
+  .mem-item-6 { grid-row: span 2; }
+}
+
+/* Mobile Staggered */
+@media (max-width: 767px) {
+  .memories-gallery {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .mem-item-even {
+    margin-left: 5%;
+    width: 95%;
+    aspect-ratio: 4/5;
+  }
+  .mem-item-odd {
+    margin-right: 5%;
+    width: 95%;
+    aspect-ratio: 4/5;
+  }
+}
+
+.memory-card {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(250, 246, 240, 0.5); /* Warm ivory border */
+  box-shadow: 0 10px 40px -10px rgba(44, 18, 8, 0.15);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.5s ease;
+  background: #fdfbf7;
+  isolation: isolate;
+  height: 100%;
+}
+
+.memory-card:hover {
+  transform: scale(1.03) !important;
+  box-shadow: 0 20px 50px -15px rgba(44, 18, 8, 0.25);
+  z-index: 10;
+}
+
+.memory-image-wrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.memory-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: sepia(0.08) contrast(1.02) saturate(1.05); /* Warm color grading */
+  will-change: transform, opacity;
+}
+
+/* Subtle grain overlay */
+.memory-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Glass reflection sweep on hover */
+.memory-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.4) 25%, transparent 30%);
+  transform: translateX(-150%);
+  transition: transform 0.6s ease;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.memory-card:hover::before {
+  transform: translateX(150%);
+}
+
+/* Image Captions */
+.memory-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 3rem 1.5rem 1.5rem;
+  background: linear-gradient(to top, rgba(30, 12, 6, 0.9), transparent);
+  color: white;
+  z-index: 4;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.4s ease;
+  border-bottom-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+}
+
+.memory-card:hover .memory-caption {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.memory-caption-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.memory-caption-desc {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+/* Floating Chips */
+.floating-chip {
+  position: absolute;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(200, 112, 56, 0.15);
+  border-radius: 100px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #7a4020;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  z-index: 5;
+  pointer-events: none;
+  animation: float-gentle 6s ease-in-out infinite alternate;
+}
+
+@keyframes float-gentle {
+  0% { transform: translateY(0) rotate(0); }
+  100% { transform: translateY(-10px) rotate(2deg); }
+}
+
+/* Custom Animation Classes for Images */
+.anim-ken-burns {
+  animation: ken-burns 20s ease-out infinite alternate;
+}
+@keyframes ken-burns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+.anim-slide-left {
+  animation: slide-left 15s ease-in-out infinite alternate;
+  transform-origin: left center;
+}
+@keyframes slide-left {
+  0% { transform: translateX(0) scale(1.05); }
+  100% { transform: translateX(-3%) scale(1.05); }
+}
+
+.anim-parallax {
+  animation: parallax-img 12s ease-in-out infinite alternate;
+}
+@keyframes parallax-img {
+  0% { transform: translateY(2%) scale(1.1); }
+  100% { transform: translateY(-4%) scale(1.1); }
+}
+
+.anim-vertical-reveal {
+  animation: vert-reveal 18s ease-in-out infinite alternate;
+}
+@keyframes vert-reveal {
+  0% { object-position: center 20%; transform: scale(1.05); }
+  100% { object-position: center 80%; transform: scale(1.05); }
+}
+
+.anim-breathe {
+  animation: breathe 8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(0.95); }
+  50% { transform: scale(1.02); }
+}
+
+.anim-polaroid {
+  animation: polaroid-rot 14s ease-in-out infinite alternate;
+}
+@keyframes polaroid-rot {
+  0% { transform: rotate(-2deg) scale(1.08); }
+  100% { transform: rotate(2deg) scale(1.08); }
+}
+
+.anim-film {
+  animation: film-strip 20s linear infinite alternate;
+}
+@keyframes film-strip {
+  0% { object-position: 20% center; transform: scale(1.2); }
+  100% { object-position: 80% center; transform: scale(1.2); }
+}
+
+/* Quote */
+.memories-quote {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-style: italic;
+  color: #7a4020;
+  text-align: center;
+  max-width: 800px;
+  margin: 5rem auto 0;
+  line-height: 1.6;
+}
+
+.memories-quote-line {
+  height: 1px;
+  width: 60px;
+  background: linear-gradient(90deg, transparent, #c87038, transparent);
+  margin: 0 auto 2rem;
+}
+
+/* Light effect */
+.golden-light-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent 40%, rgba(200, 112, 56, 0.08) 45%, rgba(255, 235, 200, 0.12) 50%, rgba(200, 112, 56, 0.08) 55%, transparent 60%);
+  background-size: 300% 300%;
+  animation: light-sweep 12s infinite;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+}
+
+@keyframes light-sweep {
+  0% { background-position: 100% 100%; }
+  15%, 100% { background-position: 0% 0%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-image, .floating-chip, .golden-light-sweep, .anim-ken-burns, .anim-slide-left, .anim-parallax, .anim-vertical-reveal, .anim-breathe, .anim-polaroid, .anim-film {
+    animation: none !important;
+    transform: none !important;
+  }
+}
