@@ -13,9 +13,9 @@ import {
 import { toast } from "sonner";
 import { m, AnimatePresence } from "framer-motion";
 import {
-  AlertCircle, Calendar, Clock, Bell, User, LogOut, ChevronRight,
+  AlertCircle, Calendar, CalendarDays, Clock, Bell, User, LogOut, ChevronRight,
   CheckCircle2, ScanLine, MapPin, Megaphone,
-  UsersRound, Shield, HelpCircle, Wallet, LogIn
+  UsersRound, Users, Shield, HelpCircle, Wallet, LogIn, UserPlus, Menu, X, CircleUserRound
 } from "lucide-react";
 
 /* ─── Nav Items ─────────────────────────────────────────────────── */
@@ -29,20 +29,21 @@ type NavItem = {
   guestOnly?: boolean;
 };
 
-// Items shown BEFORE registration
+// Items shown BEFORE registration (Frozen Order)
 const GUEST_NAV_ITEMS: NavItem[] = [
-  { to: "/schedule", label: "Schedule", icon: Calendar },
-  { to: "/clubs", label: "Clubs", icon: UsersRound },
+  { to: "/schedule", label: "Schedule", icon: CalendarDays },
+  { to: "/clubs", label: "Clubs", icon: Users },
   { to: "/campus", label: "Campus", icon: MapPin },
 ];
 
-// Items shown AFTER registration
+// Items shown AFTER registration (Frozen Order)
 const AUTH_NAV_ITEMS: NavItem[] = [
-  { to: "/my-pass", label: "Wallet", icon: Wallet },
-  { to: "/schedule", label: "Schedule", icon: Calendar },
-  { to: "/announcements", label: "Announcements", icon: Megaphone },
-  { to: "/clubs", label: "Clubs", icon: UsersRound },
+  { to: "/schedule", label: "Schedule", icon: CalendarDays },
+  { to: "/clubs", label: "Clubs", icon: Users },
   { to: "/campus", label: "Campus", icon: MapPin },
+  { to: "/my-pass", label: "Wallet", icon: Wallet },
+  { to: "/announcements", label: "Announcements", icon: Megaphone },
+  { to: "/help", label: "Help", icon: HelpCircle },
 ];
 
 /* ─── Exported Spacer ───────────────────────────────────────────── */
@@ -59,6 +60,7 @@ export function SiteHeader() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
 
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -87,9 +89,16 @@ export function SiteHeader() {
       document.body.style.overflow = "";
       document.body.classList.remove("menu-open");
     }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    if (mobileOpen) {
+      window.addEventListener("keydown", onKeyDown);
+    }
     return () => {
       document.body.style.overflow = "";
       document.body.classList.remove("menu-open");
+      window.removeEventListener("keydown", onKeyDown);
     };
   }, [mobileOpen]);
 
@@ -102,6 +111,7 @@ export function SiteHeader() {
     ]).then(([{ auth }, { onAuthStateChanged }]) => {
       unsubscribe = onAuthStateChanged(auth, (u) => {
         setUser(u);
+        setAuthLoading(false);
       });
     }).catch(e => console.error("Firebase auth lazy load failed", e));
     return () => unsubscribe();
@@ -415,8 +425,10 @@ export function SiteHeader() {
                   {user ? (
                     profilePhoto ? (
                       <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
+                    ) : profileInitial ? (
                       <span className="nav-avatar">{profileInitial}</span>
+                    ) : (
+                      <CircleUserRound className="w-5 h-5 text-[#8a4a22]" />
                     )
                   ) : (
                     <User className="w-[18px] h-[18px]" />
@@ -431,26 +443,32 @@ export function SiteHeader() {
                       <div className="flex items-center gap-3">
                         {profilePhoto ? (
                           <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover shrink-0 shadow-sm border border-[#8a4a22]/10" />
+                        ) : profileInitial ? (
+                          <span className="nav-avatar-ring w-10 h-10 nav-avatar text-sm font-bold shrink-0 shadow-sm">{profileInitial}</span>
                         ) : (
-                          <span className="nav-avatar text-sm font-bold shrink-0 shadow-sm">{profileInitial}</span>
+                          <CircleUserRound className="w-10 h-10 text-[#8a4a22]/80 shrink-0" />
                         )}
                         <div className="min-w-0 flex flex-col justify-center">
-                          <p className="text-body-primary text-primary font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
-                          <p className="text-label text-tertiary mt-0.5 truncate">
-                            {isRegistered ? profile?.branch : "Student"}
-                          </p>
+                          <p className="text-[#2c1208] font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
+                          <p className="text-xs text-[#8a4a22]/70 mt-0.5 truncate">{user.email}</p>
+                          <div className="mt-1">
+                            <span className="uppercase tracking-wider text-xs font-semibold bg-[#8a4a22]/10 text-[#8a4a22] px-2 py-0.5 rounded-full inline-block">
+                              {isRegistered ? profile?.branch || "Student" : "Registered Member"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
                     <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 mb-2" />
-                    {isRegistered && (
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
-                        <Link to="/my-pass" className="flex items-center gap-3 w-full">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                      <Link to="/my-pass" className="flex items-center justify-between w-full">
+                        <span className="flex items-center gap-3">
                           <Wallet className="w-4 h-4 opacity-70" /> 
                           <span>Student Wallet</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
+                        </span>
+                        <ChevronRight className="w-4 h-4 opacity-40" />
+                      </Link>
+                    </DropdownMenuItem>
 
                     <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
                     <DropdownMenuItem
@@ -465,162 +483,209 @@ export function SiteHeader() {
                   <>
                     <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
                       <Link to="/register" className="flex items-center gap-3 w-full">
-                        <User className="w-4 h-4 opacity-70" /> 
+                        <UserPlus className="w-4 h-4 opacity-70" /> 
                         <span>Register now</span>
                       </Link>
                     </DropdownMenuItem>
-
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                      <Link to="/login" className="flex items-center gap-3 w-full">
+                        <LogIn className="w-4 h-4 opacity-70" /> 
+                        <span>Login</span>
+                      </Link>
+                    </DropdownMenuItem>
                   </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
 
             {/* Mobile Hamburger (visible < md) */}
-            <button
-              className="nav-icon-btn md:hidden"
+            <m.button
+              type="button"
+              className="nav-hamburger md:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              data-open={mobileOpen}
+              whileTap={{ scale: 0.96 }}
+              transition={{ duration: 0.12 }}
             >
-              <div className="nav-hamburger" data-open={mobileOpen}>
-                <span />
-                <span />
-                <span />
-              </div>
-            </button>
+              <span />
+              <span />
+              <span />
+            </m.button>
           </div>
         </div>
       </header>
 
-      {/* ── Mobile Top Dropdown Overlay ──────────────────────────── */}
+      {/* ── Mobile Navigation Backdrop ────────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
           <m.div
-            className="fixed inset-0 bg-[#2c1208]/20 backdrop-blur-[2px] z-30 md:hidden"
+            className="nav-mobile-backdrop md:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             onClick={() => setMobileOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* ── Mobile Top Dropdown Menu ─────────────────────────────── */}
+      {/* ── Mobile Navigation Sheet (Apple-Inspired Layered Glass) ── */}
       <AnimatePresence>
         {mobileOpen && (
           <m.nav
-            className="fixed top-[64px] left-0 right-0 mx-2 bg-white/95 backdrop-blur-xl border border-[#8a4a22]/10 shadow-2xl md:hidden overflow-hidden z-40 max-h-[calc(100vh-90px)] overflow-y-auto rounded-3xl pb-6 pt-2"
-            initial={{ opacity: 0, y: -15, scale: 0.98 }}
+            className="nav-mobile-sheet md:hidden"
+            initial={{ opacity: 0, y: -16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -15, scale: 0.98 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.15}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 60 || info.velocity.y > 200) {
+                setMobileOpen(false);
+              }
+            }}
           >
-            <div className="px-3">
-              {/* Profile Card (if registered) */}
-              {isRegistered && profile && (
-                <Link to="/my-pass" onClick={() => setMobileOpen(false)} className="mobile-profile-card">
-                  <div className="mobile-profile-avatar">{profileInitial}</div>
-                  <div className="min-w-0">
-                    <div className="mobile-profile-name truncate">{profile.full_name}</div>
-                    <div className="mobile-profile-sub">{profile.enrollment_no}</div>
+            {/* Sheet Header with Close Button */}
+            <div className="flex items-center justify-between pb-2 mb-1 border-b border-[#8a4a22]/10">
+              <span className="text-xs font-semibold tracking-wider uppercase text-[#8a4a22]/70">Navigation</span>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="nav-icon-btn h-8 w-8 text-[#8a4a22]"
+                aria-label="Close navigation"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Profile Section or Auth CTAs */}
+            {authLoading ? (
+              <div className="nav-profile-card">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#8a4a22]/10 animate-pulse shrink-0" />
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <div className="h-4 w-32 bg-[#8a4a22]/10 rounded animate-pulse" />
+                    <div className="h-3 w-20 bg-[#8a4a22]/10 rounded animate-pulse" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[#8a4a22]/30 ml-auto shrink-0" />
-                </Link>
-              )}
-
-              {/* Quick Action Pills (if registered) */}
-              {isRegistered && (
-                <div className="mobile-quick-actions">
-                  <Link to="/my-pass" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
-                    <div className="mobile-quick-action-icon bg-[#8a4a22]/8">
-                      <Wallet className="w-4 h-4 text-[#8a4a22]" />
-                    </div>
-                    Wallet
-                  </Link>
-                  <Link to="/attendance" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
-                    <div className="mobile-quick-action-icon bg-emerald-500/10">
-                      <ScanLine className="w-4 h-4 text-emerald-600" />
-                    </div>
-                    Scanner
-                  </Link>
-                  <Link to="/help" onClick={() => setMobileOpen(false)} className="mobile-quick-action">
-                    <div className="mobile-quick-action-icon bg-blue-500/10">
-                      <HelpCircle className="w-4 h-4 text-blue-600" />
-                    </div>
-                    Help
-                  </Link>
                 </div>
-              )}
-
-              {/* Auth CTAs (for guests, prominent) */}
-              {!isRegistered && (
-                <div className="flex flex-col gap-2 mb-4">
-                  <Link
-                    to="/register"
-                    className="nav-mobile-scanner"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <User className="w-5 h-5" />
-                    Register Now
-                  </Link>
-                  <Link
-                    to="/login"
-                    className="nav-mobile-scanner bg-white text-[#8a4a22] border border-[#8a4a22]/20 shadow-sm"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <LogIn className="w-5 h-5" />
-                    Login
-                  </Link>
-                </div>
-              )}
-
-              {/* Nav Links */}
-              <div className="flex flex-col gap-1">
-                {navItems.map((item) => (
-                  item.comingSoon ? (
-                    <button
-                      key={item.label}
-                      className="nav-mobile-link"
-                      onClick={() => {
-                        toast.info(`${item.label} is coming soon!`, { description: "We're building something special." });
-                        setMobileOpen(false);
-                      }}
-                    >
-                      <item.icon className="w-5 h-5 opacity-50" />
-                      <span>{item.label}</span>
-                      <span className="ml-auto text-[10px] font-bold text-[#8a4a22]/40 bg-[#8a4a22]/5 px-2 py-0.5 rounded-full">Soon</span>
-                    </button>
+              </div>
+            ) : user ? (
+              <div className="nav-profile-card">
+                <div className="flex items-center gap-3">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover shrink-0 shadow-sm border border-[#8a4a22]/15" />
+                  ) : profileInitial ? (
+                    <span className="nav-avatar-ring w-10 h-10 nav-avatar text-sm font-bold shrink-0">{profileInitial}</span>
                   ) : (
+                    <CircleUserRound className="w-10 h-10 text-[#8a4a22]/80 shrink-0" />
+                  )}
+                  <div className="min-w-0 flex flex-col justify-center">
+                    <p className="text-[#2c1208] font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
+                    <p className="text-xs text-[#8a4a22]/70 truncate mt-0.5">{user.email}</p>
+                    <div className="mt-1">
+                      <span className="uppercase tracking-wider text-xs font-semibold bg-[#8a4a22]/10 text-[#8a4a22] px-2 py-0.5 rounded-full inline-block">
+                        {isRegistered ? profile?.branch || "Student" : "Registered Member"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t border-[#8a4a22]/10 my-1" />
+                <Link
+                  to="/my-pass"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-between text-xs font-semibold text-[#8a4a22] hover:text-[#5a1a25] transition-colors py-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    <span>Student Wallet</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 opacity-50" />
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 my-1">
+                <Link
+                  to="/register"
+                  className="nav-mobile-scanner"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Register Now
+                </Link>
+                <Link
+                  to="/login"
+                  className="nav-mobile-link justify-center font-semibold text-[#8a4a22]"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <LogIn className="w-5 h-5" />
+                  Login
+                </Link>
+                <div className="border-t border-[#8a4a22]/10 my-1" />
+              </div>
+            )}
+
+            {/* Navigation List (Frozen Order, Hierarchy, Trailing Chevron & Micro-Haptics) */}
+            <div className="flex flex-col gap-1 my-1">
+              {navItems.map((item) => {
+                const active = isActive(item.to);
+                return item.comingSoon ? (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="nav-mobile-link group"
+                    onClick={() => {
+                      toast.info(`${item.label} is coming soon!`, { description: "We're building something special." });
+                      setMobileOpen(false);
+                    }}
+                  >
+                    <item.icon className="w-5 h-5 opacity-60 shrink-0" />
+                    <span className="font-medium text-[0.9375rem]">{item.label}</span>
+                    <span className="ml-auto text-[10px] font-bold text-[#8a4a22]/50 bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">Soon</span>
+                  </button>
+                ) : (
+                  <m.div
+                    key={item.to}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.12 }}
+                  >
                     <Link
-                      key={item.to}
                       to={item.to as any}
-                      className={`nav-mobile-link ${isActive(item.to) ? "active" : ""}`}
+                      className={`nav-mobile-link group ${active ? "active" : ""}`}
                       onClick={() => setMobileOpen(false)}
                     >
-                      <item.icon className="w-5 h-5 opacity-50" />
-                      <span>{item.label}</span>
-                      {isActive(item.to) && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#5a1a25]" />
+                      {active && (
+                        <span className="w-1.5 h-6 bg-gradient-to-b from-[#6b2418] to-[#8a4a22] rounded-full shrink-0 -ml-1 mr-1" />
                       )}
+                      <item.icon className={`w-5 h-5 shrink-0 ${active ? "opacity-100 text-[#5a1a25]" : "opacity-60"}`} />
+                      <span className="font-medium text-[0.9375rem]">{item.label}</span>
+                      <ChevronRight className="w-4 h-4 opacity-40 group-hover:opacity-80 ml-auto transition-opacity" />
                     </Link>
-                  )
-                ))}
-              </div>
-
-              {/* Divider + secondary actions */}
-              <div className="mt-4 pt-4 border-t border-[#8a4a22]/8 flex flex-col gap-1">
-
-                {user && (
-                  <button
-                    className="nav-mobile-link text-red-600/80 w-full"
-                    onClick={() => { handleLogout(); setMobileOpen(false); }}
-                  >
-                    <LogOut className="w-5 h-5 opacity-50" />
-                    <span>Log out</span>
-                  </button>
-                )}
-              </div>
+                  </m.div>
+                );
+              })}
             </div>
+
+            {/* Intentional Separated Logout Action Row (at bottom) */}
+            {user && (
+              <div className="border-t border-[#8a4a22]/10 pt-2 mt-auto">
+                <m.button
+                  type="button"
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.12 }}
+                  className="nav-mobile-logout w-full"
+                  onClick={() => {
+                    handleLogout();
+                    setMobileOpen(false);
+                  }}
+                >
+                  <LogOut className="w-5 h-5 opacity-70 shrink-0" />
+                  <span>Log out</span>
+                </m.button>
+              </div>
+            )}
           </m.nav>
         )}
       </AnimatePresence>
