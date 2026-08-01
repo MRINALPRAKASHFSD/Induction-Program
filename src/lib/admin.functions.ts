@@ -17,6 +17,7 @@ import {
   runTransaction,
 } from "firebase/firestore";
 import { eventCache } from "@/lib/event-cache";
+import { CLUB_REGISTRATION_OPEN_DATE } from "@/lib/constants";
 
 /* ---------------- Events ---------------- */
 
@@ -134,6 +135,9 @@ export const listClubRegistrations = async () => {
 };
 
 export const registerForClub = async ({ data }: { data: any }) => {
+  if (new Date() < new Date(CLUB_REGISTRATION_OPEN_DATE)) {
+    throw new Error("Club registrations open on 22 August 2026.");
+  }
   const { enrollment_no, club_id } = data;
   if (!enrollment_no || !club_id) throw new Error("Missing data");
 

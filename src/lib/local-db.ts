@@ -7,6 +7,8 @@ export type LocalStudent = {
   created_at: string;
   room_no?: string; // e.g. "A109" — undefined means not yet allocated
   department_id?: string;
+  profile_picture_url?: string;
+  photo_url?: string;
 };
 
 // ─── Room Allocation Configuration ────────────────────────────────────────

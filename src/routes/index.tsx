@@ -197,7 +197,7 @@ function MemoriesSection() {
         const numUpdates = Math.random() > 0.5 ? 2 : 1;
         for (let i = 0; i < numUpdates; i++) {
           const targetSlot = Math.floor(Math.random() * 11);
-          const availablePool = memoryImages.map((_, i) => i).filter((i: number) => !newIndices.includes(i));
+          const availablePool = memoryImages.map((_: any, idx: number) => idx).filter((i: number) => !newIndices.includes(i));
           if (availablePool.length > 0) {
             const randomPoolIndex = availablePool[Math.floor(Math.random() * availablePool.length)];
             newIndices[targetSlot] = randomPoolIndex;

@@ -1,14 +1,17 @@
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   User, Award, CalendarDays, Zap, ArrowRight, ShieldCheck, Bell, Check,
   Copy, TrendingUp, Percent, Trophy, Flame, Star, MapPin, Users, Clock,
-  Wallet, ScanLine, ChevronRight, Compass, Sunrise, Handshake, Globe, Landmark, Library
+  Wallet, ScanLine, ChevronRight, Compass, Sunrise, Handshake, Globe, Landmark, Library,
+  MessageCircle, ExternalLink, History, Lock, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
 import { lookupStudent } from "@/lib/students.functions";
+import { listClubs, listClubRegistrations } from "@/lib/admin.functions";
+import { CLUB_REGISTRATION_OPEN_DATE, isClubRegistrationOpen } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -67,16 +70,39 @@ function MyPassPage() {
   const [liveStudent, setLiveStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [clubs, setClubs] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<any[]>([]);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const tilt = useTilt(cardRef);
 
   useEffect(() => {
     const p = localDb.getStudentProfile();
-    if (p) {
-      setProfile(p);
-      
+    const savedStudentId = localStorage.getItem("krmu_verified_student_id");
+    const enrollmentNo = p?.enrollment_no || savedStudentId;
+
+    if (enrollmentNo) {
+      if (!p) {
+        lookupStudent({ data: { enrollment_no: enrollmentNo } })
+          .then((res: any) => {
+            if (res?.student) {
+              setProfile({
+                id: res.student.id,
+                full_name: res.student.name || "Student",
+                enrollment_no: res.student.enrollment_no || enrollmentNo,
+                course: res.student.course || "KRMU",
+                branch: res.student.department || "General",
+                semester: res.student.semester || "1st",
+                year: res.student.year || 1,
+              } as any);
+            }
+          })
+          .catch(console.error);
+      } else {
+        setProfile(p);
+      }
+
       // Fetch live points + room assignment from server
-      lookupStudent({ data: { enrollment_no: p.enrollment_no } })
+      lookupStudent({ data: { enrollment_no: enrollmentNo } })
         .then((res: any) => {
           if (res.student) {
             setLiveStudent(res.student);
@@ -85,12 +111,12 @@ function MyPassPage() {
             const ra = res.student.roomAssignment;
             if (ra) {
               setLiveRoomAssignment(ra);
-            } else if (res.student.room_no || p.room_no) {
+            } else if (res.student.room_no || p?.room_no) {
               // Fallback for older records
               setLiveRoomAssignment({
                 allocationStatus: 'allocated',
-                roomNumber: res.student.room_no || p.room_no,
-                block: res.student.block || (p as any).block || '?',
+                roomNumber: res.student.room_no || p?.room_no,
+                block: res.student.block || (p as any)?.block || '?',
                 capacity: '?'
               });
             } else {
@@ -100,6 +126,24 @@ function MyPassPage() {
         })
         .catch(console.error)
         .finally(() => setLoading(false));
+
+      // Fetch clubs and registrations
+      Promise.all([
+        listClubs().catch(() => ({ clubs: [] })),
+        listClubRegistrations().catch(() => []),
+      ]).then(([clubsRes, allRegs]: [any, any[]]) => {
+        const allClubs = Array.isArray(clubsRes?.clubs) ? clubsRes.clubs : [];
+        setClubs(allClubs);
+        if (enrollmentNo && Array.isArray(allRegs)) {
+          const myRegs = allRegs.filter(
+            (r: any) =>
+              r.enrollment_no === enrollmentNo ||
+              r.student_id === enrollmentNo ||
+              (liveStudent && r.student_id === liveStudent.id)
+          );
+          setRegistrations(myRegs);
+        }
+      });
     } else {
       setLoading(false);
     }
@@ -352,6 +396,144 @@ function MyPassPage() {
                 );
               })}
             </div>
+          </div>
+
+          {/* ── My Clubs & Societies (Max 2 Selections) ─────────────── */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">My Clubs & Societies</p>
+              <p className="text-[10px] font-bold text-[#8a4a22]/40 uppercase tracking-wider">
+                {registrations.filter(r => r.status !== 'cancelled').length}/2 Selections
+              </p>
+            </div>
+
+            {registrations.filter(r => r.status !== 'cancelled').length === 0 ? (
+              <div className="glass-premium-v2 p-5 rounded-2xl text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mx-auto">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-primary">No Active Selections</h3>
+                  <p className="text-xs text-tertiary mt-0.5">
+                    Explore and register for up to 2 student clubs & societies.
+                  </p>
+                </div>
+                <Button asChild variant="liquidGlassMaroon" size="sm" className="rounded-full px-5 text-xs">
+                  <Link to="/clubs">Explore Clubs</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {registrations.filter(r => r.status !== 'cancelled').slice(0, 2).map((reg) => {
+                  const club = clubs.find((c: any) => c.id === reg.club_id) || {
+                    id: reg.club_id,
+                    title: reg.club_name || "Student Club",
+                    category: "General",
+                    capacity: 50,
+                    registeredCount: 0,
+                    whatsapp_group_link: "",
+                  };
+                  const isOpen = isClubRegistrationOpen();
+                  const remainingSlots = Math.max(0, (club.capacity || 50) - (club.registeredCount || 0));
+
+                  return (
+                    <div
+                      key={reg.id || reg.club_id}
+                      className="glass-premium-v2 p-4 rounded-2xl space-y-3 border border-white/40 dark:border-white/10"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-[#8a4a22]/10 text-[#8a4a22] text-[10px] font-semibold uppercase tracking-wider mb-1">
+                            {club.category || "Society"}
+                          </span>
+                          <h4 className="text-sm font-bold text-primary">{club.title}</h4>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Active
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-black/5 dark:border-white/5 text-xs text-secondary">
+                        <span>Remaining Slots: <strong className="text-primary">{remainingSlots}</strong></span>
+                        {isOpen ? (
+                          <a
+                            href={club.whatsapp_group_link || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition-colors"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            Join WhatsApp Group
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-muted-foreground font-semibold text-xs cursor-not-allowed">
+                            <Lock className="w-3.5 h-3.5" />
+                            Available from Aug 22
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Club Registration History ────────────────────────────── */}
+          <div className="space-y-2.5 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Registration History</p>
+              <History className="w-4 h-4 text-tertiary" />
+            </div>
+
+            {registrations.length === 0 ? (
+              <div className="glass-premium-v2 p-4 rounded-2xl text-center text-xs text-tertiary">
+                No club registration records found.
+              </div>
+            ) : (
+              <div className="glass-premium-v2 rounded-2xl overflow-hidden divide-y divide-black/5 dark:divide-white/5">
+                {registrations.map((reg, idx) => {
+                  const club = clubs.find((c: any) => c.id === reg.club_id);
+                  const status = (reg.status || "active").toLowerCase();
+                  const badgeColor =
+                    status === "cancelled"
+                      ? "bg-rose-500/10 text-rose-600"
+                      : status === "waitlisted"
+                      ? "bg-amber-500/10 text-amber-600"
+                      : status === "completed"
+                      ? "bg-blue-500/10 text-blue-600"
+                      : "bg-emerald-500/10 text-emerald-600";
+
+                  const statusLabel =
+                    status === "cancelled"
+                      ? "Cancelled"
+                      : status === "waitlisted"
+                      ? "Waitlisted"
+                      : status === "completed"
+                      ? "Completed"
+                      : "Active";
+
+                  return (
+                    <div key={reg.id || idx} className="p-3.5 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-primary truncate">
+                          {club?.title || reg.club_name || "Student Club"}
+                        </div>
+                        <div className="text-[10px] text-tertiary mt-0.5">
+                          {reg.created_at
+                            ? new Date(reg.created_at).toLocaleDateString()
+                            : "Registered"}
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* ── Rankings ────────────────────────────────────────── */}
