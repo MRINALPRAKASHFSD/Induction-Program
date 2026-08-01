@@ -136,7 +136,7 @@ const FALLBACK_IMAGES = [
 ];
 
 function MemoriesSection() {
-  const [activeIndices, setActiveIndices] = useState([0, 1, 2, 3, 4, 5, 6, 7]);
+  const [activeIndices, setActiveIndices] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   const [isInView, setIsInView] = useState(false);
   const sectionRef = React.useRef<HTMLElement>(null);
   const mouseRef = React.useRef<HTMLDivElement>(null);
@@ -170,10 +170,10 @@ function MemoriesSection() {
       chip: asset.category ? `✨ ${asset.category}` : ""
     }));
 
-    // If there are less than 8 images, pad them with fallback images 
+    // If there are less than 11 images, pad them with fallback images 
     // to ensure the gallery layout always has enough unique items to render
-    if (mapped.length < 8) {
-      const padCount = 8 - mapped.length;
+    if (mapped.length < 11) {
+      const padCount = 11 - mapped.length;
       return [...mapped, ...FALLBACK_IMAGES.slice(0, padCount)];
     }
     
@@ -190,13 +190,13 @@ function MemoriesSection() {
   }, []);
 
   useEffect(() => {
-    if (!isInView || memoryImages.length <= 8) return;
+    if (!isInView || memoryImages.length <= 11) return;
     const interval = setInterval(() => {
       setActiveIndices(prev => {
         const newIndices = [...prev];
         const numUpdates = Math.random() > 0.5 ? 2 : 1;
         for (let i = 0; i < numUpdates; i++) {
-          const targetSlot = Math.floor(Math.random() * 8);
+          const targetSlot = Math.floor(Math.random() * 11);
           const availablePool = memoryImages.map((_, i) => i).filter((i: number) => !newIndices.includes(i));
           if (availablePool.length > 0) {
             const randomPoolIndex = availablePool[Math.floor(Math.random() * availablePool.length)];
@@ -558,102 +558,159 @@ function Landing() {
       {/* Memories Cinematic Experience */}
       <MemoriesSection />
 
-      {/* Footer */}
-      <footer className="glass-premium-v2 rounded-none border-t border-[#8a4a22]/10 pt-20 pb-10 mt-16 relative overflow-hidden">
-        <div className="container mx-auto max-w-6xl px-4 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 lg:gap-12 mb-16">
-            
-            {/* Branding & Privacy */}
-            <div className="md:col-span-5 lg:col-span-6 flex flex-col gap-6">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-[#8a4a22]/30">
-                  A
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-2xl font-bold text-[#2c1208] tracking-tight leading-none">Aarambh</span>
-                  <span className="text-label text-secondary uppercase font-bold tracking-wider mt-1.5">Induction 2026</span>
-                </div>
-              </div>
-              
-              <p className="text-body-secondary max-w-md">
-                The official student induction platform for K.R. Mangalam University. Simplifying onboarding, scheduling, and community building for the incoming class of 2026.
-              </p>
-
-              <div className="flex items-start gap-4 glass-premium-v2 rounded-2xl p-5 max-w-md hover-lift">
-                <ShieldCheck className="h-6 w-6 text-[#8a4a22] shrink-0 mt-0.5 relative z-10" />
-                <p className="text-xs text-[#7a4020] leading-relaxed relative z-10">
-                  <strong className="block mb-1 text-sm text-[#2c1208] tracking-tight">Enterprise Security</strong> 
-                  End-to-end encrypted and strictly for university onboarding. We never track location or share data.
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Links */}
-            <div className="md:col-span-3 lg:col-span-3 md:col-start-7 lg:col-start-8 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="text-label text-[#2c1208] uppercase font-bold tracking-wider">Platform</h4>
-              <nav className="flex flex-col gap-4">
-                <Link to="/attendance" className="group text-sm text-[#7a4020]/80 hover:text-[#8a4a22] transition-all inline-flex items-center gap-3">
-                  <QrCode className="h-4 w-4 transition-transform group-hover:scale-110" /> <span className="transition-transform group-hover:translate-x-1">Attendance</span>
-                </Link>
-                <Link to="/schedule" className="group text-sm text-[#7a4020]/80 hover:text-[#8a4a22] transition-all inline-flex items-center gap-3">
-                  <Calendar className="h-4 w-4 transition-transform group-hover:scale-110" /> <span className="transition-transform group-hover:translate-x-1">Schedule</span>
-                </Link>
-                <Link to="/announcements" className="group text-sm text-[#7a4020]/80 hover:text-[#8a4a22] transition-all inline-flex items-center gap-3">
-                  <Megaphone className="h-4 w-4 transition-transform group-hover:scale-110" /> <span className="transition-transform group-hover:translate-x-1">Announcements</span>
-                </Link>
-              </nav>
-            </div>
-
-            {/* Support / Legal */}
-            <div className="md:col-span-3 lg:col-span-2 flex flex-col gap-5 mt-2 md:mt-0">
-              <h4 className="text-label text-[#2c1208] uppercase font-bold tracking-wider">Resources</h4>
-              <nav className="flex flex-col gap-4">
-                <Link to="/help" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Help Center</Link>
-                <Link to="/privacy" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Privacy Policy</Link>
-                <Link to="/terms" className="text-sm text-[#7a4020]/80 hover:text-[#8a4a22] hover:translate-x-1 transition-all">Terms of Service</Link>
-                <Link to="/admin/login" className="mt-4 action-card !p-3.5">
-                  <div className="action-card-content">
-                    <span className="action-card-title !text-[13px]">Admin Portal</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 action-card-arrow" />
-                </Link>
-              </nav>
-            </div>
+      {/* The Final Scene (Premium Footer) */}
+      <footer className="relative overflow-hidden bg-[#fdfbf9] pt-12 pb-12 mt-0 md:-mt-8">
+        
+        {/* Artistic Background & Lighting */}
+        <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden">
+          <div className="absolute w-[80vw] h-[80vw] max-w-[1200px] max-h-[1200px] bg-gradient-to-tr from-[#c87038]/5 to-[#8a4a22]/5 rounded-full blur-[100px] opacity-60"></div>
+          
+          {/* Oversized Subtle RM Watermark */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[40rem] md:text-[55rem] font-['Great_Vibes'] text-[#8a4a22] opacity-[0.008] leading-none select-none tracking-tighter transition-transform duration-[20s] ease-linear hover:scale-105">
+            RM
           </div>
 
-          {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-10 border-t border-[#8a4a22]/10">
-            <div className="text-xs text-[#7a4020]/50 font-medium tracking-wide flex flex-wrap justify-center items-center text-center">
-              &copy; 2026 EOZKA. <span className="mx-3 text-[#7a4020]/20 hidden sm:inline">•</span><br className="sm:hidden" /> All rights reserved.
-            </div>
-            
-            <a 
-              href="https://eozka.com" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="group relative bg-gradient-to-b from-white/80 to-white/40 border border-[#c87038]/20 backdrop-blur-xl rounded-[2rem] sm:rounded-[2.5rem] px-10 sm:px-10 py-4 sm:py-3.5 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 transition-all duration-500 shadow-[0_8px_30px_rgb(200,112,56,0.12)] hover:shadow-[0_12px_40px_rgb(200,112,56,0.2)] hover:-translate-y-1"
-            >
-              {/* Subtle premium inner glow */}
-              <div className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] shadow-[inset_0_1px_1px_rgba(255,255,255,1)] pointer-events-none"></div>
+          {/* Soft Vignette from both sides for visual richness */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#e8e4db]/40 via-transparent to-[#e8e4db]/40 opacity-70"></div>
+        </div>
 
-              <span className="text-[12px] sm:text-[14px] text-[#b06f3b] font-black uppercase tracking-[0.25em] drop-shadow-sm flex-shrink-0 relative z-10 pt-1 sm:pt-0">
-                Engineered & Powered By
-              </span>
+        <div className="container mx-auto max-w-7xl px-6 md:px-12 relative z-10 flex flex-col items-center">
+          
+          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8 items-start mb-12">
+            
+            {/* LEFT SIDE (Emotional Side) */}
+            <m.div 
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="flex flex-col text-left space-y-6 md:mt-12"
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-xl md:text-2xl font-bold text-[#2c1208] tracking-tight leading-none mb-1">Aarambh 2026</span>
+              </div>
+
+              <div className="space-y-1.5 text-[#5a2c14]/80 text-sm md:text-base font-medium tracking-wide">
+                <p>22 August 2026</p>
+                <p>K.R. Mangalam University</p>
+                <p>Freshers' Orientation Program</p>
+              </div>
+
+              <p className="font-serif italic text-base md:text-lg text-[#5a2c14]/50 tracking-[0.05em] font-light pt-4">
+                "Every beginning becomes a memory."
+              </p>
+            </m.div>
+
+            {/* CENTER (Focal Point) */}
+            <m.div 
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
+              className="flex flex-col items-center text-center"
+            >
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[#2c1208] tracking-tight leading-tight flex flex-col items-center">
+                <span className="mb-2 md:mb-3 text-2xl md:text-3xl opacity-90">Where Every</span>
+                <span className="text-[#8a4a22] font-['Great_Vibes'] font-normal text-[3rem] md:text-5xl lg:text-[6rem] my-0 md:-my-2 translate-x-3 md:translate-x-6 translate-y-2 md:translate-y-4">
+                  Journey
+                </span>
+                <span className="ml-16 md:ml-32 mt-3 md:mt-4 text-2xl md:text-4xl opacity-90">Begins.</span>
+              </h2>
+              <p className="text-sm md:text-base text-[#5a2c14]/70 tracking-wide font-medium mt-6 max-w-sm">
+                The official digital onboarding platform for K.R. Mangalam University's Class of 2026.
+              </p>
+            </m.div>
+
+            {/* RIGHT SIDE (Platform Side) */}
+            <m.div 
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 1.2, delay: 0.4, ease: "easeOut" }}
+              className="flex flex-col items-start md:ml-auto text-left space-y-4 md:mt-12"
+            >
+              <Link to="/login" className="group flex items-center gap-3 text-lg md:text-xl font-bold text-[#2c1208] transition-all duration-300 hover:text-[#c87038] mb-1">
+                <span className="transition-transform duration-300 group-hover:-translate-x-1">Register Now</span>
+                <span className="opacity-0 -ml-3 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">&rarr;</span>
+              </Link>
               
-              {/* Desktop Divider */}
-              <div className="hidden sm:block w-[1.5px] h-12 bg-gradient-to-b from-transparent via-[#c87038]/40 to-transparent relative z-10 flex-shrink-0 transition-opacity group-hover:opacity-100 opacity-80"></div>
+              <Link to="/admin/login" className="text-base md:text-lg font-semibold text-[#5a2c14]/80 hover:text-[#8a4a22] transition-colors duration-300">
+                Admin Portal
+              </Link>
+              <Link to="/help" className="text-base md:text-lg font-semibold text-[#5a2c14]/80 hover:text-[#8a4a22] transition-colors duration-300">
+                Help Center
+              </Link>
               
-              {/* Logo wrapper */}
-              <div className="flex items-center justify-center h-16 sm:h-[72px] relative z-10 flex-shrink-0 -mt-1 sm:mt-0">
+              <Link to="/" className="text-base md:text-lg font-semibold text-[#5a2c14]/80 hover:text-[#8a4a22] transition-colors duration-300">
+                Privacy Policy
+              </Link>
+              <Link to="/" className="text-base md:text-lg font-semibold text-[#5a2c14]/80 hover:text-[#8a4a22] transition-colors duration-300">
+                Terms of Service
+              </Link>
+            </m.div>
+
+          </div>
+
+          {/* Subtle Gradient Divider */}
+          <m.div 
+            initial={{ opacity: 0, scaleX: 0 }}
+            whileInView={{ opacity: 1, scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.5, delay: 0.6, ease: "easeOut" }}
+            className="w-full h-[1px] bg-gradient-to-r from-transparent via-[#8a4a22]/15 to-transparent mb-12 origin-center"
+          ></m.div>
+
+          {/* Signature */}
+          <m.div 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: "-20px" }}
+            transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
+            className="flex flex-col items-center justify-center w-full opacity-95 transition-opacity duration-700 hover:opacity-100"
+          >
+            <p className="text-[11px] font-bold text-[#5a2c14]/60 uppercase tracking-[0.15em] mb-6">
+              &copy; 2026 Aarambh Platform
+            </p>
+            
+            <p className="text-xs sm:text-[13px] font-bold text-[#5a2c14]/80 tracking-wider mb-6">
+              Designed, Engineered & Powered by
+            </p>
+            
+            <div className="flex flex-row items-center justify-center w-full max-w-3xl mt-4">
+              
+              {/* Left Logo (DSW) */}
+              <div className="flex-1 flex justify-end pr-10 md:pr-20">
                 <img 
-                  src="/eozka-logo.webp" 
-                  alt="eOzka" 
+                  src="/dsw-logo.png" 
+                  alt="DSW" 
                   loading="lazy" 
-                  className="h-full w-auto mix-blend-multiply object-contain scale-[1.4] sm:scale-[1.25] group-hover:scale-[1.35] transition-transform duration-500 ease-out" 
+                  className="w-[150px] md:w-[200px] h-auto object-contain transition-transform duration-700 hover:scale-105" 
                 />
               </div>
-            </a>
-          </div>
+              
+              {/* Center Logo (eOzka) */}
+              <div className="flex-none">
+                <img 
+                  src="/eozka-logo-transparent.png" 
+                  alt="eOzka" 
+                  loading="lazy" 
+                  className="w-[230px] md:w-[280px] h-auto object-contain opacity-[0.97] transition-transform duration-700 hover:scale-105" 
+                />
+              </div>
+              
+              {/* Right Logo (KRMU) */}
+              <div className="flex-1 flex justify-start pl-10 md:pl-20">
+                <img 
+                  src="/krmu-logo-transparent.png" 
+                  alt="KRMU" 
+                  loading="lazy" 
+                  className="w-[150px] md:w-[200px] h-auto object-contain transition-transform duration-700 hover:scale-105" 
+                />
+              </div>
+
+            </div>
+          </m.div>
+
         </div>
       </footer>
       </div>

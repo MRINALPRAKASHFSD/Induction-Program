@@ -213,6 +213,7 @@ export function SiteHeader() {
   const displayCount = unreadCount > 99 ? "99+" : unreadCount;
   const userInitial = user?.email?.[0]?.toUpperCase() || "?";
   const profileInitial = profile?.full_name?.[0]?.toUpperCase() || userInitial;
+  const profilePhoto = profile?.profile_picture_url || profile?.photo_url || user?.photoURL;
 
   const isActive = (to: string) => {
     if (to === "/") return path === "/";
@@ -410,9 +411,13 @@ export function SiteHeader() {
             {/* Profile Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="nav-icon-btn" aria-label="User menu">
+                <button className="nav-icon-btn overflow-hidden" aria-label="User menu">
                   {user ? (
-                    <span className="nav-avatar">{profileInitial}</span>
+                    profilePhoto ? (
+                      <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="nav-avatar">{profileInitial}</span>
+                    )
                   ) : (
                     <User className="w-[18px] h-[18px]" />
                   )}
@@ -424,7 +429,11 @@ export function SiteHeader() {
                     {/* Profile header */}
                     <div className="px-2 py-2 mb-2">
                       <div className="flex items-center gap-3">
-                        <span className="nav-avatar text-sm font-bold shrink-0">{profileInitial}</span>
+                        {profilePhoto ? (
+                          <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover shrink-0 shadow-sm border border-[#8a4a22]/10" />
+                        ) : (
+                          <span className="nav-avatar text-sm font-bold shrink-0 shadow-sm">{profileInitial}</span>
+                        )}
                         <div className="min-w-0 flex flex-col justify-center">
                           <p className="text-body-primary text-primary font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
                           <p className="text-label text-tertiary mt-0.5 truncate">
