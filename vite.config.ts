@@ -67,7 +67,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   process.env = { ...process.env, ...env };
 
-  const isDev = command === 'serve';
+  const isDev = command === 'serve' && process.env.npm_lifecycle_event === 'dev';
 
   return {
     plugins: [
