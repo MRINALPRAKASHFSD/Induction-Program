@@ -1,6 +1,9 @@
 import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText, Building4, Gallery } from "iconsax-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText, Building4, Gallery, CalendarAdd
+} from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
 import { auth, db } from "@/lib/firebase/config";
@@ -10,7 +13,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { motion, AnimatePresence } from "framer-motion";
 import { AlertCircle, Clock, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +24,7 @@ const NAV = [
   { to: "/admin/dashboard",   label: "Dashboard",          icon: Element3     },
   { to: "/admin/attendance",  label: "Attendance",          icon: ScanBarcode  },
   { to: "/admin/events",      label: "Events",              icon: Calendar1    },
+  { to: "/admin/planner",     label: "Induction Planner",   icon: CalendarAdd  },
   { to: "/admin/datasets",    label: "Dataset Management",  icon: DocumentText },
   { to: "/admin/students",    label: "Students",            icon: Profile2User },
   { to: "/admin/rooms",       label: "Rooms",               icon: Building4    },

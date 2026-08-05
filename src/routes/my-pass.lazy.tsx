@@ -1,11 +1,11 @@
 import { createLazyFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  User, Award, CalendarDays, Zap, ArrowRight, ShieldCheck, Bell, Check,
-  Copy, TrendingUp, Percent, Trophy, Flame, Star, MapPin, Users, Clock,
-  Wallet, ScanLine, ChevronRight, Compass, Sunrise, Handshake, Globe, Landmark, Library,
-  MessageCircle, ExternalLink, History, Lock, CheckCircle2, AlertCircle
+  CalendarDays, Zap, ArrowRight, ShieldCheck, Bell, Check,
+  Copy, TrendingUp, Percent, Trophy, Star, Users, Clock,
+  Wallet, ScanLine, Compass, Sunrise, Handshake, Globe, Landmark, Library,
+  MessageCircle, Lock, CheckCircle2, History, BookOpen, MapPin, ChevronRight
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
@@ -14,6 +14,45 @@ import { listClubs, listClubRegistrations } from "@/lib/admin.functions";
 import { CLUB_REGISTRATION_OPEN_DATE, isClubRegistrationOpen } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase/config";
+
+// ── Planner API helper ────────────────────────────────────────────────────────
+async function fetchPlannerDashboard() {
+  const user = auth.currentUser;
+  if (!user) return null;
+  try {
+    const token = await user.getIdToken();
+    const res = await fetch('/api/planner-student-dashboard', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ── Time helpers ──────────────────────────────────────────────────────────────
+function timeToMin(t: string): number {
+  const [h, m] = (t || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+function nowISTMinutes(): number {
+  const now = new Date();
+  const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+  return ist.getHours() * 60 + ist.getMinutes();
+}
+function formatTime(t: string): string {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2,'0')} ${period}`;
+}
+function formatDate(iso: string): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' });
+}
 
 export const Route = createLazyFileRoute("/my-pass")({
   // @ts-expect-error - Route type options do not include head in this version
@@ -72,6 +111,8 @@ function MyPassPage() {
   const [copied, setCopied] = useState(false);
   const [clubs, setClubs] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [planner, setPlanner] = useState<any | null>(null);
+  const [plannerLoading, setPlannerLoading] = useState(true);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const tilt = useTilt(cardRef);
 
@@ -147,6 +188,12 @@ function MyPassPage() {
     } else {
       setLoading(false);
     }
+
+    // Fetch planner dashboard (independent of student lookup)
+    fetchPlannerDashboard()
+      .then(data => setPlanner(data))
+      .catch(() => setPlanner(null))
+      .finally(() => setPlannerLoading(false));
   }, []);
 
   const copyEnrollment = useCallback(() => {
@@ -309,45 +356,166 @@ function MyPassPage() {
             </div>
           </div>
 
-          {/* ── Streak + Points Row (or Room + Points) ───────────── */}
+          {/* ── Planner Room Card (sticky) + Points Row ────────────── */}
           <div className="grid grid-cols-2 gap-3 animate-slide-up stagger-3">
-            {/* Room card */}
-            <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
-              <div className="flex items-center justify-between w-full relative z-10">
-                <div className="w-8 h-8 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mb-2">
-                  <Landmark className="w-4 h-4" />
+            {/* Room card — shows planner room if active, else legacy room */}
+            {(() => {
+              const plannerRoom = planner?.plannerActive && planner?.room;
+              const legacyRoom  = liveRoomAssignment?.allocationStatus === 'allocated' && liveRoomAssignment?.roomNumber;
+              return (
+                <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                  <div className="w-8 h-8 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] mb-2">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                  {plannerRoom ? (
+                    <>
+                      <div className="text-4xl text-primary font-bold tracking-tight">{plannerRoom.roomNumber}</div>
+                      <div className="text-label text-tertiary mt-1">
+                        Block {plannerRoom.block}{plannerRoom.floor ? ` · ${plannerRoom.floor}` : ''}
+                      </div>
+                      <div className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full mt-2 inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Induction Room
+                      </div>
+                    </>
+                  ) : legacyRoom ? (
+                    <>
+                      <div className="text-4xl text-primary font-bold tracking-tight">{liveRoomAssignment.roomNumber}</div>
+                      <div className="text-label text-tertiary mt-1">Block {liveRoomAssignment.block}</div>
+                    </>
+                  ) : plannerLoading ? (
+                    <>
+                      <div className="h-8 w-16 bg-black/5 rounded-lg animate-pulse mb-1" />
+                      <div className="h-3 w-20 bg-black/5 rounded animate-pulse" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm text-primary font-bold leading-tight mt-1 mb-1">Allocation<br/>Pending</div>
+                      <div className="text-label text-tertiary">Check back later</div>
+                    </>
+                  )}
                 </div>
-              </div>
-              <div className="relative z-10">
-                {liveRoomAssignment?.allocationStatus === 'allocated' && liveRoomAssignment?.roomNumber ? (
-                  <>
-                    <div className="text-4xl text-primary font-bold tracking-tight">{liveRoomAssignment.roomNumber}</div>
-                    <div className="text-label text-tertiary mt-1">
-                      Block {liveRoomAssignment.block}{liveRoomAssignment.capacity && liveRoomAssignment.capacity !== '?' ? ` • Capacity ${liveRoomAssignment.capacity}` : ''}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-xl text-primary font-bold leading-tight mt-1 mb-1">Allocation<br/>Pending</div>
-                    <div className="text-label text-tertiary">Check back later</div>
-                  </>
-                )}
-              </div>
-            </div>
-            
+              );
+            })()}
+
             {/* Reward Points */}
             <div className="glass-premium-v2 rounded-2xl p-4 flex flex-col justify-between items-start relative overflow-hidden group hover:scale-[1.02] transition-transform">
-              <div className="flex items-center justify-between w-full relative z-10">
-                <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 mb-2">
-                  <Star className="w-4 h-4" />
-                </div>
+              <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-600 mb-2">
+                <Star className="w-4 h-4" />
               </div>
-              <div className="relative z-10">
-                <div className="text-hero-heading text-primary">{livePoints !== null ? livePoints : "..."}</div>
-                <div className="text-label text-tertiary">Points</div>
-              </div>
+              <div className="text-hero-heading text-primary">{livePoints !== null ? livePoints : "..."}</div>
+              <div className="text-label text-tertiary">Points</div>
             </div>
           </div>
+
+          {/* ── Your Induction Journey ───────────────────────────────── */}
+          {planner?.plannerActive && (
+            <div className="space-y-3 pt-2 animate-slide-up stagger-3">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-label text-secondary uppercase font-bold tracking-wider mt-0">Your Induction Journey</p>
+                <Link to="/schedule" className="text-[10px] font-bold text-[#8a4a22]/60 hover:text-[#8a4a22] flex items-center gap-1 uppercase tracking-wider">
+                  Full Schedule <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+
+              {/* Today's Sessions */}
+              {planner.today?.sessions?.length > 0 ? (
+                <div className="glass-premium-v2 rounded-2xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-black/5 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-[#8a4a22]" />
+                    <span className="text-xs font-bold text-primary">Today · {formatDate(planner.today.date)}</span>
+                  </div>
+                  <div className="divide-y divide-black/5">
+                    {planner.today.sessions.slice(0, 4).map((s: any, i: number) => {
+                      const nowMin   = nowISTMinutes();
+                      const startMin = timeToMin(s.startTime);
+                      const endMin   = timeToMin(s.endTime);
+                      const ongoing  = nowMin >= startMin && nowMin < endMin;
+                      const past     = nowMin >= endMin;
+                      return (
+                        <div key={i} className={`px-4 py-3 flex items-start gap-3 ${ongoing ? 'bg-emerald-500/5' : ''}`}>
+                          <div className="flex-shrink-0 w-1 mt-1 rounded-full h-10"
+                            style={{ background: ongoing ? '#10b981' : past ? '#d1d5db' : '#8a4a22' }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-primary truncate">{s.sessionName}</div>
+                            <div className="text-[10px] text-tertiary mt-0.5">
+                              {formatTime(s.startTime)} – {formatTime(s.endTime)}
+                              {s.venueName && ` · ${s.venueName}`}
+                            </div>
+                          </div>
+                          {ongoing && (
+                            <span className="shrink-0 text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">LIVE</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {planner.today.sessions.length > 4 && (
+                      <div className="px-4 py-2 text-[10px] text-tertiary text-center">
+                        +{planner.today.sessions.length - 4} more sessions today
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="glass-premium-v2 rounded-2xl p-4 text-center">
+                  <CalendarDays className="w-6 h-6 mx-auto mb-2 text-tertiary opacity-50" />
+                  <p className="text-xs text-tertiary">No sessions scheduled for today</p>
+                </div>
+              )}
+
+              {/* Next Session */}
+              {planner.nextSession && (
+                <div className="glass-premium-v2 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#8a4a22]/10 flex items-center justify-center text-[#8a4a22] shrink-0">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-0.5">Next Up</div>
+                    <div className="text-sm font-bold text-primary truncate">{planner.nextSession.sessionName}</div>
+                    <div className="text-[11px] text-tertiary">
+                      {formatDate(planner.nextSession.date)} · {formatTime(planner.nextSession.startTime)}
+                      {planner.nextSession.venueName && ` · ${planner.nextSession.venueName}`}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Documentation Day */}
+              {planner.documentationDay && (
+                <div className="glass-premium-v2 rounded-2xl p-4 flex items-center gap-3 border border-amber-400/30">
+                  <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-0.5">Documentation Day</div>
+                    <div className="text-sm font-bold text-primary">{formatDate(planner.documentationDay.date)}</div>
+                    <div className="text-[11px] text-tertiary">Bring all required documents</div>
+                  </div>
+                </div>
+              )}
+
+              {/* 5-Day Schedule Summary */}
+              {planner.scheduleSummary?.length > 0 && (
+                <div className="glass-premium-v2 rounded-2xl overflow-hidden">
+                  <div className="px-4 py-3 border-b border-black/5">
+                    <p className="text-[10px] font-bold text-secondary uppercase tracking-wider">5-Day Overview</p>
+                  </div>
+                  <div className="grid grid-cols-5 divide-x divide-black/5">
+                    {planner.scheduleSummary.map((day: any) => (
+                      <Link
+                        key={day.day}
+                        to="/schedule"
+                        className="flex flex-col items-center py-3 gap-0.5 hover:bg-black/[0.02] transition-colors"
+                      >
+                        <span className="text-[10px] font-bold text-tertiary uppercase">D{day.day}</span>
+                        <span className="text-sm font-bold text-primary">{day.sessions}</span>
+                        <span className="text-[9px] text-tertiary">sessions</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── KPI Stats Grid ──────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">

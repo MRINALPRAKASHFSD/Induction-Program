@@ -266,6 +266,48 @@ service cloud.firestore {
       // Admins and coordinators can upload and manage metadata
       allow write: if isAdminOrCoordinator();
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // AARAMBH 2026 — INDUCTION PLANNER COLLECTIONS
+    // ALL six collections are server-write only (Firebase Admin SDK).
+    // Client NEVER reads planner Firestore directly — data is served via
+    // authenticated API endpoints (/api/planner-student-dashboard, etc.)
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // ── 26. INDUCTION PLANNERS (metadata + lifecycle state) ───────────────────
+    match /induction_planners/{plannerId} {
+      allow read:  if false;  // API only — /api/planner-admin-status
+      allow write: if false;  // Admin SDK only
+    }
+
+    // ── 27. INDUCTION ROOM ALLOCATIONS ────────────────────────────────────────
+    match /induction_room_allocations/{docId} {
+      allow read:  if false;  // API only — /api/planner-student-dashboard
+      allow write: if false;  // Admin SDK only (planner-engine.ts)
+    }
+
+    // ── 28. INDUCTION SESSIONS ─────────────────────────────────────────────────
+    match /induction_sessions/{docId} {
+      allow read:  if false;  // API only — /api/planner-student-dashboard, /api/planner-day-schedule
+      allow write: if false;  // Admin SDK only
+    }
+
+    // ── 29. INDUCTION VENUES ───────────────────────────────────────────────────
+    match /induction_venues/{docId} {
+      allow read:  if false;  // API only
+      allow write: if false;  // Admin SDK only
+    }
+
+    // ── 30. INDUCTION FACULTY COORDINATORS ────────────────────────────────────
+    match /induction_faculty_coordinators/{docId} {
+      allow read:  if false;  // API only
+      allow write: if false;  // Admin SDK only
+    }
+
+    // ── 31. PLANNER AUDIT LOGS ────────────────────────────────────────────────
+    match /planner_audit_logs/{logId} {
+      allow read:  if false;  // API only — /api/planner-admin-status
+      allow write: if false;  // Admin SDK only (planner-engine.ts)
+    }
   }
 }
-

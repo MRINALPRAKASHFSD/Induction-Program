@@ -15,11 +15,18 @@ const apiMockPlugin = (): Plugin => ({
         try {
           const module = await server.ssrLoadModule(filePath);
           
-          let body = '';
-          req.on('data', (chunk: any) => { body += chunk; });
+          const chunks: Buffer[] = [];
+          req.on('data', (chunk: any) => {
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+          });
           req.on('end', async () => {
-             if (body) {
-                try { req.body = JSON.parse(body); } catch(e) {}
+             const rawBuffer = Buffer.concat(chunks);
+             if (rawBuffer.length > 0) {
+                try {
+                   req.body = JSON.parse(rawBuffer.toString('utf8'));
+                } catch(e) {
+                   req.body = rawBuffer;
+                }
              }
              
              res.status = (code: number) => {

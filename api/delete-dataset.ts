@@ -1,5 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, Timestamp, DocumentReference, DocumentData } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
 let firebaseInitError = '';
@@ -55,7 +55,7 @@ export default async function handler(req: any, res: any) {
     const startTime = Date.now();
 
     // ── Resolve dataset ──────────────────────────────────────────────────────
-    let datasetRef: any;
+    let datasetRef: DocumentReference<DocumentData>;
     let dataset: any;
     let dataset_scope: 'event' | 'induction';
     let participantCollection: string;
@@ -83,7 +83,7 @@ export default async function handler(req: any, res: any) {
 
 
     // ── Acquire Lock ─────────────────────────────────────────────────────────
-    let parentRef: any;
+    let parentRef: DocumentReference<DocumentData>;
     if (dataset_scope === 'event') {
       parentRef = db.collection('events').doc(dataset.scope_id || dataset.event_id);
     } else {

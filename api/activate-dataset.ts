@@ -1,5 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, DocumentReference, DocumentData } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
 let firebaseInitError = '';
@@ -50,7 +50,7 @@ export default async function handler(req: any, res: any) {
     const db = getFirestore();
 
     // ── Resolve dataset (check both collections) ─────────────────────────────
-    let datasetRef: any;
+    let datasetRef: DocumentReference<DocumentData>;
     let dataset_scope: 'event' | 'induction';
 
     const eventDatasetRef = db.collection('event_datasets').doc(dataset_id);

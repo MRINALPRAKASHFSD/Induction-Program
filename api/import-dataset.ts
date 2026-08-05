@@ -1,5 +1,5 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, Timestamp, DocumentReference, DocumentData } from 'firebase-admin/firestore';
 
 let firebaseInitialized = false;
 let firebaseInitError = '';
@@ -81,7 +81,7 @@ export default async function handler(req: any, res: any) {
 
     // ── Resolve dataset document (determine type from stored record) ──────────
     // We try event_datasets first, then induction_datasets.
-    let datasetRef: any;
+    let datasetRef: DocumentReference<DocumentData>;
     let dataset: any;
     let dataset_scope: 'event' | 'induction';
 
@@ -108,7 +108,7 @@ export default async function handler(req: any, res: any) {
     // ── Resolve parent ref for lock management ───────────────────────────────
     // Event: lock lives on the event document
     // Induction: lock lives on induction_platform_config/settings
-    let parentRef: any;
+    let parentRef: DocumentReference<DocumentData>;
     if (dataset_scope === 'event') {
       parentRef = db.collection('events').doc(dataset.scope_id || dataset.event_id);
     } else {
