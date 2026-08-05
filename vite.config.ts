@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
 const apiMockPlugin = (): Plugin => ({
   name: 'api-mock-plugin',
@@ -68,6 +69,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [
+      basicSsl(),
       apiMockPlugin(),
       tanstackStart({
         spa: {

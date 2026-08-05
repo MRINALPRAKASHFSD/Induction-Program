@@ -212,21 +212,20 @@ function AttendancePage() {
       let lastError: any = null;
       let usedCameraId = cameraId || localStorage.getItem("preferred_camera_id") || undefined;
 
-      // Ensure that even if we try a preferred camera ID and it fails, we fall back to generic constraints.
-      const fallbackConfigs: MediaTrackConstraints[] = [
-        { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
-        { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-        { facingMode: "environment" },
-        { width: { ideal: 1920 }, height: { ideal: 1080 } },
-        { width: { ideal: 1280 }, height: { ideal: 720 } },
-        {} // Any camera
+      // html5-qrcode REQUIREMENT: constraint objects must have EXACTLY 1 top-level key.
+      // An empty {} causes: "'cameraIdOrConfig' object should have exactly 1 key, found 0 keys"
+      // String values ("environment" / "user") are always valid as a final fallback.
+      const fallbackConfigs: (MediaTrackConstraints | string)[] = [
+        { facingMode: { ideal: "environment" } },  // 1 key ✓ — prefer rear camera
+        { facingMode: "environment" },              // 1 key ✓ — strict rear camera
+        { facingMode: { ideal: "user" } },          // 1 key ✓ — front camera fallback
+        "environment",                              // string — always valid, rear
+        "user",                                     // string — always valid, front
       ];
 
-      const attemptConfigs: MediaTrackConstraints[] = usedCameraId
+      const attemptConfigs: (MediaTrackConstraints | string)[] = usedCameraId
         ? [
-            { deviceId: { exact: usedCameraId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            { deviceId: { exact: usedCameraId }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            { deviceId: { exact: usedCameraId } },
+            { deviceId: { exact: usedCameraId } },  // 1 key ✓ — exact preferred camera
             ...fallbackConfigs
           ]
         : fallbackConfigs;
