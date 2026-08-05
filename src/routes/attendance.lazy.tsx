@@ -156,26 +156,33 @@ function AttendancePage() {
     }
   }, []);
 
-  // ── Start scanning flow: Camera first (for iOS gesture), then GPS ───────────
+  // ── Start scanning flow: Camera first, then GPS in background ───────────────
   const startAttendanceFlow = async () => {
-    setPhase("locating");
+    // Show scanner immediately so iOS Safari doesn't pause the hidden <video> element
+    setPhase("scanner");
     setErrorMsg("");
+    locationRef.current = null;
+    setLocation(null);
 
     try {
-      // Step 1: Start camera FIRST to preserve the synchronous user gesture context
-      // required by iOS Safari for getUserMedia.
       const scannerStarted = await startScanner();
       if (!scannerStarted) return;
 
-      // Step 2: Get GPS coordinates and verify campus
-      const position = await verifyInsideCampus();
-      locationRef.current = position;  // write synchronously — readable in scanner closure
-      setLocation(position);           // update UI state
-
-      setPhase("scanner");
+      // Start GPS in background
+      verifyInsideCampus().then(position => {
+        locationRef.current = position;
+        setLocation(position);
+      }).catch(e => {
+        // If GPS fails and they haven't scanned yet, stop and show error
+        if (!isProcessingRef.current) {
+          stopScanner();
+          setErrorMsg(e.message || "Failed to get your location");
+          setPhase("error");
+        }
+      });
     } catch (e: any) {
       stopScanner();
-      setErrorMsg(e.message || "Failed to get your location");
+      setErrorMsg(e.message || "Failed to start camera");
       setPhase("error");
     }
   };
@@ -183,8 +190,6 @@ function AttendancePage() {
   // ── Camera scanner ────────────────────────────────────────────────────────
   const startScanner = async (cameraId?: string): Promise<boolean> => {
     try {
-      await new Promise(r => setTimeout(r, 100));
-
       if (scannerRef.current) {
         try { await scannerRef.current.stop(); } catch(e) {}
         scannerRef.current.clear();
@@ -218,9 +223,7 @@ function AttendancePage() {
       const fallbackConfigs: (MediaTrackConstraints | string)[] = [
         { facingMode: { ideal: "environment" } },  // 1 key ✓ — prefer rear camera
         { facingMode: "environment" },              // 1 key ✓ — strict rear camera
-        { facingMode: { ideal: "user" } },          // 1 key ✓ — front camera fallback
-        "environment",                              // string — always valid, rear
-        "user",                                     // string — always valid, front
+        { facingMode: { ideal: "user" } }           // 1 key ✓ — front camera fallback
       ];
 
       const attemptConfigs: (MediaTrackConstraints | string)[] = usedCameraId
@@ -453,14 +456,21 @@ function AttendancePage() {
       return;
     }
 
-    const currentLocation = locationRef.current;
-    if (!currentLocation) {
-      setErrorMsg("Location not available. Please try again.");
-      setPhase("error");
-      return;
-    }
-
     setPhase("submitting");
+
+    let currentLocation = locationRef.current;
+    if (!currentLocation) {
+      // If GPS is still acquiring, wait for it now
+      try {
+        currentLocation = await verifyInsideCampus();
+        locationRef.current = currentLocation;
+        setLocation(currentLocation);
+      } catch (e: any) {
+        setErrorMsg(e.message || "Failed to verify campus location.");
+        setPhase("error");
+        return;
+      }
+    }
 
     try {
       const user = auth.currentUser;
