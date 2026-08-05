@@ -116,29 +116,21 @@ export default async function handler(req: any, res: any) {
           geofence_radius_meters: Math.max(100, Math.min(1000, Number(geofence_radius_meters))),
           geofence_center: DEFAULT_CAMPUS,
           status: 'pending' as const,
-          current_qr_nonce: null,
+          // v2 Token Architecture: QR token is stored in Redis (not Firestore).
+          // current_qr_token tracks the most recently issued token reference for admin display.
+          // qr_rotation_id increments on every rotation for audit and fraud analysis.
+          current_qr_token: null,
           current_qr_generated_at: null,
+          qr_rotation_id: 0,
           total_present: 0,
           created_by: decodedToken.uid,
           created_at: FieldValue.serverTimestamp(),
           updated_at: FieldValue.serverTimestamp(),
         };
 
-        const batch = db.batch();
+        // Create the session document (single write — no secrets subcollection needed in v2)
         const sessionRef = db.collection('attendance_sessions').doc(sessionId);
-        
-        // 1. Create the session document
-        batch.set(sessionRef, sessionData);
-
-        // 2. Create the cryptographic secret for QR signing
-        // This is isolated in a subcollection so rules can deny client access
-        const secretRef = sessionRef.collection('secrets').doc('key');
-        batch.set(secretRef, {
-          session_secret: crypto.randomBytes(32).toString('hex'),
-          created_at: FieldValue.serverTimestamp(),
-        });
-
-        await batch.commit();
+        await sessionRef.set(sessionData);
 
         return res.status(201).json({
           ok: true,

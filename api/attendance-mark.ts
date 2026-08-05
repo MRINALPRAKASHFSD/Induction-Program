@@ -1,35 +1,34 @@
 /**
  * api/attendance-mark.ts
  *
- * Production-grade attendance marking endpoint — v3 (Security Hardened).
+ * Production-grade attendance marking endpoint — v4 (Opaque Token Architecture).
  *
- * Changes from v2:
- *   - GPS tolerance updated to 250m radius + 40m buffer (handles indoor/Android drift)
- *   - Nonce tracking moved to Redis ONLY (atomic SETNX, auto-TTL, no Firestore writes)
- *   - Full attendance audit log stored on every mark (browser, OS, IP, distance, nonce)
- *   - Device fingerprint collected from User-Agent for anomaly auditing
- *   - Improved error classification (network vs. validation vs. server)
+ * Changes from v3:
+ *   - QR validation replaced: Base64-decode + HMAC + nonce SETNX → single Redis GET
+ *   - Redis is now the authoritative source of truth for QR token validity
+ *   - Fail CLOSED: Redis unavailable → 503 (not fail-open) — prevents unverified attendance
+ *   - qrVersion hardcoded to 2 in audit logs to distinguish token-based scans
+ *   - sessionId is sourced from Redis token data (not from QR payload fields)
+ *   - rotationId from Redis value stored in audit log for fraud/replay analysis
  *
- * 13-point validation pipeline (ALL must pass):
+ * 11-point validation pipeline (ALL must pass):
  *
  *   1.  User is authenticated (Firebase JWT)
- *   2.  Rate limiting (Redis, 5 req/min per enrollment)
- *   3.  QR payload decoded and structurally valid
- *   4.  QR signature is cryptographically valid (HMAC-SHA256)
- *   5.  QR timestamp is fresh (not expired by rotation interval)
- *   6.  QR nonce is valid (Redis SETNX — single-use per student)
- *   7.  [Merged with 6] Anti-replay enforcement
- *   8.  Attendance session exists and is active
- *   9.  Student registration exists
- *  10.  Student account is active (not suspended)
- *  11.  Student belongs to correct programme
- *  12.  Student has not already marked attendance (Redis + Firestore dedup)
- *  13.  Student is inside campus geofence (250m + 40m GPS tolerance)
+ *   2.  Rate limiting (Redis, 5 req\/min per enrollment)
+ *   3.  QR token format valid (regex)
+ *   4.  QR token exists in Redis (not expired)
+ *   5.  Attendance session exists and is active
+ *   6.  Student registration exists
+ *   7.  Student account is active (not suspended)
+ *   8.  Student belongs to correct programme
+ *   9.  Student has not already marked attendance (Redis + Firestore dedup)
+ *  10.  Student is inside campus geofence (250m + 40m GPS tolerance)
+ *  11.  Firestore transaction (duplicate-safe attendance write)
  *
  * Failure modes:
- *   - Redis down → fails OPEN for attendance (but nonce check skipped — logged)
- *   - QStash down → fails open (points delayed, attendance recorded)
- *   - Firestore down → hard fail (attendance requires persistence)
+ *   - Redis down          → 503 Service Unavailable (FAIL CLOSED — token cannot be verified)
+ *   - QStash down         → fails open (points delayed, attendance recorded synchronously)
+ *   - Firestore down      → hard fail (attendance requires persistence)
  */
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
@@ -37,7 +36,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getRedis } from '../server/redis.js';
 import { publishAttendanceJob } from '../server/qstash.js';
 import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token.js';
-import { decodeQrPayload, verifyQrSignature, isQrExpired } from '../server/qr-crypto.js';
+import { isValidQrTokenFormat, qrTokenRedisKey, type QrTokenRedisValue } from '../server/qr-token.js';
 import { processAttendanceFirestoreTransaction } from '../server/attendance-core.js';
 import crypto from 'crypto';
 
@@ -168,7 +167,6 @@ export default async function handler(req: any, res: any) {
   // ══════════════════════════════════════════════════════════════════════════
   // VALIDATION 2: Rate limiting (Redis)
   // ══════════════════════════════════════════════════════════════════════════
-  let redisAvailable = true;
   let redis: any;
   try {
     redis = getRedis();
@@ -182,54 +180,67 @@ export default async function handler(req: any, res: any) {
       });
     }
   } catch (redisErr: any) {
-    redisAvailable = false;
-    console.warn(JSON.stringify({ requestId, layer: 'rate_limiter', error: redisErr.message }));
+    // Redis is unavailable — FAIL CLOSED.
+    // In v2 token architecture, Redis is the sole source of truth for QR validity.
+    // Allowing attendance without Redis means any string passes validation.
+    console.error(JSON.stringify({ requestId, layer: 'rate_limiter', status: 'redis_down', error: redisErr.message }));
+    return res.status(503).json({
+      ok: false,
+      error: 'Attendance service temporarily unavailable. Please retry in a moment.',
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // VALIDATION 3: QR payload structurally valid
+  // VALIDATION 3: QR token format (fast regex — no Redis yet)
   // ══════════════════════════════════════════════════════════════════════════
-  const payload = decodeQrPayload(qr_data);
-  if (!payload) {
+  if (!isValidQrTokenFormat(qr_data)) {
     return res.status(400).json({
       ok: false,
       error: 'Invalid QR code. Please scan the QR displayed by the admin.',
     });
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // VALIDATION 4: QR token exists in Redis (authoritative validity check)
+  //
+  // Redis is the SOLE source of truth for whether a QR token is currently active.
+  // If the token is not in Redis it has expired, been rotated, or is fabricated.
+  //
+  // FAIL CLOSED: if Redis is unavailable at this point, we cannot verify the
+  // token and MUST reject the request with 503. This is intentional — accepting
+  // unverified tokens would bypass the entire QR security model.
+  // The frontend retries automatically (500ms → 1s → 2s → 4s backoff).
+  // ══════════════════════════════════════════════════════════════════════════
+  let tokenData: QrTokenRedisValue;
+  try {
+    const raw = await redis.get(qrTokenRedisKey(qr_data)) as QrTokenRedisValue | null;
+    if (!raw) {
+      return res.status(400).json({
+        ok: false,
+        error: 'QR code has expired. Please scan the latest QR code shown by the admin.',
+      });
+    }
+    tokenData = raw;
+  } catch (tokenErr: any) {
+    console.error(JSON.stringify({ requestId, layer: 'token_lookup', status: 'redis_down', error: tokenErr.message }));
+    return res.status(503).json({
+      ok: false,
+      error: 'Attendance service temporarily unavailable. Please retry in a moment.',
+    });
+  }
+
+  // Extract session context from the Redis token value
+  const sessionId = tokenData.sessionId;
+  const rotationId = tokenData.rotationId;
+
   try {
     const db = getFirestore();
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 4: Fetch Session Secret & Verify HMAC Signature
+    // VALIDATION 5: Session is active
+    // (sessionId resolved from Redis token — single Firestore read)
     // ════════════════════════════════════════════════════════════════════════
-    const secretsSnapshot = await db
-      .collection('attendance_sessions')
-      .doc(payload.sessionId)
-      .collection('secrets')
-      .limit(1)
-      .get();
-
-    if (secretsSnapshot.empty) {
-      console.error(JSON.stringify({ requestId, status: 'missing_secret', sessionId: payload.sessionId }));
-      return res.status(500).json({ ok: false, error: 'Internal server error. Session is misconfigured.' });
-    }
-
-    const sessionSecret = secretsSnapshot.docs[0].data().session_secret;
-    if (!verifyQrSignature(payload, sessionSecret)) {
-      console.warn(JSON.stringify({
-        requestId, status: 'forged_qr', enrollmentId: enrollmentClean, ip: clientIp, browser, os,
-      }));
-      return res.status(403).json({
-        ok: false,
-        error: 'Invalid QR code. This QR was not generated by the system.',
-      });
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 5: QR not expired & Session Active
-    // ════════════════════════════════════════════════════════════════════════
-    const sessionRef = db.collection('attendance_sessions').doc(payload.sessionId);
+    const sessionRef = db.collection('attendance_sessions').doc(sessionId);
     const sessionDoc = await sessionRef.get();
 
     if (!sessionDoc.exists) {
@@ -237,49 +248,9 @@ export default async function handler(req: any, res: any) {
     }
 
     const session = sessionDoc.data()!;
-    const rotationInterval = session.rotation_interval_seconds || 30; // updated field name based on schema
-
-    if (isQrExpired(payload, rotationInterval)) {
-      return res.status(400).json({
-        ok: false,
-        error: 'QR code has expired. Please scan the latest QR code shown by the admin.',
-      });
-    }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 6 + 7: Nonce single-use via Redis SETNX (atomic)
-    //
-    // Why Redis-only (not Firestore)?
-    //   - Nonces are TEMPORARY by nature — they expire in seconds
-    //   - Firestore writes cost money and add latency for ephemeral data
-    //   - Redis SETNX is atomic, extremely fast, and auto-expires via TTL
-    //   - If Redis is down, we log a warning and fail OPEN (attendance proceeds)
-    //     but flag the scan as nonce_unchecked for post-hoc audit
-    // ════════════════════════════════════════════════════════════════════════
-    let nonceUnchecked = false;
-    if (redisAvailable && redis) {
-      try {
-        // SETNX: set only if not exists — atomic single-use per (nonce, student)
-        const nonceKey = `nonce:${payload.nonce}:${enrollmentClean}`;
-        const set = await redis.set(nonceKey, '1', { nx: true, ex: rotationInterval + 10 });
-        if (set === null) {
-          // Already scanned this nonce — potential rapid double-scan
-          return res.status(400).json({
-            ok: false,
-            error: 'QR code already used. Please scan the current QR displayed by the admin.',
-          });
-        }
-      } catch (nonceErr: any) {
-        // Fail open — log but proceed
-        nonceUnchecked = true;
-        console.warn(JSON.stringify({ requestId, layer: 'nonce_check', error: (nonceErr as any).message }));
-      }
-    } else {
-      nonceUnchecked = true;
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 8: Session is active
+    // VALIDATION 5 (cont.): Session must be active
     // ════════════════════════════════════════════════════════════════════════
     if (session.status !== 'active') {
       const statusMessages: Record<string, string> = {
@@ -295,7 +266,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 9: Student registration exists
+    // VALIDATION 6: Student registration exists
     // ════════════════════════════════════════════════════════════════════════
     const studentRef = db.collection('students').doc(enrollmentClean);
     const studentDoc = await studentRef.get();
@@ -310,7 +281,7 @@ export default async function handler(req: any, res: any) {
     const studentData = studentDoc.data()!;
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 10: Student account is active
+    // VALIDATION 7: Student account is active
     // ════════════════════════════════════════════════════════════════════════
     if (studentData.is_suspended === true || studentData.is_deactivated === true) {
       return res.status(403).json({
@@ -320,7 +291,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 11: Programme match
+    // VALIDATION 8: Programme match
     // ════════════════════════════════════════════════════════════════════════
     const studentDeptId = (studentData.department_id || '').toLowerCase();
     const sessionProgrammeId = (session.programme_id || '').toLowerCase();
@@ -333,29 +304,26 @@ export default async function handler(req: any, res: any) {
     }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 12: Duplicate check (Redis pre-flight + Firestore)
+    // VALIDATION 9: Duplicate check (Redis pre-flight + Firestore transaction)
     // ════════════════════════════════════════════════════════════════════════
-    const sessionId = payload.sessionId;
     const attendanceId = `${sessionId}_${enrollmentClean}`;
 
-    if (redisAvailable && redis) {
-      try {
-        const dedupKey = `attended:${sessionId}:${enrollmentClean}`;
-        const cachedName = (await redis.get(dedupKey)) as string;
-        if (cachedName) {
-          return res.status(200).json({
-            ok: true,
-            duplicate: true,
-            studentName: cachedName,
-            eventTitle: session.title || session.programme_name || 'Session',
-            message: 'Attendance already marked for this session.',
-          });
-        }
-      } catch { /* fail open */ }
-    }
+    try {
+      const dedupKey = `attended:${sessionId}:${enrollmentClean}`;
+      const cachedName = (await redis.get(dedupKey)) as string;
+      if (cachedName) {
+        return res.status(200).json({
+          ok: true,
+          duplicate: true,
+          studentName: cachedName,
+          eventTitle: session.title || session.programme_name || 'Session',
+          message: 'Attendance already marked for this session.',
+        });
+      }
+    } catch { /* Redis pre-flight dedup failed — Firestore transaction is the source of truth */ }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 13: Geofence — campus radius + GPS tolerance
+    // VALIDATION 10: Geofence — campus radius + GPS tolerance
     // Always uses configured CAMPUS_CENTER (authoritative) — never trusts
     // session.geofence_center because session documents may have stale coords.
     // ════════════════════════════════════════════════════════════════════════
@@ -403,11 +371,11 @@ export default async function handler(req: any, res: any) {
         section: studentData.section || '',
         email: studentData.email || '',
         scanTimeIso: now.toISOString(),
-        qrVersion: payload.v || 1,
+        qrVersion: 2,             // v2 = opaque token architecture
         scannerDeviceId: decodedToken.uid,
         ipAddress: clientIp,
         userAgent: uaTruncated,
-        verificationResult: nonceUnchecked ? 'nonce_unchecked' : 'verified'
+        verificationResult: `token_verified:rotation_${rotationId}`,
       });
     } catch (e: any) {
       console.warn(JSON.stringify({ requestId, layer: 'qstash', error: e.message, status: 'fallback_to_sync' }));
@@ -426,11 +394,11 @@ export default async function handler(req: any, res: any) {
           section: studentData.section || '',
           email: studentData.email || '',
           scanTimeIso: now.toISOString(),
-          qrVersion: payload.v || 1,
+          qrVersion: 2,           // v2 = opaque token architecture
           scannerDeviceId: decodedToken.uid,
           ipAddress: clientIp,
           userAgent: uaTruncated,
-          verificationResult: nonceUnchecked ? 'nonce_unchecked' : 'verified'
+          verificationResult: `token_verified:rotation_${rotationId}`,
         });
       } catch (syncError: any) {
         console.error(JSON.stringify({ requestId, layer: 'sync_fallback', error: syncError.message }));
@@ -439,17 +407,17 @@ export default async function handler(req: any, res: any) {
     }
 
     // Warm Redis dedup cache
-    if (redisAvailable && redis) {
-      try {
-        await redis.set(`attended:${sessionId}:${enrollmentClean}`, studentData.full_name, { ex: 86400 });
-      } catch {}
-    }
+    try {
+      await redis.set(`attended:${sessionId}:${enrollmentClean}`, studentData.full_name, { ex: 86400 });
+    } catch {}
 
     console.log(JSON.stringify({
       requestId, status: 'success',
       sessionId, enrollmentId: enrollmentClean,
       ip: clientIp, browser, os,
       distance: distanceFromCampus,
+      rotationId,
+      tokenAgeMs: Date.now() - tokenData.generatedAt,
     }));
 
     return res.status(202).json({
