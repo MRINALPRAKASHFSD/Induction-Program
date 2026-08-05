@@ -67,9 +67,11 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   process.env = { ...process.env, ...env };
 
+  const isDev = command === 'serve';
+
   return {
     plugins: [
-      basicSsl(),
+      isDev ? basicSsl() : null,
       apiMockPlugin(),
       tanstackStart({
         spa: {
@@ -79,7 +81,7 @@ export default defineConfig(({ command, mode }) => {
       react(),
       tailwindcss(),
       tsconfigPaths(),
-    ],
+    ].filter(Boolean) as Plugin[],
     resolve: {
       alias: {
         "@": "/src",
