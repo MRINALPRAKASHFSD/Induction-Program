@@ -535,15 +535,15 @@ export function SiteHeader() {
         {mobileOpen && (
           <m.nav
             className="nav-mobile-sheet md:hidden"
-            initial={{ opacity: 0, y: -16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.98 }}
-            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.15}
             onDragEnd={(_, info) => {
-              if (info.offset.y > 60 || info.velocity.y > 200) {
+              if (info.offset.x > 60 || info.velocity.x > 200) {
                 setMobileOpen(false);
               }
             }}

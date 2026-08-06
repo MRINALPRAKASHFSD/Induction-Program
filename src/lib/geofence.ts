@@ -11,15 +11,29 @@
  * The server ALWAYS re-validates coordinates — never trust client alone.
  */
 
+export class GeofenceError extends Error {
+  code: string;
+  distance?: number;
+  accuracy?: number;
+
+  constructor(message: string, code: string, distance?: number, accuracy?: number) {
+    super(message);
+    this.name = 'GeofenceError';
+    this.code = code;
+    this.distance = distance;
+    this.accuracy = accuracy;
+  }
+}
+
 // ── K.R. Mangalam University, Sohna Road, Gurugram ────────────────────────────
 // Verified coordinates: 28.272428°N, 77.0675693°E
 // Source: Google AI Overview + official krmangalam.edu.in documents (A-Block / campus centroid)
 export const CAMPUS_CENTER = {
-  lat: 28.272428,
-  lng: 77.0675693,
+  lat: Number(import.meta.env.VITE_CAMPUS_LAT) || 28.272428,
+  lng: Number(import.meta.env.VITE_CAMPUS_LNG) || 77.0675693,
 };
 
-export const CAMPUS_RADIUS_METERS = 300; // Full campus footprint (~300m radius from centroid)
+export const CAMPUS_RADIUS_METERS = Number(import.meta.env.VITE_CAMPUS_RADIUS_METERS) || 300; // Full campus footprint (~300m radius from centroid)
 export const GPS_TOLERANCE_METERS = 40; // ±40m for indoor/cloudy/Android GPS drift
 
 // ── Haversine distance ────────────────────────────────────────────────────────
@@ -111,9 +125,12 @@ export async function verifyInsideCampus(): Promise<GeolocationResult> {
   const { inside, distance } = isInsideCampus(position.lat, position.lng);
 
   if (!inside) {
-    throw new Error(
+    throw new GeofenceError(
       `You must be inside the K.R. Mangalam University campus to mark attendance. ` +
       `You appear to be approximately ${distance}m from campus.`,
+      'GEOFENCE_OUTSIDE_RADIUS',
+      distance,
+      position.accuracy
     );
   }
 

@@ -100,7 +100,7 @@ function RegisterPage() {
   // 'lookup'      → Phase 0: Enter Application Number
   // 'fast_track'  → Phase 1A: OTP-only fast-track (student found in induction_participants)
   // 'full_form'   → Phase 1B: Standard registration form (student not found)
-  type AppPhase = 'lookup' | 'fast_track' | 'full_form';
+  type AppPhase = 'lookup' | 'fast_track' | 'full_form' | 'not_found';
   const [appPhase, setAppPhase]           = useState<AppPhase>('lookup');
   const [appNumber, setAppNumber]         = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -151,8 +151,8 @@ function RegisterPage() {
     try {
       const result = await lookupInductionParticipant(normalized);
       if (!result.data || !result.data.found) {
-        // Not in induction dataset → standard registration form
-        setAppPhase('full_form');
+        // Not in induction dataset → show not found modal
+        setAppPhase('not_found');
         return;
       }
       const record = result.data;
@@ -499,6 +499,7 @@ function RegisterPage() {
                     onKeyDown={(e) => e.key === 'Enter' && onLookupAppNumber()}
                     placeholder="e.g. KRMU2639407"
                     className="h-12 text-[15px] uppercase bg-background/50 border-border/50 focus-visible:border-primary/50 focus-visible:ring-primary/20"
+                    disabled={lookupLoading}
                     autoFocus
                   />
                 </div>
@@ -523,6 +524,65 @@ function RegisterPage() {
       </div>
     );
   }
+
+  // ── Phase 0.5 — Record Not Found Modal ──────────────────────────────────────
+  if (appPhase === 'not_found') {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" /><div className="orb orb-4" />
+        </div>
+        <div className="relative z-10 w-full">
+          <SiteHeader />
+          
+          {/* Blurred Background Overlay */}
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 z-40 bg-background/40 backdrop-blur-[14px]"
+          />
+
+          <main className="container mx-auto max-w-md px-4 relative z-50">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+              className="panel-liquid-glass rounded-2xl p-8 shadow-glow text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              </div>
+              <h3 className="text-xl font-bold mb-2">Admission Record Not Found</h3>
+              <p className="text-[15px] text-muted-foreground mb-4">
+                We couldn't find a fast-track admission record for Application No. <strong className="text-foreground">{appNumber.toUpperCase()}</strong>.
+              </p>
+              <p className="text-[14px] text-muted-foreground/80 mb-8">
+                You can still register manually, but you will need to fill out all details.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  onClick={() => setAppPhase('lookup')} 
+                  variant="outline"
+                  className="flex-1 h-11 border-border/50 bg-background/50"
+                >
+                  Try Another Number
+                </Button>
+                <Button 
+                  onClick={() => setAppPhase('full_form')} 
+                  variant="liquidGlassMaroon"
+                  className="flex-1 h-11"
+                >
+                  Register Manually
+                </Button>
+              </div>
+            </motion.div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
 
   // ── Phase 1A — Fast-track: Student found in induction_participants ──────────
   if (appPhase === 'fast_track' && inductionRecord) {

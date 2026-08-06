@@ -25,18 +25,34 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 import {
-  ScanLine, CheckCircle2, XCircle, AlertTriangle,
+  ScanLine, CheckCircle2, XCircle, AlertTriangle, X, Navigation, Signal, Smartphone, ShieldAlert, Check, Navigation2,
   ArrowLeft, Clock, MapPin, Shield, History,
   Percent, ChevronRight, Camera, Loader2, RefreshCw,
-  Zap, ZapOff, ZoomIn, SwitchCamera, Sun, Focus
+  Zap, ZapOff, ZoomIn, SwitchCamera, Sun, Focus, QrCode
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
 import { auth, db } from "@/lib/firebase/config";
 import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
-import { verifyInsideCampus, isInsideCampus, CAMPUS_CENTER, CAMPUS_RADIUS_METERS, type GeolocationResult } from "@/lib/geofence";
+import { verifyInsideCampus, isInsideCampus, CAMPUS_CENTER, CAMPUS_RADIUS_METERS, type GeolocationResult, GeofenceError } from "@/lib/geofence";
 import { toast } from "sonner";
+
+const DEPARTMENTS = {
+  SOET: "School of Engineering and Technology",
+  SOMC: "School of Management and Commerce",
+  SOAS: "School of Applied Sciences",
+  SOAH: "School of Allied Health",
+  SALS: "School of Agricultural and Life Sciences",
+  SOL: "School of Law",
+  SOA: "School of Architecture",
+  SOJMC: "School of Journalism and Mass Communication",
+  SOED: "School of Education",
+  SFA: "School of Fine Arts",
+  SOHS: "School of Humanities and Social Sciences"
+};
 
 const playSuccessSound = () => {
   try {
@@ -103,6 +119,7 @@ function AttendancePage() {
   const [phase, setPhase] = useState<Phase>("dashboard");
   const [result, setResult] = useState<MarkResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [errorObj, setErrorObj] = useState<Error | null>(null);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [location, setLocation] = useState<GeolocationResult | null>(null);
@@ -176,6 +193,7 @@ function AttendancePage() {
         // If GPS fails and they haven't scanned yet, stop and show error
         if (!isProcessingRef.current) {
           stopScanner();
+          setErrorObj(e as Error);
           setErrorMsg(e.message || "Failed to get your location");
           setPhase("error");
         }
@@ -352,6 +370,7 @@ function AttendancePage() {
       if (e?.name === "NotReadableError") errMsg = "Camera is already in use by another app or tab.";
       if (e?.name === "NotFoundError") errMsg = "No camera found on this device.";
       
+      setErrorObj(new Error(errMsg));
       setErrorMsg(errMsg);
       setPhase("error");
       return false;
@@ -451,6 +470,7 @@ function AttendancePage() {
     isProcessingRef.current = true;
 
     if (!profile?.enrollment_no) {
+      setErrorObj(new Error("Please register first to mark attendance."));
       setErrorMsg("Please register first to mark attendance.");
       setPhase("error");
       return;
@@ -466,6 +486,7 @@ function AttendancePage() {
         locationRef.current = currentLocation;
         setLocation(currentLocation);
       } catch (e: any) {
+        setErrorObj(e as Error);
         setErrorMsg(e.message || "Failed to verify campus location.");
         setPhase("error");
         return;
@@ -495,6 +516,7 @@ function AttendancePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        setErrorObj(new Error(data.error || "Failed to mark attendance."));
         setErrorMsg(data.error || "Failed to mark attendance.");
         setPhase("error");
         return;
@@ -519,6 +541,7 @@ function AttendancePage() {
         || e.message?.toLowerCase().includes('network')
         || e.message?.toLowerCase().includes('networkerror');
 
+      setErrorObj(new Error(isOffline ? 'Network unavailable. Please reconnect and scan again.' : 'Failed to reach server. Please check your connection.'));
       setErrorMsg(
         isOffline
           ? 'Network unavailable. Please reconnect and scan again.'
@@ -540,6 +563,7 @@ function AttendancePage() {
     isProcessingRef.current = false;
     setPhase("scanner");
     setErrorMsg("");
+    setErrorObj(null);
     setResult(null);
   };
 
@@ -558,6 +582,7 @@ function AttendancePage() {
     setPhase("dashboard");
     setResult(null);
     setErrorMsg("");
+    setErrorObj(null);
     setLocation(null);
   };
 
@@ -710,129 +735,252 @@ function AttendancePage() {
         </div>
       </div>
 
-      {phase === "dashboard" && (
+            {phase === "dashboard" && (
         <div className="min-h-screen bg-background pb-16">
           <SiteHeader />
-          <div className="ambient-bg" aria-hidden="true">
+          <div className="ambient-bg hidden md:block" aria-hidden="true">
             <div className="ambient-blob ambient-blob-1" />
             <div className="ambient-blob ambient-blob-2" />
             <div className="ambient-blob ambient-blob-3" />
           </div>
 
-          <main className="relative container mx-auto max-w-md px-4 py-8 space-y-6">
+          <main 
+            className="relative mx-auto mt-8 lg:mt-12 space-y-6 md:space-y-8"
+            style={{ maxWidth: "1600px", width: "min(94vw, 1600px)", paddingInline: "clamp(20px, 3vw, 48px)" }}
+          >
             {/* Header */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-1.5">
-              <h1 className="text-hero-heading text-primary font-bold">Attendance</h1>
-              <p className="text-label text-secondary uppercase font-bold tracking-wider">Aarambh 2026</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="md:hidden text-center space-y-1 mb-6"
+            >
+              <h1 className="text-2xl font-bold text-primary">Attendance Pass</h1>
+              <p className="text-xs text-muted-foreground">Fast • Secure • Verified</p>
             </motion.div>
 
-            {/* Stats */}
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-3">
-              <div className="glass-premium-v2 rounded-2xl p-4 text-center">
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 mx-auto mb-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                </div>
-                <div className="text-2xl font-bold text-primary">{attendanceCount}</div>
-                <div className="text-xs text-tertiary font-medium">Sessions Attended</div>
-              </div>
-              <div className="glass-premium-v2 rounded-2xl p-4 text-center">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 mx-auto mb-2">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div className="text-2xl font-bold text-primary">{profile?.full_name?.[0] || "?"}</div>
-                <div className="text-xs text-tertiary font-medium">Verified Student</div>
-              </div>
-            </motion.div>
-
-            {/* SCAN BUTTON — the main CTA */}
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
-              <Button
-                variant="liquidGlassMaroon"
-                size="lg"
-                className="w-full rounded-2xl h-16 text-lg font-bold gap-3"
-                onClick={startAttendanceFlow}
-              >
-                <Camera className="w-6 h-6" />
-                Scan Attendance QR
-              </Button>
-              <p className="text-center text-xs text-muted-foreground mt-2">
-                Point your camera at the QR displayed on the projector or smart panel
-              </p>
-            </motion.div>
-
-            {/* How it works */}
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              <div className="glass-premium-v2 rounded-2xl p-4 space-y-3">
-                <h3 className="text-sm font-bold text-primary flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-500" />
-                  How Secure Attendance Works
-                </h3>
-                {[
-                  { icon: Camera, text: "Open camera and scan the QR code shown by admin" },
-                  { icon: MapPin, text: "Your location is verified to ensure you're on campus" },
-                  { icon: Clock, text: "QR codes rotate every 30s — they can't be shared" },
-                  { icon: CheckCircle2, text: "Attendance is recorded securely on the server" },
-                ].map((step, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-xs text-secondary">
-                    <div className="w-5 h-5 rounded-full bg-primary/5 flex items-center justify-center shrink-0 mt-0.5">
-                      <step.icon className="w-3 h-3 text-primary/60" />
-                    </div>
-                    {step.text}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 lg:gap-12">
+              
+              {/* LEFT COLUMN: Identity Pass */}
+              <div className="md:col-span-5 lg:col-span-4 flex flex-col gap-6">
+                {!profile ? (
+                  <div className="glass-premium-v2 rounded-3xl p-6 space-y-6 min-h-[400px]">
+                    <div className="skeleton-glass w-full h-8 rounded-lg" />
+                    <div className="skeleton-glass w-3/4 h-6 rounded-lg" />
+                    <div className="skeleton-glass w-full h-32 rounded-xl mt-8" />
                   </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Attendance History */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-label text-secondary uppercase font-bold tracking-wider flex items-center gap-1.5">
-                  <History className="w-3.5 h-3.5" />
-                  Recent Attendance
-                </h3>
-                <span className="text-xs text-tertiary">{attendanceCount} total</span>
-              </div>
-
-              {loadingRecords ? (
-                <div className="space-y-2">
-                  {[1,2,3].map(i => <div key={i} className="skeleton-glass skeleton-card" style={{ minHeight: "56px" }} />)}
-                </div>
-              ) : records.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm font-medium">No attendance records yet</p>
-                  <p className="text-xs mt-1">Scan a QR code to mark your first attendance</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {records.map(rec => (
-                    <div key={rec.id} className="glass-premium-v2 rounded-xl p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                          <CheckCircle2 className="w-4 h-4" />
-                        </div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-premium-v2 rounded-[32px] overflow-hidden relative border border-white/40 dark:border-white/10 shadow-xl"
+                  >
+                    {/* Noise texture overlay */}
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none" />
+                    
+                    {/* Pass Header */}
+                    <div className="bg-primary/5 p-6 border-b border-white/20 dark:border-white/5 relative overflow-hidden">
+                      <div className="absolute -right-12 -top-12 w-40 h-40 bg-primary/10 blur-3xl rounded-full" />
+                      <div className="relative z-10 flex justify-between items-start">
                         <div>
-                          <div className="text-sm font-semibold text-primary">{rec.event_id || rec.session_id}</div>
-                          <div className="text-xs text-tertiary">
-                            {rec.scanned_at?.toDate?.()
-                              ? rec.scanned_at.toDate().toLocaleString("en-IN", {
-                                  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                                })
-                              : "—"}
-                          </div>
+                          <div className="text-[10px] uppercase tracking-widest text-primary/70 font-bold mb-1">Aarambh 2026</div>
+                          <h2 className="text-2xl md:text-3xl font-black text-primary tracking-tight leading-none uppercase">{profile.full_name}</h2>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 backdrop-blur-md">
+                          <Shield className="w-6 h-6 text-primary" />
                         </div>
                       </div>
-                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                        Present
-                      </span>
+                      
+                      <div className="mt-6 inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-3 py-1.5 rounded-full text-xs font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Verified Student
+                      </div>
                     </div>
-                  ))}
+
+                    {/* Pass Details */}
+                    <div className="p-6 space-y-5 relative bg-gradient-to-b from-transparent to-black/5 dark:to-white/5">
+                      <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-tertiary font-bold mb-1">Programme</div>
+                          <div className="text-sm font-semibold text-secondary">{profile.branch || "B.Tech CSE"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-tertiary font-bold mb-1">School</div>
+                          <div className="text-sm font-semibold text-secondary">{DEPARTMENTS[profile.department_id as keyof typeof DEPARTMENTS] || "SOET"}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-tertiary font-bold mb-1">Enrollment</div>
+                          <div className="text-sm font-semibold text-secondary uppercase font-mono tracking-wide">{profile.enrollment_no || profile.id.split('-')[0]}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-tertiary font-bold mb-1">Academic Session</div>
+                          <div className="text-sm font-semibold text-secondary">2026-27</div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t border-dashed border-primary/20 flex justify-between items-center">
+                        <div className="font-mono text-xs text-tertiary font-semibold uppercase tracking-widest">
+                          ID: {profile.id.split('-').pop()}
+                        </div>
+                        <div className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+                          DAY 2
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Desktop CTA */}
+                <div className="hidden md:block mt-2">
+                  <ScanButton onScan={startAttendanceFlow} />
                 </div>
-              )}
+              </div>
+
+              {/* RIGHT COLUMN: Stats & Journey */}
+              <div className="md:col-span-7 lg:col-span-8 flex flex-col gap-6 md:gap-8">
+                
+                {/* Stats Grid */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  transition={{ delay: 0.1 }}
+                  className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+                >
+                  <StatCard 
+                    icon={CheckCircle2}
+                    value={attendanceCount}
+                    label="Completed"
+                    color="emerald"
+                  />
+                  <StatCard 
+                    icon={Clock}
+                    value={2}
+                    label="Today's Sessions"
+                    color="blue"
+                  />
+                  <StatCard 
+                    icon={QrCode}
+                    value={1}
+                    label="Remaining Today"
+                    color="amber"
+                  />
+                  <StatCard 
+                    icon={Shield}
+                    value="Day 1"
+                    label="Verified Since"
+                    color="primary"
+                  />
+                </motion.div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                  {/* Attendance History (Boarding Pass style) */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="text-sm text-primary uppercase font-bold tracking-wider flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Recent Attendance
+                      </h3>
+                    </div>
+
+                    {loadingRecords ? (
+                      <div className="space-y-3">
+                        {[1,2].map(i => <div key={i} className="skeleton-glass rounded-[20px] min-h-[80px]" />)}
+                      </div>
+                    ) : records.length === 0 ? (
+                      <div className="glass-premium-v2 rounded-[24px] p-8 text-center border border-dashed border-primary/20">
+                        <History className="w-10 h-10 mx-auto mb-3 opacity-20 text-primary" />
+                        <p className="text-sm font-bold text-primary">No records yet</p>
+                        <p className="text-xs mt-1 text-tertiary">Scan your first QR code to begin your journey.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {records.map(rec => (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            key={rec.id} 
+                            className="glass-premium-v2 rounded-[20px] p-4 flex items-center justify-between relative overflow-hidden group hover:border-primary/30 transition-colors"
+                          >
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500" />
+                            <div className="flex items-center gap-4 pl-2">
+                              <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors">
+                                <MapPin className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-bold text-primary">{rec.event_id || rec.session_id || "Main Auditorium"}</div>
+                                <div className="text-[11px] text-tertiary font-medium mt-0.5 flex items-center gap-1.5">
+                                  <Clock className="w-3 h-3" />
+                                  {rec.scanned_at?.toDate?.()
+                                    ? rec.scanned_at.toDate().toLocaleString("en-IN", {
+                                        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                                      })
+                                    : "—"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                Verified
+                              </span>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Security Timeline */}
+                  <div className="space-y-4 hidden lg:block">
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="text-sm text-primary uppercase font-bold tracking-wider flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        Security Check
+                      </h3>
+                    </div>
+
+                    <div className="glass-premium-v2 rounded-3xl p-6 relative overflow-hidden h-[calc(100%-2rem)] border border-primary/10">
+                      <div className="absolute right-0 top-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full" />
+                      
+                      <div className="absolute left-9 top-10 bottom-10 w-0.5 bg-primary/10" />
+                      
+                      <div className="space-y-8 relative z-10">
+                        <TimelineStep 
+                          icon={MapPin} 
+                          title="Campus Location Verified" 
+                          status="completed" 
+                        />
+                        <TimelineStep 
+                          icon={Shield} 
+                          title="Device Identity Authenticated" 
+                          status="completed" 
+                        />
+                        <TimelineStep 
+                          icon={QrCode} 
+                          title="Ready for Rotating QR Scan" 
+                          status="current" 
+                        />
+                        <TimelineStep 
+                          icon={CheckCircle2} 
+                          title="Attendance Logged" 
+                          status="upcoming" 
+                          isLast
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile CTA */}
+                <div className="md:hidden mt-4 pb-8">
+                  <ScanButton onScan={startAttendanceFlow} />
+                </div>
+
+              </div>
             </div>
           </main>
         </div>
       )}
+
+  
 
   {/* ══════════════════════════════════════════════════════════════════════════
       LOCATING PHASE — Getting GPS coordinates
@@ -979,29 +1127,314 @@ function AttendancePage() {
       ERROR PHASE
       ══════════════════════════════════════════════════════════════════════════ */}
   {phase === "error" && (
-      <div className="min-h-screen bg-background">
-      <SiteHeader />
-      <main className="container mx-auto max-w-md px-4 py-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-6">
-          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
-            <XCircle className="w-10 h-10 text-red-500" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-primary">Attendance Failed</h2>
-            <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">{errorMsg}</p>
-          </div>
-          <div className="flex gap-3 justify-center">
-            <Button variant="outline" onClick={goBack}>
-              <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-            </Button>
-            <Button variant="liquidGlassMaroon" onClick={retryOrResume}>
-              <RefreshCw className="w-4 h-4 mr-1.5" /> Try Again
-            </Button>
-          </div>
-        </motion.div>
-      </main>
-    </div>
+      <ErrorPhase 
+        errorObj={errorObj} 
+        errorMsg={errorMsg} 
+        goBack={goBack} 
+        retryOrResume={retryOrResume} 
+      />
     )}
     </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PRESENTATIONAL COMPONENTS
+// ══════════════════════════════════════════════════════════════════════════
+
+function ScanButton({ onScan }: { onScan: () => void }) {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onScan}
+      className="w-full relative group overflow-hidden rounded-[28px] p-[1px] bg-gradient-to-b from-white/20 to-white/5 shadow-xl md:shadow-2xl"
+    >
+      <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/30 transition-colors duration-500 blur-xl" />
+      <div className="relative w-full bg-gradient-to-br from-primary to-[#7a3443] rounded-[27px] p-6 flex flex-col items-center justify-center gap-3 overflow-hidden border border-white/10">
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+        <Camera className="w-10 h-10 text-white/90 drop-shadow-md" />
+        <div className="text-center">
+          <div className="text-lg md:text-xl font-bold text-white tracking-tight">Scan Attendance QR</div>
+          <div className="text-[10px] md:text-xs text-white/70 font-semibold tracking-widest uppercase mt-1">Secure • Rotating • Verified</div>
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
+function StatCard({ icon: Icon, value, label, color }: { icon: any, value: string | number, label: string, color: 'emerald' | 'blue' | 'amber' | 'primary' }) {
+  const colorMap = {
+    emerald: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20",
+    blue: "text-blue-600 bg-blue-500/10 border-blue-500/20",
+    amber: "text-amber-600 bg-amber-500/10 border-amber-500/20",
+    primary: "text-primary bg-primary/5 border-primary/10",
+  };
+  return (
+    <div className="glass-premium-v2 rounded-[20px] p-4 flex flex-col items-center justify-center text-center gap-2 border border-white/40 dark:border-white/10">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${colorMap[color]}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <div>
+        <div className="text-xl md:text-2xl font-bold text-primary leading-none">{value}</div>
+        <div className="text-[10px] uppercase tracking-wider text-tertiary font-bold mt-1.5">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineStep({ icon: Icon, title, status, isLast }: { icon: any, title: string, status: 'completed' | 'current' | 'upcoming', isLast?: boolean }) {
+  const statusColors = {
+    completed: "bg-emerald-500 text-white ring-emerald-500/30",
+    current: "bg-primary text-white ring-primary/30",
+    upcoming: "bg-primary/5 text-primary/40 ring-transparent",
+  };
+  
+  return (
+    <div className="flex items-start gap-4 relative group">
+      <div className="relative mt-1">
+        <div className={`w-6 h-6 rounded-full flex items-center justify-center ring-4 transition-all duration-500 z-10 relative ${statusColors[status]}`}>
+          {status === 'completed' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Icon className="w-3.5 h-3.5" />}
+        </div>
+        {status === 'current' && (
+          <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20" />
+        )}
+      </div>
+      <div className="pt-1.5 pb-2">
+        <div className={`text-sm font-bold ${status === 'upcoming' ? 'text-primary/40' : 'text-primary'}`}>{title}</div>
+      </div>
+    </div>
+  );
+}
+
+
+export function ErrorPhase({
+  errorObj,
+  errorMsg,
+  goBack,
+  retryOrResume
+}: {
+  errorObj: Error | null;
+  errorMsg: string;
+  goBack: () => void;
+  retryOrResume: () => void;
+}) {
+  const isGeofence = errorObj instanceof GeofenceError;
+  const distance = isGeofence ? errorObj.distance : undefined;
+  const accuracy = isGeofence ? errorObj.accuracy : undefined;
+  const errorCode = isGeofence ? errorObj.code : (errorObj?.name !== 'Error' ? errorObj?.name : 'ERR_ATTENDANCE');
+
+  const formatDistance = (dist: number) => {
+    if (dist < 1000) return `${dist} m`;
+    return `${(dist / 1000).toFixed(1)} km`;
+  };
+
+  const getStatusText = (step: string) => {
+    if (step === 'location') {
+      if (isGeofence) return 'Failed';
+      return 'Unknown';
+    }
+    // For Identity, QR, Session, if we are in this flow, they were verified
+    return 'Verified';
+  };
+
+  const CampusRadius = typeof CAMPUS_RADIUS_METERS !== 'undefined' ? CAMPUS_RADIUS_METERS : 300;
+
+  return (
+    <div className="min-h-screen bg-[#FFFDFB] dark:bg-background pb-16">
+      <SiteHeader />
+      <main className="container mx-auto px-4 py-8 md:py-16">
+        
+        {/* Top Header */}
+        <div className="mb-8 md:mb-12 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-medium text-muted-foreground mb-3">
+            <Shield className="w-4 h-4" />
+            <span>Secure Attendance</span>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-3">
+            Attendance Not Recorded
+          </h1>
+          <p className="text-muted-foreground text-lg max-w-xl">
+            {isGeofence 
+              ? "Your location could not be verified for this attendance session." 
+              : "We couldn't verify your attendance due to a technical issue."}
+          </p>
+          {errorCode && (
+            <p className="text-xs text-muted-foreground mt-2 opacity-60 font-mono">
+              Code: {errorCode}
+            </p>
+          )}
+        </div>
+
+        {/* Pipeline Progress */}
+        <div className="max-w-4xl mx-auto md:mx-0 mb-12">
+          <div className="flex items-center justify-between relative">
+            <div className="absolute left-0 top-1/2 w-full h-0.5 bg-border -translate-y-1/2 z-0"></div>
+            {[
+              { id: 'identity', label: 'Identity', valid: true },
+              { id: 'qr', label: 'QR', valid: true },
+              { id: 'session', label: 'Session', valid: true },
+              { id: 'location', label: 'Location', valid: !isGeofence }
+            ].map((step, i) => (
+              <div key={step.id} className="relative z-10 flex flex-col items-center gap-2 bg-[#FFFDFB] dark:bg-background px-2">
+                <div className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center border-2",
+                  step.valid ? "bg-[#18B87A]/10 border-[#18B87A] text-[#18B87A]" : "bg-[#C05A67]/10 border-[#C05A67] text-[#C05A67]"
+                )}>
+                  {step.valid ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                </div>
+                <span className="text-xs font-medium">{step.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop Split Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Column - Main Status */}
+          <div className="md:col-span-7 space-y-6">
+            
+            {/* Status Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-white/70 dark:bg-card/50 backdrop-blur-[24px] border border-black/5 dark:border-white/10 rounded-[32px] p-8 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.04)]"
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
+                <div className="w-16 h-16 rounded-2xl bg-[#C05A67]/10 flex items-center justify-center shrink-0">
+                  <MapPin className="w-8 h-8 text-[#C05A67]" />
+                </div>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C05A67]/10 text-[#C05A67] text-sm font-medium mb-3">
+                    <ShieldAlert className="w-4 h-4" />
+                    Campus Verification Failed
+                  </div>
+                  <h2 className="text-2xl font-bold text-foreground">Security Verification</h2>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-3 border-b border-border/50">
+                  <span className="text-muted-foreground">Identity</span>
+                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
+                    <CheckCircle2 className="w-4 h-4" /> Verified
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-border/50">
+                  <span className="text-muted-foreground">QR Code</span>
+                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
+                    <CheckCircle2 className="w-4 h-4" /> Verified
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-border/50">
+                  <span className="text-muted-foreground">Attendance Session</span>
+                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
+                    <CheckCircle2 className="w-4 h-4" /> Active
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3">
+                  <span className="text-muted-foreground">Campus Location</span>
+                  <span className="flex items-center gap-2 font-medium text-[#C05A67]">
+                    <XCircle className="w-4 h-4" /> Outside Allowed Radius
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Actions */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button 
+                onClick={retryOrResume}
+                className="h-14 px-8 rounded-2xl text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-lg shadow-primary/25 transition-all active:scale-[0.98] w-full sm:w-auto"
+              >
+                <RefreshCw className="w-5 h-5 mr-2" /> Try Again
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={goBack}
+                className="h-14 px-8 rounded-2xl text-base font-medium bg-white/50 dark:bg-black/50 backdrop-blur-md border-border hover:bg-black/5 transition-all active:scale-[0.98] w-full sm:w-auto"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" /> Go Back
+              </Button>
+            </motion.div>
+          </div>
+
+          {/* Right Column - Metrics & Tips */}
+          <div className="md:col-span-5 space-y-4">
+            
+            {/* Distance Card */}
+            {distance !== undefined && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
+                <Card className="bg-white/70 dark:bg-card/50 backdrop-blur-xl border-border/50 shadow-sm overflow-hidden">
+                  <CardContent className="p-6 flex flex-col justify-center">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                      <Navigation2 className="w-4 h-4" />
+                      <span className="text-sm font-medium uppercase tracking-wider">Current Distance</span>
+                    </div>
+                    <div className="text-4xl font-bold tracking-tight text-foreground mb-2">
+                      {formatDistance(distance)}
+                    </div>
+                    <div className="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#C05A67]/10 text-[#C05A67] text-xs font-semibold uppercase tracking-wide">
+                      Outside Campus
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Campus Mini Card */}
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+              <Card className="bg-white/70 dark:bg-card/50 backdrop-blur-xl border-border/50 shadow-sm overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                      <MapPin className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-1">K.R. Mangalam University</h3>
+                      <p className="text-sm text-muted-foreground leading-snug">Sohna Road<br/>Gurugram, Haryana</p>
+                      
+                      <div className="mt-4 grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Radius</p>
+                          <p className="text-sm font-medium">{CampusRadius} m</p>
+                        </div>
+                        {accuracy !== undefined && (
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">GPS Accuracy</p>
+                            <p className="text-sm font-medium">±{Math.round(accuracy)}m</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Helpful Tips */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="pt-4">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 px-1">How to Fix</h3>
+              <div className="space-y-3">
+                {[
+                  { icon: Navigation, text: `Move within ${CampusRadius}m of campus` },
+                  { icon: Smartphone, text: "Enable High Accuracy / Precise Location" },
+                  { icon: Signal, text: "Stay outdoors for better GPS signal" }
+                ].map((tip, i) => (
+                  <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-white/50 dark:bg-card/30 backdrop-blur-md border border-black/5 dark:border-white/5">
+                    <div className="w-8 h-8 rounded-full bg-primary/5 flex items-center justify-center shrink-0">
+                      <tip.icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{tip.text}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
