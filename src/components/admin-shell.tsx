@@ -13,7 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertCircle, Clock, Bell } from "lucide-react";
+import { AlertCircle, Clock, Bell, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -42,6 +42,19 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Isolated UI state for desktop sidebar collapse
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("adminSidebarCollapsed") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("adminSidebarCollapsed", isCollapsed.toString());
+  }, [isCollapsed]);
+
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
@@ -122,53 +135,69 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden text-[#2c1208]">
-      {/* Background Elements */}
-      <div className="bg-hero-premium fixed inset-0 -z-10" />
+    <div className="min-h-screen relative overflow-hidden bg-background text-foreground flex flex-col">
+      {/* Background Elements (Preserved but subtle) */}
+      <div className="bg-hero-premium fixed inset-0 -z-10 opacity-30" />
       <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="orb orb-1 opacity-50" />
-        <div className="orb orb-2 opacity-50" />
-        <div className="orb orb-3 opacity-40" />
-        <div className="hero-ring hero-ring-1 opacity-40" />
-        <div className="hero-ring hero-ring-2 opacity-40" />
+        <div className="orb orb-1 opacity-20" />
+        <div className="orb orb-2 opacity-20" />
       </div>
-      <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj4KICA8ZmlsdGVyIGlkPSJub2lzZSI+CiAgICA8ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC44NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIgLz4KICAgIDxmZUNvbG9yTWF0cml4IHR5cGU9Im1hdHJpeCIgdmFsdWVzPSIxIDAgMCAwIDAgIDAgMSAwIDAgMCAgMCAwIDEgMCAwICAwIDAgMCAwLjA4IDAiIC8+ICAKICA8L2ZpbHRlcj4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWx0ZXI9InVybCgjbm9pc2UpIiAvPgo8L3N2Zz4=')] opacity-30 mix-blend-multiply pointer-events-none -z-10" />
 
-      <header className="sticky top-0 z-30 panel-liquid-glass">
-        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <button className="lg:hidden text-[#5a2c14] hover:text-[#2c1208]" onClick={() => setOpen((o) => !o)} aria-label="Toggle nav">
+      {/* Sticky Premium Header */}
+      <header className="sticky top-0 z-50 bg-background/70 backdrop-blur-2xl border-b border-border/80 shadow-sm transition-all duration-200">
+        <div className="admin-content-grid py-0 flex items-center justify-between h-16">
+          <div className="flex items-center gap-4">
+            <button className="lg:hidden text-foreground hover:text-primary transition-colors" onClick={() => setOpen((o) => !o)} aria-label="Toggle nav">
               {open ? <CloseSquare variant="TwoTone" className="h-6 w-6" /> : <HambergerMenu variant="TwoTone" className="h-6 w-6" />}
             </button>
-            <Link to="/admin/dashboard" className="font-bold text-xl text-[#2c1208] tracking-tight flex items-center gap-2">
-              <ShieldTick variant="TwoTone" className="h-5 w-5 text-[#8a4a22]" />
-              KRMU Admin
+            <Link to="/admin/dashboard" className="font-bold text-xl text-foreground tracking-tight flex items-center gap-2">
+              <ShieldTick variant="TwoTone" className="h-6 w-6 text-primary" />
+              <span className="hidden sm:inline-block">KRMU Admin</span>
             </Link>
+            
+            {/* Breadcrumb Area */}
+            <div className="hidden md:flex items-center ml-4 pl-4 border-l border-border/50 text-sm text-muted-foreground font-medium">
+               <span>Admin</span>
+               <span className="mx-2">/</span>
+               <span className="text-foreground capitalize">{path.split('/').pop()?.replace(/-/g, ' ') || 'Dashboard'}</span>
+            </div>
           </div>
+          
           <div className="flex items-center gap-3">
+             {/* Decorative Search Bar */}
+             <div className="hidden lg:flex items-center relative mr-2">
+                <Search className="w-4 h-4 absolute left-3 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  placeholder="Search (Cmd+K)" 
+                  className="admin-input-enhanced pl-9 py-1.5 h-9 text-sm w-64 bg-muted/50 border border-transparent focus:bg-background focus:border-border transition-colors"
+                  readOnly 
+                />
+             </div>
+
             <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative rounded-full text-amber-500 hover:bg-white/50 hover:text-amber-600">
+                <Button variant="ghost" size="icon" className="relative rounded-full text-amber-600 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-900/50">
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white shadow-sm ring-2 ring-white/50">
+                    <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] font-bold text-white shadow-sm ring-2 ring-background">
                       {displayCount}
                     </span>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-white/80 backdrop-blur-2xl border-white/40 shadow-2xl rounded-2xl overflow-hidden mt-2">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
-                  <h3 className="font-bold text-[#2c1208]">Notifications</h3>
+              <DropdownMenuContent align="end" className="w-80 sm:w-96 p-0 bg-white/90 dark:bg-card/90 backdrop-blur-2xl border-border shadow-2xl rounded-2xl overflow-hidden mt-2">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                  <h3 className="font-bold text-foreground">Notifications</h3>
                   {unreadCount > 0 && (
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-400 px-2 py-0.5 rounded-full">
                       {unreadCount} new
                     </span>
                   )}
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto hide-scrollbar">
                   {announcements.length === 0 ? (
-                    <div className="p-8 text-center text-[#7a4020]/60">
+                    <div className="p-8 text-center text-muted-foreground/60">
                       <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="text-sm font-medium">You're all caught up!</p>
                     </div>
@@ -187,24 +216,24 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                               <Link 
                                 to="/admin/announcements" 
                                 onClick={() => { markAsRead(a.id); setIsOpen(false); }}
-                                className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/60 relative ${!isRead ? "bg-white/40" : "opacity-75"}`}
+                                className={`block p-4 border-b border-border/50 transition-colors hover:bg-muted/50 relative ${!isRead ? "bg-muted/30" : "opacity-75"}`}
                               >
                                 {!isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500" />}
                                 <div className="flex items-start justify-between gap-2 mb-1">
-                                  <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
+                                  <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-foreground" : "font-semibold text-muted-foreground"}`}>
                                     {a.title}
                                   </h4>
                                   {a.isImportant && (
-                                    <span className="absolute top-4 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                                    <span className="absolute top-4 right-4 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
                                       <AlertCircle className="w-2.5 h-2.5" /> Urgent
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs text-[#7a4020] line-clamp-2 leading-relaxed mb-2">
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-2">
                                   {a.content}
                                 </p>
                                 <div className="flex items-center justify-between">
-                                  <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1">
+                                  <div className="text-[10px] font-semibold text-muted-foreground/80 flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                                   </div>
@@ -217,8 +246,8 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                     </div>
                   )}
                 </div>
-                <div className="p-2 border-t border-[#8a4a22]/10 bg-white/50">
-                  <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-white/60" asChild>
+                <div className="p-2 border-t border-border bg-muted/30">
+                  <Button variant="ghost" className="w-full text-xs font-bold text-foreground rounded-xl hover:bg-muted" asChild>
                     <Link to="/admin/announcements" onClick={() => setIsOpen(false)}>
                       Manage Announcements
                     </Link>
@@ -227,57 +256,90 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button asChild variant="liquidGlassWhite" size="sm" className="rounded-full shadow-sm text-[#2c1208]"><Link to="/">View site</Link></Button>
-            <Button onClick={signOutAdmin} variant="liquidGlassDark" size="sm" className="rounded-full shadow-sm"><Logout variant="TwoTone" className="mr-1.5 h-4 w-4" /> Sign out</Button>
+            {/* Profile Avatar Placeholder */}
+            <div className="h-9 w-9 rounded-full bg-primary/10 ring-2 ring-primary/20 ring-offset-2 ring-offset-background flex items-center justify-center text-primary font-bold text-sm mx-1 hidden sm:flex">
+              A
+            </div>
+
+            <Button asChild variant="outline" size="sm" className="hidden sm:flex rounded-full shadow-sm text-foreground bg-background"><Link to="/">View site</Link></Button>
+            <Button onClick={signOutAdmin} variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-destructive"><Logout variant="TwoTone" className="h-5 w-5 sm:mr-1.5" /> <span className="hidden sm:inline">Sign out</span></Button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto flex max-w-7xl gap-8 px-4 py-8 relative z-10">
-        <aside className={`${open ? "block" : "hidden"} lg:block w-full lg:w-64 shrink-0`}>
-          <div className="flex flex-col gap-5 sticky top-24">
-            <nav className="grid gap-1.5 glass-card-hero p-3.5">
-              {NAV.map(({ to, label, icon: Icon }) => {
-                const active = path === to;
-                return (
-                  <Link
-                    key={to} to={to} onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-bold transition-all ${
-                      active 
-                        ? "bg-[#3c1608] text-white shadow-md" 
-                        : "text-[#7a4020] hover:bg-white/50 hover:text-[#2c1208]"
-                    }`}
-                  >
-                    <Icon variant="TwoTone" className={`h-5 w-5 ${active ? "text-white" : "text-[#8a4a22]"}`} /> {label}
-                  </Link>
-                );
-              })}
-            </nav>
+      {/* Main Layout Area */}
+      <div className="admin-content-grid flex-1 flex gap-8 items-start relative z-10 w-full pt-6 pb-12">
+        
+        {/* Mobile Backdrop */}
+        {open && (
+           <div className="admin-sidebar-backdrop lg:hidden" onClick={() => setOpen(false)} />
+        )}
 
-            {/* Privacy & Copyright Block */}
-            <div className="glass-card-hero p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <ShieldTick variant="TwoTone" className="h-4 w-4 text-[#8a4a22]" />
-                <h4 className="text-[11px] font-bold text-[#2c1208] uppercase tracking-[0.15em]">Privacy First</h4>
-              </div>
-              <p className="text-xs leading-relaxed text-[#7a4020]/90 font-medium">
-                Admin data is encrypted. Student records are confidential and used strictly for induction operations. Zero tracking.
-              </p>
-              <div className="mt-4 pt-4 border-t border-[#8a4a22]/15">
-                <p className="text-[10px] font-semibold text-[#7a4020]/70 uppercase tracking-wider">
-                  &copy; {new Date().getFullYear()} KRMU.
-                </p>
-              </div>
-            </div>
+        {/* Sidebar */}
+        <aside className={`${
+           open ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 fixed lg:sticky top-0 lg:top-[88px] left-0 z-40 h-full lg:h-[calc(100vh-100px)] transition-[width,transform] duration-300 ease-in-out ${
+           isCollapsed ? "lg:w-20" : "lg:w-64"
+        } shrink-0 bg-[#FDFBF7] dark:bg-muted/30 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none shadow-2xl lg:shadow-none p-4 lg:p-0 border-r border-border/40`}>
+          
+          <div className="flex flex-col gap-4 h-full overflow-y-auto hide-scrollbar admin-scroll-area">
+             <div className="flex items-center justify-between lg:mb-2 px-1">
+                <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>Main Menu</h3>
+                <button 
+                  onClick={() => setIsCollapsed(!isCollapsed)} 
+                  className="hidden lg:flex items-center justify-center w-6 h-6 rounded-md hover:bg-muted text-muted-foreground transition-colors"
+                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {isCollapsed ? <ChevronRight className="w-4 h-4"/> : <ChevronLeft className="w-4 h-4"/>}
+                </button>
+             </div>
+             
+             <nav className="grid gap-1.5 admin-card p-3">
+               {NAV.map(({ to, label, icon: Icon }) => {
+                 const active = path === to;
+                 return (
+                   <Link
+                     key={to} to={to} onClick={() => setOpen(false)}
+                     title={isCollapsed ? label : undefined}
+                     className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all group relative overflow-hidden ${
+                       active 
+                         ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20" 
+                         : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                     } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                   >
+                     {active && (
+                       <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-white/90 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                     )}
+                     <Icon variant={active ? "Bold" : "TwoTone"} className={`h-5 w-5 shrink-0 transition-transform group-hover:scale-110 ${active ? "text-white" : "text-primary/60 group-hover:text-primary"}`} /> 
+                     {!isCollapsed && <span>{label}</span>}
+                   </Link>
+                 );
+               })}
+             </nav>
+
+             {/* Privacy block - hide when collapsed */}
+             {!isCollapsed && (
+               <div className="admin-card p-5 mt-auto">
+                 <div className="flex items-center gap-2 mb-3">
+                   <ShieldTick variant="TwoTone" className="h-4 w-4 text-primary" />
+                   <h4 className="text-[11px] font-bold text-foreground uppercase tracking-[0.15em]">Privacy First</h4>
+                 </div>
+                 <p className="text-xs leading-relaxed text-muted-foreground font-medium">
+                   Admin data is encrypted. Student records are confidential. Zero tracking.
+                 </p>
+               </div>
+             )}
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1">
+        {/* Main Content Area */}
+        <main className="min-w-0 flex-1 w-full admin-scroll-area">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold sm:text-4xl text-[#2c1208] tracking-tight">{title}</h1>
-            {subtitle && <p className="mt-2 text-base text-[#7a4020]/80 font-medium">{subtitle}</p>}
+            <h1 className="admin-page-title">{title}</h1>
+            {subtitle && <p className="mt-2 text-sm text-muted-foreground font-medium">{subtitle}</p>}
           </div>
-          <div className="glass-card-hero p-6 sm:p-8">
+          {/* Note: We removed the glass-card-hero wrapper to allow pages to own their card layouts as specified in Phase 2 */}
+          <div className="w-full">
             {children}
           </div>
         </main>
@@ -285,3 +347,4 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
     </div>
   );
 }
+

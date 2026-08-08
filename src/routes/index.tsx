@@ -57,32 +57,37 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
   }, [targetDate]);
 
   return (
-    <div className="flex items-center gap-3 sm:gap-5">
+    <div className="flex items-center gap-2 sm:gap-4">
       {[
-        { value: timeLeft.days, label: "Days" },
-        { value: timeLeft.hours, label: "Hours" },
-        { value: timeLeft.minutes, label: "Mins" },
-        { value: timeLeft.seconds, label: "Secs" },
-      ].map((s) => (
-        <div key={s.label} className="text-center min-w-[56px] sm:min-w-[64px] flex flex-col items-center">
-          <div className="glass-premium-v2 rounded-xl w-full h-[48px] sm:h-[56px] flex items-center justify-center !p-0 overflow-hidden border-0">
-            <AnimatePresence>
-              <m.span
-                key={s.value}
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "-100%", opacity: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="absolute text-[#2c1208] font-black text-2xl sm:text-3xl tabular-nums leading-none"
-              >
-                {s.value.toString().padStart(2, "0")}
-              </m.span>
-            </AnimatePresence>
+        { value: timeLeft.days, label: "DAYS" },
+        { value: timeLeft.hours, label: "HRS" },
+        { value: timeLeft.minutes, label: "MIN" },
+        { value: timeLeft.seconds, label: "SEC" },
+      ].map((s, idx, arr) => (
+        <React.Fragment key={s.label}>
+          <div className="text-center flex flex-col items-center">
+            <div className="relative w-[48px] sm:w-[60px] h-[48px] sm:h-[56px] flex items-center justify-center overflow-hidden">
+              <AnimatePresence>
+                <m.span
+                  key={s.value}
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: "-100%", opacity: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
+                  className="absolute text-[#2c1208] font-black text-4xl sm:text-5xl tabular-nums leading-none"
+                >
+                  {s.value.toString().padStart(2, "0")}
+                </m.span>
+              </AnimatePresence>
+            </div>
+            <div className="text-[0.65rem] sm:text-[0.7rem] text-[#a87a5f] font-bold uppercase tracking-[0.2em] mt-1 sm:mt-2">
+              {s.label}
+            </div>
           </div>
-          <div className="text-label text-secondary uppercase font-bold tracking-wider mt-2">
-            {s.label}
-          </div>
-        </div>
+          {idx < arr.length - 1 && (
+            <div className="text-xl sm:text-2xl text-[#dcbba8] font-black pb-4 sm:pb-6">:</div>
+          )}
+        </React.Fragment>
       ))}
     </div>
   );
@@ -471,19 +476,13 @@ function Landing() {
             </div>
 
             {/* Countdown timer */}
-            <div className="mt-14 glass-premium-v2 px-7 py-6 inline-flex items-center flex-wrap gap-x-8 gap-y-5 rounded-[2.5rem] css-animate-fade-in-up shadow-[0_15px_40px_rgb(138,74,34,0.06)] border-[#8a4a22]/10" style={{ animationDelay: '0.4s' }}>
-              <div className="flex items-center gap-5 pr-5 sm:pr-8 border-r border-[#8a4a22]/10 relative z-10">
-                <div className="relative hidden sm:block">
-                  <div className="bg-white/80 p-3 rounded-2xl shadow-sm border border-white/60 relative z-10 drop-shadow-sm">
-                    <div className="css-spin-slow">
-                      <Clock className="h-6 w-6 text-[#8a4a22]/90" />
-                    </div>
-                  </div>
-                  {/* Subtle pulse ring */}
-                  <div className="absolute inset-0 border-[1.5px] border-[#8a4a22]/20 rounded-2xl z-0 css-pulse-ring" />
-                </div>
-                <span className="text-[#8a4a22]/90 text-xs sm:text-[0.95rem] font-bold uppercase tracking-[0.25em] leading-snug text-left relative z-10">
-                  Induction<br/>Begins In
+            <div className="mt-14 bg-white px-6 sm:px-10 py-5 sm:py-7 inline-flex items-center flex-wrap gap-x-6 sm:gap-x-8 gap-y-5 rounded-[2rem] css-animate-fade-in-up shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-[#f0e6dd]" style={{ animationDelay: '0.4s' }}>
+              <div className="flex flex-col gap-1.5 pr-6 sm:pr-8 border-r border-[#dcbba8]/50 relative z-10 text-left">
+                <span className="text-[#965a38] text-[0.7rem] sm:text-[0.85rem] font-bold uppercase tracking-[0.2em] leading-none">
+                  Induction
+                </span>
+                <span className="text-[#2c1208] text-base sm:text-xl font-bold leading-none mt-1">
+                  Aug 24, 2026
                 </span>
               </div>
               <Countdown targetDate="2026-08-24T09:00:00+05:30" />

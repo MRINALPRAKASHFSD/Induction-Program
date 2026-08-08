@@ -90,22 +90,21 @@ async function apiCall(endpoint: string, body: any, method: string = "POST"): Pr
 
 // ── Status Badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { bg: string; text: string; dot: string }> = {
-    pending: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
-    active: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-    paused: { bg: "bg-blue-500/10", text: "text-blue-600", dot: "bg-blue-500" },
-    ended: { bg: "bg-gray-500/10", text: "text-gray-600", dot: "bg-gray-500" },
-    locked: { bg: "bg-red-500/10", text: "text-red-600", dot: "bg-red-500" },
+  const config: Record<string, { badge: string; dot: string }> = {
+    pending: { badge: "admin-badge-warning", dot: "bg-amber-500" },
+    active: { badge: "admin-badge-success", dot: "bg-emerald-500" },
+    paused: { badge: "admin-badge-info", dot: "bg-blue-500" },
+    ended: { badge: "admin-badge-neutral", dot: "bg-gray-500" },
+    locked: { badge: "admin-badge-danger", dot: "bg-red-500" },
   };
   const c = config[status] || config.pending;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
+    <span className={`inline-flex items-center gap-1.5 ${c.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${status === 'active' ? 'animate-pulse' : ''}`} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Main Component
 // ══════════════════════════════════════════════════════════════════════════════
@@ -496,168 +495,170 @@ function AdminAttendance() {
 
         {/* ── Active Session Panel ────────────────────────────────────────── */}
         {activeSession && (
-          <div className="border border-border/50 rounded-2xl overflow-hidden bg-card/50">
-            <div className="p-5 border-b border-border/50">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="text-lg font-bold">{activeSession.event_id}</h3>
-                    <StatusBadge status={activeSession.status} />
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {activeSession.venue}</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {activeSession.programme_name}</span>
-                  </div>
-                </div>
-
-                {/* Control buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {activeSession.status === "pending" && (
-                    <Button size="sm" variant="default" onClick={() => generateQr(activeSession.id)} disabled={actionLoading}>
-                      <Play className="w-3.5 h-3.5 mr-1" /> Start & Generate QR
-                    </Button>
-                  )}
-                  {activeSession.status === "active" && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => generateQr(activeSession.id)} disabled={actionLoading}>
-                        <RefreshCw className="w-3.5 h-3.5 mr-1" /> Force Rotate
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateStatus(activeSession.id, "paused")} disabled={actionLoading}>
-                        <Pause className="w-3.5 h-3.5 mr-1" /> Pause
-                      </Button>
-                      {/* End requires confirmation */}
-                      <Button size="sm" variant="destructive" disabled={actionLoading} onClick={() => setConfirmAction({
-                        label: "End Attendance",
-                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
-                        status: "ended",
-                        sessionId: activeSession.id,
-                      })}>
-                        <Square className="w-3.5 h-3.5 mr-1" /> End
-                      </Button>
-                    </>
-                  )}
-                  {activeSession.status === "paused" && (
-                    <>
-                      <Button size="sm" variant="default" onClick={() => updateStatus(activeSession.id, "active")} disabled={actionLoading}>
-                        <Play className="w-3.5 h-3.5 mr-1" /> Resume
-                      </Button>
-                      <Button size="sm" variant="destructive" disabled={actionLoading} onClick={() => setConfirmAction({
-                        label: "End Attendance",
-                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
-                        status: "ended",
-                        sessionId: activeSession.id,
-                      })}>
-                        <Square className="w-3.5 h-3.5 mr-1" /> End
-                      </Button>
-                    </>
-                  )}
-                  {activeSession.status === "ended" && (
-                    <Button size="sm" variant="destructive" disabled={actionLoading} onClick={() => setConfirmAction({
-                      label: "Lock Attendance",
-                      description: "This will permanently lock attendance for this session. Admins will not be able to make further changes without unlocking.",
-                      status: "locked",
-                      sessionId: activeSession.id,
-                    })}>
-                      <Lock className="w-3.5 h-3.5 mr-1" /> Lock
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => exportCsv(activeSession.id)}>
-                    <Download className="w-3.5 h-3.5 mr-1" /> CSV
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setActiveSession(null); setQrDataUrl(null); }}>
-                    ✕
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* QR Display + Live Stats */}
-            <div className="grid md:grid-cols-2 gap-0">
+          <div className="admin-card mb-8">
+            <div className="flex flex-col lg:flex-row gap-6">
+              
               {/* QR Panel */}
               <div
                 ref={qrContainerRef}
-                className={`flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-border/50 ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
+                className={`flex-1 flex flex-col items-center justify-center p-6 bg-muted/20 rounded-2xl border relative ${
+                  isFullscreen ? 'fixed inset-0 z-[100] bg-background' : ''
+                }`}
               >
+                <Button size="icon" variant="ghost" className="absolute top-3 right-3 text-muted-foreground hover:text-foreground" onClick={toggleFullscreen}>
+                  {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                </Button>
                 {qrDataUrl ? (
                   <>
                     <img
                       src={qrDataUrl}
                       alt="Attendance QR"
-                      className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg"
+                      className="w-64 h-64 md:w-80 md:h-80 rounded-2xl shadow-sm bg-white p-3"
                     />
-                    <div className="mt-4 flex items-center gap-3 text-sm">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <Timer className="w-4 h-4" />
-                        Next rotation in: <strong className={`${qrCountdown <= 5 ? 'text-red-500' : 'text-emerald-600'}`}>{qrCountdown}s</strong>
-                      </span>
-                      <Button size="sm" variant="ghost" onClick={toggleFullscreen}>
-                        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                      </Button>
+                    <div className="mt-6 flex items-center gap-2 text-sm font-medium">
+                      <Timer className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Next rotation in:</span>
+                      <strong className={`${qrCountdown <= 5 ? 'text-destructive' : 'text-success'} w-6 inline-block tabular-nums`}>{qrCountdown}s</strong>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">Display this QR on the projector or smart panel</p>
+                    <p className="text-xs text-muted-foreground mt-2 text-center max-w-[250px]">Display this QR on the projector or smart panel</p>
                   </>
                 ) : (
-                  <div className="text-center text-muted-foreground py-12">
-                    <Wifi className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="font-medium">No QR Code Active</p>
+                  <div className="text-center text-muted-foreground py-16">
+                    <Wifi className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-medium text-foreground">No QR Code Active</p>
                     <p className="text-xs mt-1">Start the session to generate a QR code</p>
                   </div>
                 )}
               </div>
 
-              {/* Live Dashboard */}
-              <div className="p-5">
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div className="bg-emerald-500/10 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-emerald-600">{liveStats}</div>
-                    <div className="text-xs text-muted-foreground font-medium mt-0.5">Students Present</div>
+              {/* Session Info & Controls */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="admin-section-title mb-2">{activeSession.event_id}</h3>
+                    <StatusBadge status={activeSession.status} />
                   </div>
-                  <div className="bg-blue-500/10 rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold text-blue-600">{activeSession.qr_rotation_interval_seconds}s</div>
-                    <div className="text-xs text-muted-foreground font-medium mt-0.5">QR Rotation</div>
-                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => { setActiveSession(null); setQrDataUrl(null); }}>
+                    ✕
+                  </Button>
                 </div>
 
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm flex items-center gap-1.5">
-                    <Activity className="w-4 h-4 text-emerald-500" />
-                    Recent Check-ins
-                    {activeSession.status === "active" && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    )}
-                  </h4>
+                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-5 mb-6">
+                  <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {activeSession.venue}</span>
+                  <span className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {activeSession.programme_name}</span>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto space-y-1.5 pr-1">
-                  {liveRecords.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">
-                      No check-ins yet. Students will appear here in real-time.
-                    </p>
-                  ) : (
-                    liveRecords.map((rec, i) => (
-                      <div
-                        key={rec.id}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xs font-bold">
-                            {i + 1}
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold">{rec.student_name}</div>
-                            <div className="text-xs text-muted-foreground">{rec.student_id}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                          {rec.scanned_at?.toDate?.()
-                            ? rec.scanned_at.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-                            : "—"}
-                        </div>
-                      </div>
-                    ))
+                {/* Control buttons */}
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {activeSession.status === "pending" && (
+                    <Button className="admin-btn-success shadow-sm rounded-lg" onClick={() => generateQr(activeSession.id)} disabled={actionLoading}>
+                      <Play className="w-4 h-4 mr-2" /> Start & Generate QR
+                    </Button>
                   )}
+                  {activeSession.status === "active" && (
+                    <>
+                      <Button variant="outline" className="shadow-sm rounded-lg" onClick={() => generateQr(activeSession.id)} disabled={actionLoading}>
+                        <RefreshCw className="w-4 h-4 mr-2" /> Force Rotate
+                      </Button>
+                      <Button variant="outline" className="shadow-sm rounded-lg" onClick={() => updateStatus(activeSession.id, "paused")} disabled={actionLoading}>
+                        <Pause className="w-4 h-4 mr-2" /> Pause
+                      </Button>
+                      <Button variant="destructive" className="shadow-sm rounded-lg" disabled={actionLoading} onClick={() => setConfirmAction({
+                        label: "End Attendance",
+                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
+                        status: "ended",
+                        sessionId: activeSession.id,
+                      })}>
+                        <Square className="w-4 h-4 mr-2" /> End
+                      </Button>
+                    </>
+                  )}
+                  {activeSession.status === "paused" && (
+                    <>
+                      <Button className="admin-btn-success shadow-sm rounded-lg" onClick={() => updateStatus(activeSession.id, "active")} disabled={actionLoading}>
+                        <Play className="w-4 h-4 mr-2" /> Resume
+                      </Button>
+                      <Button variant="destructive" className="shadow-sm rounded-lg" disabled={actionLoading} onClick={() => setConfirmAction({
+                        label: "End Attendance",
+                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
+                        status: "ended",
+                        sessionId: activeSession.id,
+                      })}>
+                        <Square className="w-4 h-4 mr-2" /> End
+                      </Button>
+                    </>
+                  )}
+                  {activeSession.status === "ended" && (
+                    <Button variant="destructive" className="shadow-sm rounded-lg" disabled={actionLoading} onClick={() => setConfirmAction({
+                      label: "Lock Attendance",
+                      description: "This will permanently lock attendance for this session. Admins will not be able to make further changes without unlocking.",
+                      status: "locked",
+                      sessionId: activeSession.id,
+                    })}>
+                      <Lock className="w-4 h-4 mr-2" /> Lock
+                    </Button>
+                  )}
+                  <Button variant="outline" className="shadow-sm rounded-lg" onClick={() => exportCsv(activeSession.id)}>
+                    <Download className="w-4 h-4 mr-2" /> CSV
+                  </Button>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="bg-emerald-500/10 rounded-2xl text-center py-5">
+                    <div className="text-3xl font-bold text-emerald-600 tabular-nums leading-none">{liveStats}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-emerald-700/80 font-bold mt-2">Students Present</div>
+                  </div>
+                  <div className="bg-blue-500/10 rounded-2xl text-center py-5">
+                    <div className="text-3xl font-bold text-blue-600 tabular-nums leading-none">{activeSession.qr_rotation_interval_seconds}s</div>
+                    <div className="text-[11px] uppercase tracking-wider text-blue-700/80 font-bold mt-2">QR Rotation</div>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col min-h-[250px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+                      <Activity className="w-4 h-4 text-emerald-500" />
+                      Recent Check-ins
+                      {activeSession.status === "active" && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1" />
+                      )}
+                    </h4>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-2 admin-scroll-area max-h-80">
+                    {liveRecords.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8 bg-muted/20 rounded-xl">
+                        No check-ins yet. Students will appear here in real-time.
+                      </p>
+                    ) : (
+                      liveRecords.map((rec, i) => (
+                        <div
+                          key={rec.id}
+                          className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xs font-bold tabular-nums shrink-0">
+                              {i + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold leading-tight truncate">{rec.student_name}</div>
+                              <div className="text-xs text-muted-foreground mt-0.5 truncate">{rec.student_id}</div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end justify-center gap-1 text-xs text-muted-foreground shrink-0 pl-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="tabular-nums">
+                              {rec.scanned_at?.toDate?.()
+                                ? rec.scanned_at.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -665,9 +666,9 @@ function AdminAttendance() {
 
         {/* ── Sessions List ───────────────────────────────────────────────── */}
         {loading ? (
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1,2,3].map(i => (
-              <div key={i} className="h-20 bg-muted/30 rounded-xl animate-pulse" />
+              <div key={i} className="h-40 admin-skeleton rounded-2xl" />
             ))}
           </div>
         ) : sessions.length === 0 ? (
@@ -677,32 +678,38 @@ function AdminAttendance() {
             <p className="text-sm mt-1">Create your first session to start tracking attendance</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {sessions.map(session => (
               <div
                 key={session.id}
-                className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl border transition-all cursor-pointer hover:bg-muted/20 gap-3 sm:gap-0 ${
-                  activeSession?.id === session.id ? 'border-primary/50 bg-primary/5' : 'border-border/50'
+                className={`admin-card flex flex-col h-full cursor-pointer border-2 transition-all hover:-translate-y-1 ${
+                  activeSession?.id === session.id ? 'border-primary/50 bg-primary/5 shadow-md' : 'border-transparent'
                 }`}
                 onClick={() => setActiveSession(session)}
               >
-                <div className="flex items-center gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-semibold text-sm">{session.event_id}</span>
-                      <StatusBadge status={session.status} />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {session.venue}</span>
-                      <span>{session.programme_name}</span>
-                      <span>{session.date}</span>
-                    </div>
+                <div className="flex justify-between items-start mb-4 gap-3">
+                  <div className="flex flex-col gap-2.5">
+                    <span className="font-bold text-base leading-tight text-foreground">{session.event_id}</span>
+                    <StatusBadge status={session.status} />
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <div className="text-2xl font-bold text-primary tabular-nums leading-none">{session.total_present}</div>
+                    <div className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-1.5">Present</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-emerald-600">{session.total_present}</div>
-                    <div className="text-xs text-muted-foreground">present</div>
+
+                <div className="mt-auto space-y-2.5 text-sm text-muted-foreground pt-3 border-t border-border/50">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 shrink-0" /> 
+                    <span className="truncate">{session.venue}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{session.programme_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{session.date}</span>
                   </div>
                 </div>
               </div>

@@ -116,11 +116,17 @@ function AdminEvents() {
       </div>
 
       {!rows ? (
-        <div className="grid gap-3" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+          {[1,2,3].map(i => <div key={i} className="h-48 admin-skeleton rounded-2xl" />)}
+        </div>
       ) : rows.length === 0 ? (
-        <p className="rounded-xl border glass-card-hero p-8 text-center text-sm text-muted-foreground">No events yet. Create one to get started.</p>
+        <div className="text-center py-16 text-muted-foreground">
+          <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">No events yet</p>
+          <p className="text-sm mt-1">Create one to get started.</p>
+        </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
           {rows.map((r) => (
             <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />
           ))}
@@ -182,56 +188,57 @@ function EventCard({
   const qrEnabled = row.qr_enabled ?? true;
 
   return (
-    <div className="glass-premium-v2 rounded-2xl border border-[#8a4a22]/8 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-      <div className="p-4 sm:p-5">
+    <div className="admin-card flex flex-col h-full border-2 border-transparent transition-all hover:-translate-y-1 shadow-sm hover:shadow-md overflow-hidden relative">
+      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${row.is_active ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
+      <div className="p-5 pl-6 flex-1 flex flex-col">
         {/* Badges */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="rounded-lg bg-[#8a4a22]/10 px-2.5 py-1 text-xs font-bold text-[#5a2c14] tracking-wide">Day {row.day_number}</span>
+          <span className="admin-badge-neutral font-bold tracking-wide">Day {row.day_number}</span>
           {row.is_active
-            ? <span className="rounded-lg bg-emerald-500/15 px-2.5 py-1 text-xs font-bold text-emerald-700">LIVE</span>
-            : <span className="rounded-lg bg-[#8a4a22]/8 px-2.5 py-1 text-xs font-semibold text-[#8a4a22]/60">Paused</span>
+            ? <span className="admin-badge-success font-bold flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</span>
+            : <span className="admin-badge-neutral font-semibold opacity-70">Paused</span>
           }
           {!qrEnabled && (
-            <span className="rounded-lg bg-red-500/15 px-2.5 py-1 text-xs font-bold text-red-600 flex items-center gap-1">
+            <span className="admin-badge-danger font-bold flex items-center gap-1">
               <WifiOff className="h-3 w-3" /> QR OFF
             </span>
           )}
           {isFull && (
-            <span className="rounded-lg bg-orange-500/15 px-2.5 py-1 text-xs font-bold text-orange-600">FULL</span>
+            <span className="admin-badge-warning font-bold">FULL</span>
           )}
-          <span className="rounded-lg bg-[#8a4a22]/8 px-2.5 py-1 text-xs font-semibold text-[#7a4020]/80 max-w-[200px] truncate">{deptName}</span>
+          <span className="admin-badge-neutral font-semibold max-w-[180px] truncate">{deptName}</span>
 
           {/* Capacity badge */}
           {row.capacity !== undefined && (
-            <span className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-700">
+            <span className="admin-badge-info font-semibold">
               {attendCount}/{row.capacity} attended
             </span>
           )}
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-[#2c1208] text-base leading-snug mb-1">{row.title}</h3>
-        <p className="text-sm text-[#7a4020]/70 font-medium mb-1">
-          {row.venue} · {new Date(row.starts_at).toLocaleString()} → {new Date(row.ends_at).toLocaleTimeString()}
+        <h3 className="font-bold text-foreground text-lg leading-snug mb-1">{row.title}</h3>
+        <p className="text-sm text-muted-foreground font-medium mb-2">
+          {row.venue} · {new Date(row.starts_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} → {new Date(row.ends_at).toLocaleTimeString([], { timeStyle: 'short' })}
         </p>
         {row.description && (
-          <p className="mt-2 line-clamp-2 text-sm text-[#7a4020]/60 leading-relaxed">{row.description}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground/80 leading-relaxed">{row.description}</p>
         )}
 
         {/* Action row */}
-        <div className="mt-4 pt-3 border-t border-[#8a4a22]/8 flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="liquidGlassWhite" className="rounded-full h-8 text-xs font-bold" onClick={onOpenQr}>
-            <QrIcon className="mr-1.5 h-3.5 w-3.5" /> QR Code
+        <div className="mt-auto pt-4 border-t border-border/50 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs font-semibold" onClick={onOpenQr}>
+            <QrIcon className="mr-1.5 h-3.5 w-3.5" /> QR
           </Button>
-          <Button size="sm" variant="liquidGlassWhite" className="rounded-full h-8 text-xs font-bold" onClick={toggle}>
+          <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs font-semibold" onClick={toggle}>
             {row.is_active ? <><PowerOff className="mr-1.5 h-3.5 w-3.5" /> Pause</> : <><Power className="mr-1.5 h-3.5 w-3.5" /> Activate</>}
           </Button>
 
           {/* Emergency QR toggle */}
           <Button
             size="sm"
-            variant="liquidGlassWhite"
-            className={`rounded-full h-8 text-xs font-bold ${!qrEnabled ? "border-red-400/40 text-red-600" : ""}`}
+            variant="outline"
+            className={`rounded-lg h-8 text-xs font-semibold ${!qrEnabled ? "border-red-500/50 text-red-600 bg-red-500/5 hover:bg-red-500/10 hover:text-red-700" : ""}`}
             onClick={toggleQr}
             title={qrEnabled ? "Disable QR attendance" : "Enable QR attendance"}
           >
@@ -241,17 +248,17 @@ function EventCard({
           {/* Attendance panel toggle */}
           <Button
             size="sm"
-            variant="liquidGlassWhite"
-            className={`rounded-full h-8 text-xs font-bold ${showAttendance ? "bg-indigo-500/10 border-indigo-400/30 text-indigo-700" : ""}`}
+            variant={showAttendance ? "default" : "outline"}
+            className={`rounded-lg h-8 text-xs font-semibold ${showAttendance ? "bg-primary text-primary-foreground" : ""}`}
             onClick={() => setShowAttendance(v => !v)}
           >
-            <Users className="mr-1.5 h-3.5 w-3.5" /> Attendance
+            <Users className="mr-1.5 h-3.5 w-3.5" /> Feed
           </Button>
 
           <EventDialog row={row} onSaved={onChanged} departments={departments} />
 
-          <Button size="sm" variant="liquidGlassDestructive" className="rounded-full h-8 text-xs font-bold ml-auto" onClick={remove}>
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+          <Button size="sm" variant="destructive" className="rounded-lg h-8 text-xs font-semibold ml-auto" onClick={remove}>
+            <Trash2 className="mr-1 h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -348,22 +355,22 @@ function AttendancePanel({ event }: { event: EventRow }) {
   const records: AttendanceRecord[] = data?.data ?? [];
 
   const MetricCard = ({ label, value, sub }: { label: string; value: string | number; sub?: string }) => (
-    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-center">
-      <div className="text-lg font-bold text-white">{value}</div>
-      <div className="text-xs text-white/50 mt-0.5">{label}</div>
-      {sub && <div className="text-[10px] text-white/30 mt-0.5">{sub}</div>}
+    <div className="rounded-xl bg-muted/40 border border-border/30 p-3 text-center">
+      <div className="text-lg font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground mt-0.5 font-semibold">{label}</div>
+      {sub && <div className="text-[10px] text-muted-foreground/60 mt-0.5">{sub}</div>}
     </div>
   );
 
   return (
-    <div className="border-t border-[#8a4a22]/10 bg-[#0f0f1a]/4 p-4 sm:p-5">
+    <div className="border-t border-border/50 bg-muted/10 p-4 sm:p-5">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="font-bold text-sm text-[#2c1208]">Attendance Records</h4>
+        <h4 className="font-bold text-sm text-foreground">Attendance Records</h4>
         <div className="flex items-center gap-2">
-          <button onClick={() => fetchData(page, cursor)} className="p-1.5 rounded-lg hover:bg-black/5 transition-colors" title="Refresh">
-            <RefreshCw className="h-3.5 w-3.5 text-[#7a4020]/70" />
+          <button onClick={() => fetchData(page, cursor)} className="p-1.5 rounded-lg hover:bg-muted transition-colors" title="Refresh">
+            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground" />
           </button>
-          <Button size="sm" variant="liquidGlassWhite" className="rounded-full h-7 text-xs" onClick={handleExport} disabled={exporting}>
+          <Button size="sm" variant="outline" className="rounded-lg h-7 text-xs font-semibold" onClick={handleExport} disabled={exporting}>
             <Download className="mr-1 h-3 w-3" /> {exporting ? "Exporting…" : "CSV"}
           </Button>
         </div>
@@ -411,37 +418,37 @@ function AttendancePanel({ event }: { event: EventRow }) {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-8 text-sm text-[#7a4020]/50">Loading…</div>
+        <div className="text-center py-8 text-sm text-muted-foreground">Loading…</div>
       ) : records.length === 0 ? (
-        <div className="text-center py-8 text-sm text-[#7a4020]/50">No attendance records yet.</div>
+        <div className="text-center py-8 text-sm text-muted-foreground">No attendance records yet.</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[#8a4a22]/10">
+        <div className="overflow-x-auto rounded-xl border border-border/50">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[#8a4a22]/10 bg-[#8a4a22]/4">
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Application No.</th>
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Name</th>
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Dept.</th>
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Status</th>
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Device</th>
-                <th className="text-left p-2.5 font-semibold text-[#5a2c14]">Marked At</th>
+              <tr className="border-b border-border/50 bg-muted/30">
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Application No.</th>
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Name</th>
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Dept.</th>
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Status</th>
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Device</th>
+                <th className="text-left p-2.5 font-semibold text-muted-foreground">Marked At</th>
               </tr>
             </thead>
             <tbody>
               {records.map((r, i) => (
-                <tr key={r.id} className={`border-b border-[#8a4a22]/6 hover:bg-[#8a4a22]/3 transition-colors ${i % 2 === 0 ? "" : "bg-[#8a4a22]/2"}`}>
-                  <td className="p-2.5 font-mono text-[#5a2c14] font-semibold">{r.application_number}</td>
-                  <td className="p-2.5 text-[#2c1208]">{r.student_name}</td>
-                  <td className="p-2.5 text-[#7a4020]/70 truncate max-w-[100px]">{r.department || r.school}</td>
+                <tr key={r.id} className={`border-b border-border/30 hover:bg-muted/40 transition-colors ${i % 2 === 0 ? "" : "bg-muted/10"}`}>
+                  <td className="p-2.5 font-mono text-foreground font-semibold">{r.application_number}</td>
+                  <td className="p-2.5 text-foreground font-medium">{r.student_name}</td>
+                  <td className="p-2.5 text-muted-foreground truncate max-w-[100px]">{r.department || r.school}</td>
                   <td className="p-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      r.status === "present" ? "bg-emerald-100 text-emerald-700" :
-                      r.status === "late"    ? "bg-yellow-100 text-yellow-700" :
-                      "bg-blue-100 text-blue-700"
+                      r.status === "present" ? "admin-badge-success" :
+                      r.status === "late"    ? "admin-badge-warning" :
+                      "admin-badge-info"
                     }`}>{r.status}</span>
                   </td>
-                  <td className="p-2.5 text-[#7a4020]/60">{r.device_type} · {r.browser}</td>
-                  <td className="p-2.5 text-[#7a4020]/60">
+                  <td className="p-2.5 text-muted-foreground/80">{r.device_type} · {r.browser}</td>
+                  <td className="p-2.5 text-muted-foreground/80">
                     {r.server_timestamp
                       ? new Date(r.server_timestamp).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })
                       : "—"}
@@ -455,20 +462,20 @@ function AttendancePanel({ event }: { event: EventRow }) {
 
       {/* Pagination */}
       {pagination && (
-        <div className="flex items-center justify-between mt-3 text-xs text-[#7a4020]/60">
+        <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
           <span>Page {page} of {pagination.totalPages || 1} · {pagination.total} total</span>
           <div className="flex gap-1">
             <button
               onClick={handlePrevPage}
               disabled={!pagination.hasPrevPage}
-              className="p-1.5 rounded-lg hover:bg-black/5 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={handleNextPage}
               disabled={!pagination.hasNextPage}
-              className="p-1.5 rounded-lg hover:bg-black/5 disabled:opacity-30 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -563,12 +570,12 @@ function EventDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {row
-          ? <Button size="sm" variant="liquidGlassWhite" className="rounded-full">Edit</Button>
-          : <Button variant="liquidGlassDark" className="rounded-full"><Plus className="mr-1 h-4 w-4" /> New event</Button>
+          ? <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs font-semibold">Edit</Button>
+          : <Button variant="default" className="rounded-lg font-semibold"><Plus className="mr-2 h-4 w-4" /> New Event</Button>
         }
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{row ? "Edit event" : "New event"}</DialogTitle></DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl">
+        <DialogHeader><DialogTitle>{row ? "Edit Event" : "New Event"}</DialogTitle></DialogHeader>
         <div className="flex flex-col gap-4">
           {/* School */}
           <Field label="School">
@@ -648,8 +655,8 @@ function EventDialog({
             <span>QR attendance enabled</span>
           </label>
 
-          <DialogFooter>
-            <Button type="button" onClick={submit} variant="liquidGlassDark" className="rounded-full">Save</Button>
+          <DialogFooter className="mt-2">
+            <Button type="button" onClick={submit} variant="default" className="rounded-lg font-semibold">Save Changes</Button>
           </DialogFooter>
         </div>
       </DialogContent>
@@ -693,13 +700,13 @@ function QrDialog({ event, onClose }: { event: EventRow | null; onClose: () => v
 
   return (
     <Dialog open={!!event} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{event?.title}</DialogTitle></DialogHeader>
-        {dataUrl && <img src={dataUrl} alt="QR" className="mx-auto h-72 w-72" />}
-        <p className="break-all text-center text-xs text-muted-foreground">{scanUrl}</p>
-        <DialogFooter>
-          <Button variant="liquidGlassWhite" className="rounded-full" onClick={() => navigator.clipboard.writeText(scanUrl).then(() => toast.success("Link copied"))}>Copy link</Button>
-          <Button variant="liquidGlassDark" className="rounded-full" onClick={printIt}><Printer className="mr-1 h-4 w-4" /> Print poster</Button>
+      <DialogContent className="sm:max-w-md rounded-2xl">
+        <DialogHeader><DialogTitle className="text-center">{event?.title}</DialogTitle></DialogHeader>
+        {dataUrl && <img src={dataUrl} alt="QR" className="mx-auto h-72 w-72 p-2 bg-white rounded-xl shadow-sm border" />}
+        <p className="break-all text-center text-xs text-muted-foreground px-4">{scanUrl}</p>
+        <DialogFooter className="gap-2 sm:justify-center mt-2">
+          <Button variant="outline" className="rounded-lg font-semibold" onClick={() => navigator.clipboard.writeText(scanUrl).then(() => toast.success("Link copied"))}>Copy Link</Button>
+          <Button variant="default" className="rounded-lg font-semibold" onClick={printIt}><Printer className="mr-2 h-4 w-4" /> Print Poster</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
