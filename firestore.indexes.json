@@ -287,6 +287,44 @@
         { "fieldPath": "plannerId",  "order": "ASCENDING" },
         { "fieldPath": "timestamp",  "order": "DESCENDING" }
       ]
+    },
+
+    /* ── EVENT PLANNERS (v2) ──────────────────────────────────────────── */
+
+    {
+      "collectionGroup": "planners",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plannerType", "order": "ASCENDING" },
+        { "fieldPath": "createdAt",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "planners",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plannerType", "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "planner_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plannerId", "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "dayNumber", "order": "ASCENDING" },
+        { "fieldPath": "sequence",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "planner_days",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plannerId", "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "dayNumber", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
