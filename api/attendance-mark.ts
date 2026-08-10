@@ -428,6 +428,9 @@ export default async function handler(req: any, res: any) {
       venue:       session.venue,
       date:        session.date,
       programme:   session.programme_name,
+      // Guest headcount linkage fields (additive — safe for all consumers)
+      sessionId:   sessionId,
+      event_id:    session.event_id || null,
       message:     'Attendance marked successfully!',
     });
 

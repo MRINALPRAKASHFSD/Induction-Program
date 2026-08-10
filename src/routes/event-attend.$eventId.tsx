@@ -6,8 +6,12 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   CheckCircle2, MapPin, Clock, User, Hash,
   BookOpen, GraduationCap, Building, Check,
-  AlertTriangle, XCircle
+  AlertTriangle, XCircle, Loader2, Users, ChevronDown, CalendarClock
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { auth } from '@/lib/firebase/config';
+import { Link } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/event-attend/$eventId')({
   head: () => ({
@@ -63,6 +67,7 @@ function EventAttendPage() {
   const [applicationNumber, setApplicationNumber] = useState('');
   const [errorMsg,          setErrorMsg]          = useState('');
   const [resultData,        setResultData]        = useState<any | null>(null);
+  const [hasPlanner,        setHasPlanner]        = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -105,6 +110,27 @@ function EventAttendPage() {
     };
     load();
   }, [eventId]);
+
+  useEffect(() => {
+    if (pageState === 'success') {
+      const checkPlanner = async () => {
+        try {
+          const user = auth.currentUser;
+          const token = user ? await user.getIdToken() : undefined;
+          const res = await fetch('/api/event-schedule?type=orientation', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          const data = await res.json();
+          if (data.plannerActive) {
+            setHasPlanner(true);
+          }
+        } catch (e) {
+          console.error("Failed to check planner status", e);
+        }
+      };
+      checkPlanner();
+    }
+  }, [pageState]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,6 +468,38 @@ function EventAttendPage() {
               <TimelineStep text="Student Verified" />
               <TimelineStep text="Attendance Recorded" />
             </motion.div>
+
+            <GuestDrawerTrigger event={event} resultData={resultData} />
+
+            {/* ── Planner card (conditionally shown) ───────────────── */}
+            <AnimatePresence>
+              {hasPlanner && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="mt-4 w-full"
+                >
+                  <Link
+                    to="/my-schedule"
+                    className="w-full glass-premium-v2 border border-[#8a4a22]/30 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group block"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#8a4a22]/10 flex items-center justify-center shrink-0">
+                        <CalendarClock className="w-4 h-4 text-[#8a4a22]" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-primary">View My Schedule</p>
+                        <p className="text-xs text-secondary mt-0.5">Check what's happening next</p>
+                      </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-[#8a4a22]/5 flex items-center justify-center group-hover:bg-[#8a4a22]/10 transition-colors">
+                      <ChevronDown className="w-4 h-4 text-primary/40 group-hover:text-primary transition-colors shrink-0 -rotate-90" />
+                    </div>
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
 
@@ -653,3 +711,250 @@ function TimelineStep({ text }: { text: string }) {
 
 const headingCls = 'text-section-heading text-primary font-bold text-center my-2';
 const bodyCls    = 'text-body-secondary text-secondary text-center';
+
+// ── GuestDrawerTrigger ────────────────────────────────────────────────────────
+
+const RELATIONSHIP_OPTIONS = [
+  { value: "PARENT",   label: "Parent",   emoji: "👨‍👩‍👧" },
+  { value: "SIBLING",  label: "Sibling",  emoji: "👫" },
+  { value: "GUARDIAN", label: "Guardian", emoji: "🤝" },
+  { value: "RELATIVE", label: "Relative", emoji: "👪" },
+  { value: "FRIEND",   label: "Friend",   emoji: "😊" },
+  { value: "OTHER",    label: "Other",    emoji: "✨" },
+] as const;
+
+function GuestDrawerTrigger({
+  event,
+  resultData,
+}: {
+  event: EventData;
+  resultData: any;
+}) {
+  const [open, setOpen]                   = useState(false);
+  const [headcount, setHeadcount]         = useState(0);
+  const [customCount, setCustomCount]     = useState<string>("");
+  const [useCustom, setUseCustom]         = useState(false);
+  const [relationships, setRelationships] = useState<string[]>([]);
+  const [submitting, setSubmitting]       = useState(false);
+  const [submitted, setSubmitted]         = useState(false);
+  const [skipped, setSkipped]             = useState(false);
+
+  if (skipped) return null;
+
+  const effectiveCount = useCustom ? (parseInt(customCount, 10) || 0) : headcount;
+
+  const toggleRel = (val: string) => {
+    setRelationships(prev =>
+      prev.includes(val) ? prev.filter(r => r !== val) : [...prev, val],
+    );
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not authenticated");
+      const token = await user.getIdToken();
+      const payload = {
+        event_id:             event.id,
+        student_id:           resultData.applicationNumber,
+        application_number:   resultData.applicationNumber,
+        orientation_id:       null,
+        attendance_record_id: null,
+        headcount:            effectiveCount,
+        relationships,
+        device_timestamp:     new Date().toISOString(),
+        department_id:        resultData.course || null,
+        programme:            resultData.program || null,
+        school:               resultData.school || null,
+      };
+      const res = await fetch("/api/event-guest-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save guest details");
+      setSubmitted(true);
+      setOpen(false);
+      toast.success(effectiveCount === 0 ? "Got it — came alone!" : `${effectiveCount} guest(s) recorded. Thank you!`);
+    } catch (e: any) {
+      toast.error(`Failed to save: ${e.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-600 font-semibold mx-auto mt-6 mb-2">
+        <CheckCircle2 className="w-4 h-4" />
+        {effectiveCount === 0 ? "Came alone — recorded ✓" : `${effectiveCount} guest(s) recorded ✓`}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full mt-6 mb-2">
+      {/* Drawer trigger card */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        onClick={() => setOpen(true)}
+        className="w-full mx-auto glass-premium-v2 border border-border/40 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#c87038]/10 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-[#c87038]" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-primary">Add Guest Details</p>
+            <p className="text-xs text-secondary mt-0.5">Did anyone accompany them?</p>
+          </div>
+        </div>
+        <ChevronDown className="w-4 h-4 text-primary/40 group-hover:text-primary transition-colors shrink-0" />
+      </motion.button>
+
+      {/* Backdrop + Drawer */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              key="overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100]"
+              onClick={() => setOpen(false)}
+            />
+            <motion.div
+              key="drawer"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-[101] bg-[#FFFDFB] rounded-t-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto"
+              style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="w-10 h-1 rounded-full bg-border mx-auto mb-5" />
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-primary">Guest Headcount</h3>
+                  <p className="text-sm text-secondary mt-0.5">How many guests accompanied them today?</p>
+                </div>
+
+                {/* Stepper 0–8 then 8+ */}
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => { setHeadcount(n); setUseCustom(false); }}
+                      className={`aspect-square rounded-xl text-lg font-bold transition-all ${
+                        !useCustom && headcount === n
+                          ? "bg-[#8a4a22] text-white shadow-lg scale-105"
+                          : "glass-premium-v2 border border-border/50 text-primary hover:bg-[#8a4a22]/10"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setUseCustom(true)}
+                    className={`aspect-square rounded-xl text-sm font-bold transition-all ${
+                      useCustom
+                        ? "bg-[#8a4a22] text-white shadow-lg scale-105"
+                        : "glass-premium-v2 border border-border/50 text-primary hover:bg-[#8a4a22]/10"
+                    }`}
+                  >
+                    8+
+                  </button>
+                </div>
+
+                {/* Custom count for 8+ */}
+                <AnimatePresence>
+                  {useCustom && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-2 mt-2">
+                        Exact number of guests
+                      </label>
+                      <input
+                        type="number"
+                        min={8}
+                        max={99}
+                        value={customCount}
+                        onChange={e => setCustomCount(e.target.value)}
+                        placeholder="Enter number (8–99)"
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-white text-primary font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-[#c87038]/50"
+                        autoFocus
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Relationship tags (visible when guests > 0) */}
+                <AnimatePresence>
+                  {effectiveCount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <p className="text-xs font-bold text-secondary uppercase tracking-wider mb-3 mt-2">
+                        Who came with them? (optional)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {RELATIONSHIP_OPTIONS.map(r => (
+                          <button
+                            key={r.value}
+                            onClick={() => toggleRel(r.value)}
+                            className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+                              relationships.includes(r.value)
+                                ? "bg-[#8a4a22] text-white border-[#8a4a22] shadow"
+                                : "bg-white border-border text-secondary hover:border-[#8a4a22]/30"
+                            }`}
+                          >
+                            {r.emoji} {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit + Skip */}
+                <div className="flex flex-col gap-3 pt-4">
+                  <Button
+                    className="w-full bg-[#8a4a22] hover:bg-[#6e3a1a] text-white rounded-xl h-12"
+                    disabled={submitting || (useCustom && (!customCount || parseInt(customCount, 10) < 8))}
+                    onClick={handleSubmit}
+                  >
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                    ) : effectiveCount === 0 ? (
+                      "Came alone"
+                    ) : (
+                      `Confirm ${effectiveCount} Guest${effectiveCount !== 1 ? "s" : ""}`
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setOpen(false); setSkipped(true); }}
+                    className="text-secondary text-xs hover:bg-black/5"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
