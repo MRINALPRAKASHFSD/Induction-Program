@@ -12,11 +12,14 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as MyScheduleRouteImport } from './routes/my-schedule'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventAttendEventIdRouteImport } from './routes/event-attend.$eventId'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminPlannersRouteImport } from './routes/admin.planners'
 import { Route as AdminPlannerRouteImport } from './routes/admin.planner'
+import { Route as AdminEventGuestsRouteImport } from './routes/admin.event-guests'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
@@ -99,6 +102,11 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyScheduleRoute = MyScheduleRouteImport.update({
+  id: '/my-schedule',
+  path: '/my-schedule',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/my-schedule.lazy').then((d) => d.Route))
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -181,11 +189,25 @@ const AdminStudentsRoute = AdminStudentsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.students.lazy').then((d) => d.Route),
 )
+const AdminPlannersRoute = AdminPlannersRouteImport.update({
+  id: '/admin/planners',
+  path: '/admin/planners',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.planners.lazy').then((d) => d.Route),
+)
 const AdminPlannerRoute = AdminPlannerRouteImport.update({
   id: '/admin/planner',
   path: '/admin/planner',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/admin.planner.lazy').then((d) => d.Route))
+const AdminEventGuestsRoute = AdminEventGuestsRouteImport.update({
+  id: '/admin/event-guests',
+  path: '/admin/event-guests',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.event-guests.lazy').then((d) => d.Route),
+)
 const AdminDocumentsRoute = AdminDocumentsRouteImport.update({
   id: '/admin/documents',
   path: '/admin/documents',
@@ -211,6 +233,7 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/my-schedule': typeof MyScheduleRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -225,7 +248,9 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
+  '/admin/event-guests': typeof AdminEventGuestsRoute
   '/admin/planner': typeof AdminPlannerRoute
+  '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
@@ -242,6 +267,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/my-schedule': typeof MyScheduleRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -256,7 +282,9 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
+  '/admin/event-guests': typeof AdminEventGuestsRoute
   '/admin/planner': typeof AdminPlannerRoute
+  '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
@@ -274,6 +302,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/my-schedule': typeof MyScheduleRoute
   '/register': typeof RegisterRoute
   '/announcements': typeof AnnouncementsLazyRoute
   '/attendance': typeof AttendanceLazyRoute
@@ -288,7 +317,9 @@ export interface FileRoutesById {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
+  '/admin/event-guests': typeof AdminEventGuestsRoute
   '/admin/planner': typeof AdminPlannerRoute
+  '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
@@ -307,6 +338,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/my-schedule'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -321,7 +353,9 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/dashboard'
     | '/admin/documents'
+    | '/admin/event-guests'
     | '/admin/planner'
+    | '/admin/planners'
     | '/admin/students'
     | '/event-attend/$eventId'
     | '/admin/activity'
@@ -338,6 +372,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/my-schedule'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -352,7 +387,9 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/dashboard'
     | '/admin/documents'
+    | '/admin/event-guests'
     | '/admin/planner'
+    | '/admin/planners'
     | '/admin/students'
     | '/event-attend/$eventId'
     | '/admin/activity'
@@ -369,6 +406,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/my-schedule'
     | '/register'
     | '/announcements'
     | '/attendance'
@@ -383,7 +421,9 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/dashboard'
     | '/admin/documents'
+    | '/admin/event-guests'
     | '/admin/planner'
+    | '/admin/planners'
     | '/admin/students'
     | '/event-attend/$eventId'
     | '/admin/activity'
@@ -401,6 +441,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  MyScheduleRoute: typeof MyScheduleRoute
   RegisterRoute: typeof RegisterRoute
   AnnouncementsLazyRoute: typeof AnnouncementsLazyRoute
   AttendanceLazyRoute: typeof AttendanceLazyRoute
@@ -415,7 +456,9 @@ export interface RootRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentsRoute: typeof AdminDocumentsRoute
+  AdminEventGuestsRoute: typeof AdminEventGuestsRoute
   AdminPlannerRoute: typeof AdminPlannerRoute
+  AdminPlannersRoute: typeof AdminPlannersRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
   EventAttendEventIdRoute: typeof EventAttendEventIdRoute
   AdminActivityLazyRoute: typeof AdminActivityLazyRoute
@@ -507,6 +550,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-schedule': {
+      id: '/my-schedule'
+      path: '/my-schedule'
+      fullPath: '/my-schedule'
+      preLoaderRoute: typeof MyScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -607,11 +657,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStudentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/planners': {
+      id: '/admin/planners'
+      path: '/admin/planners'
+      fullPath: '/admin/planners'
+      preLoaderRoute: typeof AdminPlannersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/planner': {
       id: '/admin/planner'
       path: '/admin/planner'
       fullPath: '/admin/planner'
       preLoaderRoute: typeof AdminPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/event-guests': {
+      id: '/admin/event-guests'
+      path: '/admin/event-guests'
+      fullPath: '/admin/event-guests'
+      preLoaderRoute: typeof AdminEventGuestsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/documents': {
@@ -641,6 +705,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  MyScheduleRoute: MyScheduleRoute,
   RegisterRoute: RegisterRoute,
   AnnouncementsLazyRoute: AnnouncementsLazyRoute,
   AttendanceLazyRoute: AttendanceLazyRoute,
@@ -655,7 +720,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentsRoute: AdminDocumentsRoute,
+  AdminEventGuestsRoute: AdminEventGuestsRoute,
   AdminPlannerRoute: AdminPlannerRoute,
+  AdminPlannersRoute: AdminPlannersRoute,
   AdminStudentsRoute: AdminStudentsRoute,
   EventAttendEventIdRoute: EventAttendEventIdRoute,
   AdminActivityLazyRoute: AdminActivityLazyRoute,
