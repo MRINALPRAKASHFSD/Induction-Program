@@ -70,7 +70,7 @@ export function IdentityPanel({ profile }: IdentityPanelProps) {
               </div>
               
               <div className="text-sm font-medium text-muted-foreground">
-                {profile?.course || "Undergraduate Programmes"} 
+                {"Undergraduate Programmes"} 
                 {profile?.branch && <span className="mx-2 opacity-50">•</span>}
                 {profile?.branch && getSchoolName(profile.department_id || profile.branch)}
               </div>

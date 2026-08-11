@@ -28,7 +28,8 @@ import {
   ScanLine, CheckCircle2, XCircle, AlertTriangle, X, Navigation, Signal, Smartphone, ShieldAlert, Check, Navigation2,
   ArrowLeft, Clock, MapPin, Shield, History,
   Percent, ChevronRight, Camera, Loader2, RefreshCw,
-  Zap, ZapOff, ZoomIn, SwitchCamera, Sun, Focus, QrCode
+  Zap, ZapOff, ZoomIn, SwitchCamera, Sun, Focus, QrCode,
+  Users, ChevronDown, CalendarDays
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -111,6 +112,9 @@ interface MarkResult {
   programme?: string;
   message?: string;
   error?: string;
+  // Guest linkage fields (additive — may be null for older sessions)
+  sessionId?: string;
+  event_id?: string | null;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1037,7 +1041,7 @@ function AttendancePage() {
   {phase === "success" && (
       <div className="min-h-screen bg-background">
         <SiteHeader />
-        <main className="container mx-auto max-w-md px-4 py-16">
+        <main className="container mx-auto max-w-md px-4 py-12">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1082,12 +1086,25 @@ function AttendancePage() {
               </div>
             )}
 
-            <div className="flex gap-3 justify-center pt-2">
-              <Button variant="outline" onClick={goBack}>
-                <ArrowLeft className="w-4 h-4 mr-1.5" /> Back
-              </Button>
-              <Button variant="liquidGlassMaroon" onClick={retryOrResume}>
-                <Camera className="w-4 h-4 mr-1.5" /> Scan Another
+            {/* Guest headcount prompt */}
+            <GuestDrawerTrigger result={result} profile={profile} />
+
+            {/* Action CTAs */}
+            <div className="flex flex-col gap-3 pt-2">
+              <Link to="/my-schedule">
+                <Button variant="liquidGlassMaroon" className="w-full">
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  View Schedule
+                </Button>
+              </Link>
+              <Link to="/my-pass">
+                <Button variant="liquidGlassWhite" className="w-full">
+                  Back to Dashboard
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={retryOrResume} className="text-tertiary">
+                <Camera className="w-4 h-4 mr-1.5" />
+                Scan Another
               </Button>
             </div>
           </motion.div>
@@ -1436,5 +1453,256 @@ export function ErrorPhase({
         </div>
       </main>
     </div>
+  );
+}
+
+// ── GuestDrawerTrigger ────────────────────────────────────────────────────────
+// Self-contained inline component. Uses a custom slide-up panel.
+
+const RELATIONSHIP_OPTIONS = [
+  { value: "PARENT",   label: "Parent",   emoji: "👨‍👩‍👧" },
+  { value: "SIBLING",  label: "Sibling",  emoji: "👫" },
+  { value: "GUARDIAN", label: "Guardian", emoji: "🤝" },
+  { value: "RELATIVE", label: "Relative", emoji: "👪" },
+  { value: "FRIEND",   label: "Friend",   emoji: "😊" },
+  { value: "OTHER",    label: "Other",    emoji: "✨" },
+] as const;
+
+function GuestDrawerTrigger({
+  result,
+  profile,
+}: {
+  result: MarkResult | null;
+  profile: any;
+}) {
+  const [open, setOpen]                   = useState(false);
+  const [headcount, setHeadcount]         = useState(0);
+  const [customCount, setCustomCount]     = useState<string>("");
+  const [useCustom, setUseCustom]         = useState(false);
+  const [relationships, setRelationships] = useState<string[]>([]);
+  const [submitting, setSubmitting]       = useState(false);
+  const [submitted, setSubmitted]         = useState(false);
+  const [skipped, setSkipped]             = useState(false);
+
+  if (skipped) return null;
+
+  const effectiveCount = useCustom ? (parseInt(customCount, 10) || 0) : headcount;
+
+  const toggleRel = (val: string) => {
+    setRelationships(prev =>
+      prev.includes(val) ? prev.filter(r => r !== val) : [...prev, val],
+    );
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not authenticated");
+      const token = await user.getIdToken();
+      const payload = {
+        event_id:             result?.event_id || "orientation-2026",
+        student_id:           profile?.enrollment_no || "",
+        application_number:   profile?.application_number || "",
+        orientation_id:       null,
+        attendance_record_id: result?.sessionId
+          ? `${result.sessionId}_${(profile?.enrollment_no || "").toUpperCase()}`
+          : null,
+        headcount:            effectiveCount,
+        relationships,
+        device_timestamp:     new Date().toISOString(),
+        department_id:        profile?.department_id || profile?.department || null,
+        programme:            profile?.programme || null,
+        school:               profile?.school || null,
+      };
+      const res = await fetch("/api/event-guest-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save guest details");
+      setSubmitted(true);
+      setOpen(false);
+      toast.success(effectiveCount === 0 ? "Got it — came alone!" : `${effectiveCount} guest(s) recorded. Thank you!`);
+    } catch (e: any) {
+      toast.error(`Failed to save: ${e.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-600 font-semibold mx-auto">
+        <CheckCircle2 className="w-4 h-4" />
+        {effectiveCount === 0 ? "Came alone — recorded ✓" : `${effectiveCount} guest(s) recorded ✓`}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Drawer trigger card */}
+      <motion.button
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        onClick={() => setOpen(true)}
+        className="w-full max-w-xs mx-auto glass-premium-v2 border border-white/40 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Users className="w-4 h-4 text-primary" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-bold text-primary">Add Guest Details</p>
+            <p className="text-xs text-tertiary">Did anyone accompany you today?</p>
+          </div>
+        </div>
+        <ChevronDown className="w-4 h-4 text-primary/40 group-hover:text-primary transition-colors" />
+      </motion.button>
+
+      {/* Backdrop + Drawer */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              key="overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              onClick={() => setOpen(false)}
+            />
+            <motion.div
+              key="drawer"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl p-6 max-h-[88vh] overflow-y-auto"
+              style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+            >
+              <div className="w-10 h-1 rounded-full bg-primary/20 mx-auto mb-5" />
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-primary">Guest Headcount</h3>
+                  <p className="text-sm text-tertiary mt-0.5">How many guests accompanied you today?</p>
+                </div>
+
+                {/* Stepper 0–8 then 8+ */}
+                <div className="grid grid-cols-5 gap-2">
+                  {[0, 1, 2, 3, 4, 5, 6, 7].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => { setHeadcount(n); setUseCustom(false); }}
+                      className={`aspect-square rounded-xl text-lg font-bold transition-all ${
+                        !useCustom && headcount === n
+                          ? "bg-primary text-white shadow-lg scale-105"
+                          : "glass-premium-v2 border border-white/30 text-primary hover:bg-primary/10"
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setUseCustom(true)}
+                    className={`aspect-square rounded-xl text-sm font-bold transition-all ${
+                      useCustom
+                        ? "bg-primary text-white shadow-lg scale-105"
+                        : "glass-premium-v2 border border-white/30 text-primary hover:bg-primary/10"
+                    }`}
+                  >
+                    8+
+                  </button>
+                </div>
+
+                {/* Custom count for 8+ */}
+                <AnimatePresence>
+                  {useCustom && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <label className="text-xs font-bold text-primary/60 uppercase tracking-wider block mb-2">
+                        Exact number of guests
+                      </label>
+                      <input
+                        type="number"
+                        min={8}
+                        max={99}
+                        value={customCount}
+                        onChange={e => setCustomCount(e.target.value)}
+                        placeholder="Enter number (8–99)"
+                        className="w-full px-4 py-3 rounded-xl border border-primary/20 bg-white/60 text-primary font-bold text-center text-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        autoFocus
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Relationship tags (visible when guests > 0) */}
+                <AnimatePresence>
+                  {effectiveCount > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <p className="text-xs font-bold text-primary/60 uppercase tracking-wider mb-3">
+                        Who came with you? (optional)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {RELATIONSHIP_OPTIONS.map(r => (
+                          <button
+                            key={r.value}
+                            onClick={() => toggleRel(r.value)}
+                            className={`px-3 py-1.5 rounded-xl text-sm font-semibold border transition-all ${
+                              relationships.includes(r.value)
+                                ? "bg-primary text-white border-primary shadow"
+                                : "glass-premium-v2 border-white/30 text-secondary hover:border-primary/30"
+                            }`}
+                          >
+                            {r.emoji} {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit + Skip */}
+                <div className="flex flex-col gap-3 pt-2">
+                  <Button
+                    variant="liquidGlassMaroon"
+                    className="w-full"
+                    disabled={submitting || (useCustom && (!customCount || parseInt(customCount, 10) < 8))}
+                    onClick={handleSubmit}
+                  >
+                    {submitting ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</>
+                    ) : effectiveCount === 0 ? (
+                      "I came alone"
+                    ) : (
+                      `Confirm ${effectiveCount} Guest${effectiveCount !== 1 ? "s" : ""}`
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setOpen(false); setSkipped(true); }}
+                    className="text-tertiary text-xs"
+                  >
+                    Skip for now
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

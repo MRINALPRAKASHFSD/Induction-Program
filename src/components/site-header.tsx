@@ -62,6 +62,7 @@ export function SiteHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [plannerActive, setPlannerActive] = useState(false);
 
   const path = useRouterState({ select: (s) => s.location.pathname });
 
@@ -70,7 +71,10 @@ export function SiteHeader() {
   const isRegistered = !!profile;
 
   // Determine which nav items to show
-  const navItems = isRegistered ? AUTH_NAV_ITEMS : GUEST_NAV_ITEMS;
+  const navItems = useMemo(() => {
+    if (!isRegistered) return GUEST_NAV_ITEMS;
+    return AUTH_NAV_ITEMS;
+  }, [isRegistered]);
 
   /* ── Scroll listener ──────────────────────────────────────────── */
   useEffect(() => {

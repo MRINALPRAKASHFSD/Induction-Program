@@ -40,11 +40,49 @@ async function fetchPlannerDashboard() {
   if (!user) return null;
   try {
     const token = await user.getIdToken();
-    const res = await fetch('/api/planner-student-dashboard', {
+    const res = await fetch('/api/event-schedule?type=orientation', {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
-    return res.json();
+    const data = await res.json();
+    
+    if (!data.plannerActive) return null;
+
+    // Use current date for "today"
+    const now = new Date();
+    // Assuming browser local time is close enough, or we just format to YYYY-MM-DD
+    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let todaySessions = (data.sessions || []).filter((s: any) => s.date === todayStr);
+    
+    todaySessions = todaySessions.map((s: any) => {
+      const start = timeToMin(s.startTime);
+      const end = timeToMin(s.endTime);
+      let status = 'upcoming';
+      if (nowMin >= start && nowMin < end) status = 'current';
+      else if (nowMin >= end) status = 'past';
+      
+      return {
+        id: s.id || (s.sessionTitle + s.startTime),
+        startTime: s.startTime,
+        sessionName: s.sessionTitle,
+        venueName: s.venue,
+        status
+      };
+    });
+    
+    todaySessions.sort((a: any, b: any) => timeToMin(a.startTime) - timeToMin(b.startTime));
+    const nextSession = todaySessions.find((s: any) => s.status === 'upcoming' || s.status === 'current');
+
+    return {
+      plannerActive: true,
+      today: {
+        date: todayStr,
+        sessions: todaySessions
+      },
+      nextSession: nextSession || null
+    };
   } catch {
     return null;
   }

@@ -67,12 +67,12 @@ const Countdown = React.memo(function Countdown({ targetDate }: { targetDate: st
         <React.Fragment key={s.label}>
           <div className="text-center flex flex-col items-center">
             <div className="relative w-[48px] sm:w-[60px] h-[48px] sm:h-[56px] flex items-center justify-center overflow-hidden">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 <m.span
                   key={s.value}
-                  initial={{ y: "100%", opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: "-100%", opacity: 0 }}
+                  initial={{ y: 20, opacity: 0, filter: "blur(4px)" }}
+                  animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+                  exit={{ y: -20, opacity: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.4, ease: "easeOut" }}
                   className="absolute text-[#2c1208] font-black text-4xl sm:text-5xl tabular-nums leading-none"
                 >
