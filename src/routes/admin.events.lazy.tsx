@@ -116,7 +116,7 @@ function AdminEvents() {
       </div>
 
       {!rows ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
           {[1,2,3].map(i => <div key={i} className="h-48 admin-skeleton rounded-2xl" />)}
         </div>
       ) : rows.length === 0 ? (
@@ -126,7 +126,7 @@ function AdminEvents() {
           <p className="text-sm mt-1">Create one to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
           {rows.map((r) => (
             <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />
           ))}
