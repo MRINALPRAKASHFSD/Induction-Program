@@ -182,9 +182,14 @@ export default async function handler(req: any, res: any) {
       const batch = db.batch();
       let insertedCount = 0;
       let updatedCount = 0;
+      let unchangedCount = 0;
       let failCount = 0;
       let conflictCount = 0;
+      let firestoreWrites = 0;
+      let firestoreReads = 0;
       const conflictLogs: any[] = [];
+      const parsedRows: any[] = [];
+      const participantRefs: any[] = [];
 
       for (const row of rows) {
         const isBlank = Object.values(row as any).every((v) => !v || String(v).trim() === '');
@@ -212,146 +217,148 @@ export default async function handler(req: any, res: any) {
 
         if (!appNumber || !studentName) { failCount++; continue; }
 
+        let docId = appNumber;
         if (dataset_scope === 'event') {
-          // ── Event: simple upsert, doc ID = {scope_id}_{APP_NUMBER} ──
           const eventId = dataset.scope_id || dataset.event_id;
-          const docId = `${eventId}_${appNumber}`;
-          const participantRef = db.collection(participantCollection).doc(docId);
+          docId = `${eventId}_${appNumber}`;
+        }
+        
+        const ref = db.collection(participantCollection).doc(docId);
+        participantRefs.push(ref);
+        parsedRows.push({ docId, appNumber, studentName, email, mobile, school, course, program, admissionStatus, ref });
+      }
 
-          batch.set(participantRef, {
+      const existingDocsMap = new Map<string, any>();
+      if (participantRefs.length > 0) {
+        try {
+          // Efficient bulk-read of up to 500 documents
+          const snaps = await db.getAll(...participantRefs);
+          firestoreReads += snaps.length;
+          for (const snap of snaps) {
+            if (snap.exists) {
+              existingDocsMap.set(snap.id, snap.data());
+            }
+          }
+        } catch (error) {
+          console.error("[import-dataset] Bulk read failed", error);
+        }
+      }
+      // batch was already initialized at the start of chunk action
+      for (const parsed of parsedRows) {
+        const existing = existingDocsMap.get(parsed.docId);
+
+        if (existing) {
+          // Conflict check for registered induction users
+          if (dataset_scope === 'induction' && existing.registration_status === 'REGISTERED' && existing.email && parsed.email && existing.email !== parsed.email) {
+            conflictCount++;
+            conflictLogs.push({
+              severity: 'HIGH',
+              reason: 'Email mismatch — student is already registered',
+              old_dataset: existing.dataset_id,
+              new_dataset: dataset_id,
+              application_number: parsed.appNumber,
+              timestamp: FieldValue.serverTimestamp(),
+              resolved: false,
+              resolved_by: null,
+              resolved_at: null,
+              resolution_note: null,
+              resolution_time: null,
+              imported_email: parsed.email,
+              stored_email: existing.email,
+              student_name: parsed.studentName,
+            });
+            continue;
+          }
+
+          let hasChanges = false;
+          const updates: any = {};
+          
+          const fields = [
+            { key: 'student_name', val: parsed.studentName },
+            { key: 'school', val: parsed.school },
+            { key: 'course', val: parsed.course },
+            { key: 'program', val: parsed.program },
+            { key: 'admission_status', val: parsed.admissionStatus }
+          ];
+
+          for (const f of fields) {
+            if (existing[f.key] !== f.val) {
+              updates[f.key] = f.val;
+              hasChanges = true;
+            }
+          }
+
+          // Email/Mobile overwrite policy
+          if (!(dataset_scope === 'induction' && existing.registration_status === 'REGISTERED')) {
+            if (existing.email !== parsed.email) { updates.email = parsed.email; hasChanges = true; }
+            if (existing.mobile !== parsed.mobile) { updates.mobile = parsed.mobile; hasChanges = true; }
+          }
+
+          if (hasChanges) {
+            updates.dataset_id = dataset_id;
+            updates.last_updated_at = FieldValue.serverTimestamp();
+            batch.update(parsed.ref, updates);
+            updatedCount++;
+            firestoreWrites++;
+          } else {
+            unchangedCount++;
+          }
+        } else {
+          // New participant
+          const newDoc: any = {
             dataset_id,
-            dataset_scope: 'event',
-            scope_id: eventId,
-            application_number: appNumber,
-            student_name: studentName,
-            email,
-            mobile,
-            school,
-            course,
-            program,
-            admission_status: admissionStatus,
+            dataset_scope,
+            application_number: parsed.appNumber,
+            student_name: parsed.studentName,
+            email: parsed.email,
+            mobile: parsed.mobile,
+            school: parsed.school,
+            course: parsed.course,
+            program: parsed.program,
+            admission_status: parsed.admissionStatus,
             attendance_status: 'pending',
             attendance_time: null,
             created_at: FieldValue.serverTimestamp(),
             last_updated_at: FieldValue.serverTimestamp(),
-          }, { merge: true });
-
-          updatedCount++; // Using updatedCount for event batch sets
-        } else {
-          // ── Induction: conflict-aware upsert, doc ID = {APP_NUMBER} ────────
-          // We must read first to apply the overwrite policy.
-          // Note: reads inside a batch write are not possible; we use batch for
-          // the writes after doing the read outside. For induction imports, we
-          // accept this N-read overhead as the data integrity guarantee is worth it.
-          try {
-            const participantRef = db.collection(participantCollection).doc(appNumber);
-            const existingSnap = await participantRef.get();
-
-            if (existingSnap.exists) {
-              const existing = existingSnap.data()!;
-
-              if (existing.registration_status === 'REGISTERED' && existing.email && existing.email !== email) {
-                // REGISTERED student with a different email → conflict: skip row
-                conflictCount++;
-                conflictLogs.push({
-                  severity: 'HIGH',
-                  reason: 'Email mismatch — student is already registered',
-                  old_dataset: existing.dataset_id,
-                  new_dataset: dataset_id,
-                  application_number: appNumber,
-                  timestamp: FieldValue.serverTimestamp(),
-                  resolved: false,
-                  resolved_by: null,
-                  resolved_at: null,
-                  resolution_note: null,
-                  resolution_time: null,
-                  imported_email: email,
-                  stored_email: existing.email,
-                  student_name: studentName,
-                });
-                continue;
-              }
-
-              if (existing.registration_status === 'REGISTERED') {
-                // REGISTERED, same email → update non-PII fields only
-                batch.update(participantRef, {
-                  student_name: studentName,
-                  school,
-                  course,
-                  program,
-                  dataset_id,  // point to latest dataset
-                  last_updated_at: FieldValue.serverTimestamp(),
-                });
-              } else {
-                // PENDING → latest wins, full overwrite
-                batch.set(participantRef, {
-                  dataset_id,
-                  dataset_scope: 'induction',
-                  application_number: appNumber,
-                  student_name: studentName,
-                  email,
-                  mobile,
-                  school,
-                  course,
-                  program,
-                  admission_status: admissionStatus,
-                  attendance_status: 'pending',
-                  attendance_time: null,
-                  registration_status: 'PENDING',
-                  created_at: existing.created_at || FieldValue.serverTimestamp(),
-                  last_updated_at: FieldValue.serverTimestamp(),
-                }, { merge: true });
-              }
-              updatedCount++;
-            } else {
-              // New participant
-              batch.set(participantRef, {
-                dataset_id,
-                dataset_scope: 'induction',
-                created_from: 'induction_dataset',
-                application_number: appNumber,
-                student_name: studentName,
-                email,
-                mobile,
-                school,
-                course,
-                program,
-                admission_status: admissionStatus,
-                attendance_status: 'pending',
-                attendance_time: null,
-                registration_status: 'PENDING',
-                created_at: FieldValue.serverTimestamp(),
-                last_updated_at: FieldValue.serverTimestamp(),
-              });
-              insertedCount++;
-            }
-          } catch {
-            failCount++;
+          };
+          
+          if (dataset_scope === 'event') {
+            newDoc.scope_id = dataset.scope_id || dataset.event_id;
+          } else {
+            newDoc.created_from = 'induction_dataset';
+            newDoc.registration_status = 'PENDING';
           }
+          
+          batch.set(parsed.ref, newDoc);
+          insertedCount++;
+          firestoreWrites++;
         }
       }
 
-      await batch.commit();
-
-      // Write conflict logs if any
-      if (conflictLogs.length > 0) {
-        const logBatch = db.batch();
-        for (const log of conflictLogs) {
-          const logRef = db.collection('conflict_logs').doc();
-          logBatch.set(logRef, log);
+      if (firestoreWrites > 0 || conflictLogs.length > 0) {
+        if (conflictLogs.length > 0) {
+          for (const log of conflictLogs) {
+            const logRef = db.collection('conflict_logs').doc();
+            batch.set(logRef, log);
+            firestoreWrites++;
+          }
         }
-        await logBatch.commit();
+        await batch.commit();
       }
 
       // Update progress counters
       const updates: any = {};
       if (insertedCount > 0) updates['statistics.rows.inserted'] = FieldValue.increment(insertedCount);
       if (updatedCount > 0) updates['statistics.rows.updated'] = FieldValue.increment(updatedCount);
+      if (unchangedCount > 0) updates['statistics.rows.unchanged'] = FieldValue.increment(unchangedCount);
       if (failCount > 0) updates['statistics.rows.skipped'] = FieldValue.increment(failCount);
       if (conflictCount > 0) {
         updates['statistics.rows.conflicts'] = FieldValue.increment(conflictCount);
         updates['statistics.rows.skipped'] = FieldValue.increment(conflictCount);
       }
+      if (firestoreReads > 0) updates['statistics.performance.firestore_reads'] = FieldValue.increment(firestoreReads);
+      if (firestoreWrites > 0) updates['statistics.performance.firestore_writes'] = FieldValue.increment(firestoreWrites);
+      
       if (typeof batch_time_ms === 'number' && batch_time_ms > 0) {
         const prevAvg = dataset.statistics?.performance?.average_batch_ms || batch_time_ms;
         updates['statistics.performance.average_batch_ms'] = Math.round((prevAvg + batch_time_ms) / 2);
@@ -359,7 +366,9 @@ export default async function handler(req: any, res: any) {
 
       await datasetRef.update(updates);
 
-      return apiResponse(res, 200, true, 'Chunk imported successfully.', { insertedCount, updatedCount, failCount, conflictCount });
+      return apiResponse(res, 200, true, 'Chunk imported successfully.', { 
+        insertedCount, updatedCount, unchangedCount, failCount, conflictCount, firestoreReads, firestoreWrites 
+      });
     }
 
     // ══════════════════════════════════════════════════════════════════════════

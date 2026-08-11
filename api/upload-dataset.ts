@@ -136,23 +136,9 @@ export default async function handler(req: any, res: any) {
     // ── 2. Compute checksum ──────────────────────────────────────────────────
     const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
 
-    // ── 3. Same-module duplicate check ───────────────────────────────────────
-    let dupeSnap: any;
-    if (dataset_scope === 'event') {
-      dupeSnap = await db.collection(datasetCollection)
-        .where('scope_id', '==', scope_id)
-        .where('checksum', '==', checksum)
-        .get();
-    } else {
-      dupeSnap = await db.collection(datasetCollection)
-        .where('checksum', '==', checksum)
-        .get();
-    }
-    const nonDeleted = dupeSnap.docs.filter((d: any) => d.data().status !== 'DELETED');
-    if (nonDeleted.length > 0) {
-      return apiResponse(res, 409, false,
-        'This exact file has already been uploaded for this module (checksum match). Upload a different file or delete the existing dataset first.');
-    }
+    // ── 3. Same-module versioning check ──────────────────────────────────────
+    // Previously we rejected identical checksums with a 409.
+    // Now we allow them to seamlessly generate v2, v3, etc., retaining the checksum metadata.
 
     // ── 4. Cross-module informational check (source_checksum) ─────────────
     let cross_module_warning: any = null;
@@ -229,7 +215,7 @@ export default async function handler(req: any, res: any) {
     // ── 7. Determine next version number ────────────────────────────────────
     let versionsSnap: any;
     if (dataset_scope === 'event') {
-      versionsSnap = await db.collection(datasetCollection).where('scope_id', '==', scope_id).get();
+      versionsSnap = await db.collection(datasetCollection).where('event_id', '==', scope_id).get();
     } else {
       versionsSnap = await db.collection(datasetCollection).get();
     }
@@ -290,6 +276,7 @@ export default async function handler(req: any, res: any) {
 
     if (dataset_scope === 'event') {
       datasetData.scope_id = scope_id;
+      datasetData.event_id = scope_id;
     }
 
     await datasetRef.set(datasetData);
