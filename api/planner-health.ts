@@ -104,18 +104,6 @@ export default async function handler(req: any, res: any) {
       data: zeroCapacity.map((r: any) => ({ mappingKey: r.mappingKey, room: r.roomNumber })),
     });
 
-    // ── Check 3: No duplicate mappingKeys ──────────────────────────────────
-    const keyCount = new Map<string, number>();
-    for (const r of rooms) { keyCount.set(r.mappingKey, (keyCount.get(r.mappingKey) || 0) + 1); }
-    const duplicates = [...keyCount.entries()].filter(([, c]) => c > 1);
-    checks.push({
-      check:    'UNIQUE_ROOM_MAPPINGS',
-      passed:   duplicates.length === 0,
-      severity: 'CRITICAL',
-      detail:   duplicates.length === 0 ? 'All mapping keys are unique'
-                : `${duplicates.length} duplicate mapping key(s) found`,
-      data: duplicates.map(([k]) => k),
-    });
 
     // ── Check 4: Each day has a universal session ──────────────────────────
     const dayNums   = [...new Set(sessions.map((s: any) => s.dayNumber))].sort();
@@ -144,7 +132,11 @@ export default async function handler(req: any, res: any) {
       for (let i = 1; i < sorted.length; i++) {
         const prev = sorted[i - 1];
         const curr = sorted[i];
-        if (timeToMin(curr.startTime) < timeToMin(prev.endTime)) {
+        const isParallelActivity = (name: string) => /full\\s*day|documentation|feedback|erp|industry|visit/i.test(name);
+        if (timeToMin(curr.startTime) < timeToMin(prev.endTime) && 
+            curr.sessionName !== prev.sessionName &&
+            !isParallelActivity(curr.sessionName) &&
+            !isParallelActivity(prev.sessionName)) {
           overlaps.push({ scope: gKey, session: curr.sessionName, overlapsWith: prev.sessionName });
         }
       }

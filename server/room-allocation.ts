@@ -4,12 +4,13 @@
  * INTERNAL SERVER LIBRARY — never expose this as a public API endpoint.
  * Import this module only from API handlers that already enforce authentication.
  *
- * Algorithm: Sequential Fill with Firestore Transaction Safety
- *   1. Query the `rooms` collection filtered by school + ACTIVE status,
- *      ordered by allocationOrder (fills rooms one-by-one, in sequence).
- *   2. Find the first room with remainingSeats > 0 (O(1) in steady-state).
- *   3. Atomically decrement remainingSeats and increment occupancy.
- *   4. Return assignment details. Never throws — degrades to 'pending' on error.
+ * Algorithm: Planner-Driven Dynamic Allocation
+ *   1. Resolve active planner ID (cached via Redis).
+ *   2. Query `induction_room_allocations` for the programme mapping.
+ *   3. Fetch Candidate Rooms from the `rooms` runtime collection.
+ *   4. Use Redis as a fast selector/load-balancer to pick a candidate.
+ *   5. Verify `remainingSeats > 0` in Firestore (the absolute source of truth).
+ *   6. Atomically decrement remainingSeats and increment occupancy.
  */
 
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
@@ -19,53 +20,97 @@ import { getRedis } from './redis.js';
 
 export interface RoomAssignment {
   roomNumber: string | null;
+  roomId: string | null;
+  plannerId: string | null;
   block: string | null;
   school: string;
-  schoolCode: string;
   capacity: number | null;
   allocatedAt: string;
-  allocationStatus: 'allocated' | 'pending';
+  allocationStatus: 'ALLOCATED' | 'PENDING';
 }
 
-export interface RoomMasterEntry {
-  roomNumber: string;
-  block: string;
-  school: string;       // lowercase, matches department_id on Student (e.g. "soet")
-  schoolCode: string;   // uppercase display code (e.g. "SOET")
-  capacity: number;
-  roomType: string;
-  equipmentType: string;
-  allocationOrder: number; // sequential fill order within each school
+function buildMappingKey(schoolCode: string, course: string, programme: string): string {
+  return `${schoolCode.toLowerCase().trim()}|${course.toLowerCase().trim()}|${(programme || '').toLowerCase().trim()}`;
 }
 
 // ── Allocation Engine ─────────────────────────────────────────────────────────
 
-/**
- * Allocate a room inside an existing Firestore transaction.
- *
- * @param db            Firebase Admin Firestore instance
- * @param transaction   The running Firestore transaction
- * @param departmentId  Lowercase school ID (e.g. "soet") from the student document
- * @param enrollmentNo  For logging only — does not affect allocation logic
- * @returns             RoomAssignment with status 'allocated' | 'pending'
- */
 export async function allocateRoom(
   db: Firestore,
   transaction: Transaction,
   departmentId: string,
+  course: string,
+  branchId: string | null | undefined,
   enrollmentNo: string,
 ): Promise<RoomAssignment> {
   const now = new Date().toISOString();
   const schoolCode = departmentId.toUpperCase();
+  const programme = branchId || '';
 
   try {
     const redis = getRedis();
-    const availableRooms = ROOM_MASTER_DATA
-      .filter(r => r.school === departmentId)
-      .sort((a,b) => a.allocationOrder - b.allocationOrder);
+    
+    // 1. Resolve Active Planner (with Redis caching)
+    let plannerId = (await redis.get('planner_active')) as string | null;
+    if (!plannerId) {
+      const plannerSnap = await db.collection('induction_planners')
+        .where('status', '==', 'PUBLISHED')
+        .limit(1)
+        .get();
+      
+      if (plannerSnap.empty) {
+        return makePending(departmentId, now);
+      }
+      plannerId = plannerSnap.docs[0].id;
+      // Cache for 60 seconds to avoid massive read spikes
+      await redis.setex('planner_active', 60, plannerId);
+    }
 
-    // Redis LUA Script for atomic sequential fill
-    const LUA_ALLOCATE = `
+    // 2. Mapping Lookup
+    // Try Programme -> Course -> School level mappings
+    const keysToTry = [
+      buildMappingKey(departmentId, course, programme),
+      buildMappingKey(departmentId, course, course),
+      buildMappingKey(departmentId, course, ''),
+      buildMappingKey(departmentId, '', '')
+    ];
+
+    let mappedRooms: any[] = [];
+    
+    for (const key of keysToTry) {
+      const mappingSnap = await db.collection('induction_room_allocations')
+        .where('plannerId', '==', plannerId)
+        .where('mappingKey', '==', key)
+        .get();
+        
+      if (!mappingSnap.empty) {
+        mappedRooms = mappingSnap.docs.map(d => d.data());
+        break; // Found the most specific mapping
+      }
+    }
+
+    if (mappedRooms.length === 0) {
+      return makePending(departmentId, now, plannerId);
+    }
+
+    const roomNumbers = mappedRooms.map(r => r.roomNumber);
+
+    // 3. Batch Fetch Runtime State
+    // We cannot use 'in' queries easily within a transaction without doing get() on refs.
+    const roomRefs = roomNumbers.map(r => db.collection('rooms').doc(r));
+    const roomsSnap = await transaction.getAll(...roomRefs);
+    
+    const availableRooms = roomsSnap
+      .map(d => ({ id: d.id, exists: d.exists, data: d.data() as any }))
+      .filter(r => r.exists && r.data.status === 'ACTIVE' && r.data.remainingSeats > 0);
+
+    if (availableRooms.length === 0) {
+      return makePending(departmentId, now, plannerId);
+    }
+
+    // 4. Redis Selection (Load Balancer)
+    // Pass the available rooms to Redis to pick one (to avoid all concurrent requests picking the exact same room and causing tx retries)
+    const LUA_SELECT = `
       local prefix = KEYS[1]
       local rooms = cjson.decode(ARGV[1])
       
@@ -74,9 +119,10 @@ export async function allocateRoom(
         local current = redis.call('GET', key)
         
         if not current then
-          -- Initialize capacity and take one seat
-          redis.call('SET', key, room.capacity - 1)
-          return room.roomNumber
+          if room.remainingSeats > 0 then
+            redis.call('SET', key, room.remainingSeats - 1)
+            return room.roomNumber
+          end
         else
           local num = tonumber(current)
           if num > 0 then
@@ -86,169 +132,69 @@ export async function allocateRoom(
         end
       end
       
-      return nil
+      -- Fallback: just return the first one if Redis state is mismatched
+      return rooms[1].roomNumber
     `;
 
     const roomsJson = JSON.stringify(
-      availableRooms.map(r => ({ roomNumber: r.roomNumber, capacity: r.capacity }))
+      availableRooms.map(r => ({ 
+        roomNumber: r.id, 
+        remainingSeats: r.data.remainingSeats 
+      }))
     );
     
-    const allocatedRoomNumber = await redis.eval(LUA_ALLOCATE, ["room_seats:"], [roomsJson]) as string | null;
+    let selectedRoomNumber = await redis.eval(LUA_SELECT, [`alloc_seats:${plannerId}:`], [roomsJson]) as string;
+    
+    // 5. Firestore Source of Truth Verification
+    let candidate = availableRooms.find(r => r.id === selectedRoomNumber);
+    
+    // If the Redis-selected room is somehow out of sync and full in Firestore, pick the first available one from our Firestore snapshot.
+    if (!candidate || candidate.data.remainingSeats <= 0) {
+      candidate = availableRooms.find(r => r.data.remainingSeats > 0);
+    }
 
-    if (allocatedRoomNumber) {
-      const room = availableRooms.find(r => r.roomNumber === allocatedRoomNumber)!;
+    if (candidate && candidate.data.remainingSeats > 0) {
+      const roomRef = db.collection('rooms').doc(candidate.id);
       
-      // Update Firestore Room Document using exact ID (avoid query index locks)
-      // This will still have 1 write/sec contention per room, but it's partitioned across rooms.
-      const roomRef = db.collection('rooms').doc(allocatedRoomNumber);
-      const roomDoc = await transaction.get(roomRef);
-      if (roomDoc.exists) {
-        const roomData = roomDoc.data()!;
-        transaction.update(roomRef, {
-          occupancy:      (roomData.occupancy ?? 0) + 1,
-          remainingSeats: (roomData.remainingSeats ?? roomData.capacity) - 1,
-          updatedAt:      now,
-        });
-      }
+      // Update Runtime Room Collection
+      transaction.update(roomRef, {
+        occupancy: (candidate.data.occupancy || 0) + 1,
+        remainingSeats: candidate.data.remainingSeats - 1,
+        updatedAt: now,
+      });
 
       return {
-        roomNumber:       room.roomNumber,
-        block:            room.block,
+        roomNumber:       candidate.id,
+        roomId:           candidate.id,
+        plannerId:        plannerId,
+        block:            candidate.data.block || null,
         school:           departmentId,
-        schoolCode:       room.schoolCode || schoolCode,
-        capacity:         room.capacity,
+        capacity:         candidate.data.capacity,
         allocatedAt:      now,
-        allocationStatus: 'allocated',
+        allocationStatus: 'ALLOCATED',
       };
     }
 
-    return makePending(departmentId, schoolCode, now);
+    return makePending(departmentId, now, plannerId);
   } catch (err) {
-    // Never block registration — log and degrade gracefully
     console.error(`[room-allocation] Error for ${enrollmentNo} (${departmentId}):`, err);
-    return makePending(departmentId, schoolCode, now);
+    return makePending(departmentId, now, null);
   }
 }
 
 function makePending(
   departmentId: string,
-  schoolCode: string,
   now: string,
+  plannerId: string | null = null
 ): RoomAssignment {
   return {
     roomNumber:       null,
+    roomId:           null,
+    plannerId:        plannerId,
     block:            null,
     school:           departmentId,
-    schoolCode,
     capacity:         null,
     allocatedAt:      now,
-    allocationStatus: 'pending',
+    allocationStatus: 'PENDING',
   };
 }
-
-// ── Canonical Room Master Data ────────────────────────────────────────────────
-// Source of truth: Room Allocation Master Sheet — Aarambh 2026
-// allocationOrder is 1-indexed, sequential within each school for fill order.
-
-export const ROOM_MASTER_DATA: RoomMasterEntry[] = [
-  // ── SOLS — A Block, 2nd floor ────────────────────────────────────────────
-  { roomNumber: 'A201', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 80,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1  },
-  { roomNumber: 'A202', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 2  },
-  { roomNumber: 'A203', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 3  },
-  { roomNumber: 'A204', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 60,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 4  },
-  { roomNumber: 'A205', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 60,  roomType: 'classroom', equipmentType: 'Projector',   allocationOrder: 5  },
-  { roomNumber: 'A206', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 6  },
-  { roomNumber: 'A208', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 80,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 7  },
-  { roomNumber: 'A209', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 80,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 8  },
-  { roomNumber: 'A210', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 9  },
-  { roomNumber: 'A211', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 10 },
-  { roomNumber: 'A214', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: '',            allocationOrder: 11 },
-  { roomNumber: 'A215', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 80,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 12 },
-  { roomNumber: 'A216', block: 'A', school: 'sols', schoolCode: 'SOLS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 13 },
-
-  // ── SMAS — A Block + B Block + C Block ──────────────────────────────────
-  { roomNumber: 'A213', block: 'A', school: 'smas', schoolCode: 'SMAS', capacity: 110, roomType: 'classroom', equipmentType: 'Laptop Recharge', allocationOrder: 1 },
-  { roomNumber: 'B115', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Projector',        allocationOrder: 2 },
-  { roomNumber: 'B116', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Projector',        allocationOrder: 3 },
-  { roomNumber: 'B118', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Projector',        allocationOrder: 4 },
-  { roomNumber: 'B120', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel',      allocationOrder: 5 },
-  { roomNumber: 'B121', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel',      allocationOrder: 6 },
-  { roomNumber: 'B122', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel',      allocationOrder: 7 },
-  { roomNumber: 'B123', block: 'B', school: 'smas', schoolCode: 'SMAS', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel',      allocationOrder: 8 },
-  { roomNumber: 'C301', block: 'C', school: 'smas', schoolCode: 'SMAS', capacity: 64,  roomType: 'classroom', equipmentType: 'Projector',        allocationOrder: 9 },
-
-  // ── SOED — A Block, 3rd floor ────────────────────────────────────────────
-  { roomNumber: 'A301', block: 'A', school: 'soed', schoolCode: 'SOED', capacity: 80, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1 },
-  { roomNumber: 'A302', block: 'A', school: 'soed', schoolCode: 'SOED', capacity: 60, roomType: 'classroom', equipmentType: 'Projector',   allocationOrder: 2 },
-
-  // ── SOLA — A Block, 3rd floor ────────────────────────────────────────────
-  { roomNumber: 'A303', block: 'A', school: 'sola', schoolCode: 'SOLA', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1 },
-  { roomNumber: 'A304', block: 'A', school: 'sola', schoolCode: 'SOLA', capacity: 60, roomType: 'classroom', equipmentType: 'Projector',   allocationOrder: 2 },
-  { roomNumber: 'A305', block: 'A', school: 'sola', schoolCode: 'SOLA', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 3 },
-
-  // ── SBAS — B Block, ground floor ─────────────────────────────────────────
-  { roomNumber: 'B010', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 60, roomType: 'classroom', equipmentType: 'Projector',   allocationOrder: 1 },
-  { roomNumber: 'B011', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 48, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 2 },
-  { roomNumber: 'B012', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 48, roomType: 'classroom', equipmentType: 'Projector',   allocationOrder: 3 },
-  { roomNumber: 'B013', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 48, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 4 },
-  { roomNumber: 'B014', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 48, roomType: 'classroom', equipmentType: '',            allocationOrder: 5 },
-  { roomNumber: 'B016', block: 'B', school: 'sbas', schoolCode: 'SBAS', capacity: 48, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 6 },
-
-  // ── SPRS — B Block, 3rd floor ────────────────────────────────────────────
-  { roomNumber: 'B312', block: 'B', school: 'sprs', schoolCode: 'SPRS', capacity: 48, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1 },
-
-  // ── SEMC (SEMCE) — C Block, 1st floor ────────────────────────────────────
-  // Note: department_id in the registration form is "semc"; master sheet labels it SEMCE.
-  { roomNumber: 'C104', block: 'C', school: 'semc', schoolCode: 'SEMCE', capacity: 64, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1 },
-  { roomNumber: 'C106', block: 'C', school: 'semc', schoolCode: 'SEMCE', capacity: 64, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 2 },
-
-  // ── SOAD — C Block, Design Studios ──────────────────────────────────────
-  { roomNumber: 'C201', block: 'C', school: 'soad', schoolCode: 'SOAD', capacity: 110, roomType: 'design_studio', equipmentType: 'Design Studio V',  allocationOrder: 1 },
-  { roomNumber: 'C213', block: 'C', school: 'soad', schoolCode: 'SOAD', capacity: 110, roomType: 'design_studio', equipmentType: 'Design Studio II', allocationOrder: 2 },
-
-  // ── SOMC — C Block ───────────────────────────────────────────────────────
-  { roomNumber: 'C319', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 110, roomType: 'classroom', equipmentType: 'Laptop Recharge', allocationOrder: 1 },
-  { roomNumber: 'C406', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 64,  roomType: 'classroom', equipmentType: 'Smart Panel',     allocationOrder: 2 },
-  { roomNumber: 'C407', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 64,  roomType: 'classroom', equipmentType: 'Smart Panel',     allocationOrder: 3 },
-  { roomNumber: 'C408', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 64,  roomType: 'classroom', equipmentType: 'Smart Panel',     allocationOrder: 4 },
-  { roomNumber: 'C410', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 64,  roomType: 'classroom', equipmentType: 'Smart Panel',     allocationOrder: 5 },
-  { roomNumber: 'C411', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 48,  roomType: 'classroom', equipmentType: 'Smart Panel',     allocationOrder: 6 },
-  { roomNumber: 'C415', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 110, roomType: 'classroom', equipmentType: 'Laptop Recharge', allocationOrder: 7 },
-  { roomNumber: 'C416', block: 'C', school: 'somc', schoolCode: 'SOMC', capacity: 110, roomType: 'classroom', equipmentType: 'Laptop Recharge', allocationOrder: 8 },
-
-  // ── SOET — D Block ───────────────────────────────────────────────────────
-  { roomNumber: 'D003', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 1  },
-  { roomNumber: 'D004', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 2  },
-  { roomNumber: 'D005', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 3  },
-  { roomNumber: 'D006', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 4  },
-  { roomNumber: 'D007', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 5  },
-  { roomNumber: 'D008', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 6  },
-  { roomNumber: 'D009', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 7  },
-  { roomNumber: 'D011', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 8  },
-  { roomNumber: 'D015', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 9  },
-  { roomNumber: 'D017', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 10 },
-  { roomNumber: 'D019', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 11 },
-  { roomNumber: 'D021', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 12 },
-  { roomNumber: 'D106', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 13 },
-  { roomNumber: 'D107', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 14 },
-  { roomNumber: 'D108', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 15 },
-  { roomNumber: 'D109', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 16 },
-  { roomNumber: 'D110', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 17 },
-  { roomNumber: 'D111', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 18 },
-  { roomNumber: 'D113', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 19 },
-  { roomNumber: 'D115', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 20 },
-  { roomNumber: 'D119', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 21 },
-  { roomNumber: 'D121', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 22 },
-  { roomNumber: 'D123', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 23 },
-  { roomNumber: 'D125', block: 'D', school: 'soet', schoolCode: 'SOET', capacity: 60, roomType: 'classroom', equipmentType: 'Smart Panel', allocationOrder: 24 },
-];
-
-/** Total capacity for a given school across all its rooms. */
-export function getSchoolCapacity(school: string): number {
-  return ROOM_MASTER_DATA
-    .filter(r => r.school === school)
-    .reduce((sum, r) => sum + r.capacity, 0);
-}
-
-/** All distinct school IDs present in the master data. */
-export const ALL_SCHOOLS = [...new Set(ROOM_MASTER_DATA.map(r => r.school))];

@@ -274,6 +274,62 @@ export async function publishPlanner(
       );
     }
 
+    // ── Validate Mappings & Capacities ──────────────────────────────────────
+    const allocationsSnap = await db.collection('induction_room_allocations')
+      .where('plannerId', '==', plannerId)
+      .get();
+    
+    if (allocationsSnap.empty) {
+      throw new Error('Cannot publish: planner has no room allocations.');
+    }
+
+    const uniqueRooms = new Map<string, any>();
+    
+    for (const doc of allocationsSnap.docs) {
+      const data = doc.data();
+      
+      if (!data.roomNumber) {
+        throw new Error(`Cannot publish: Missing mapped room for programme "${data.programme}" (Row ${data.rowIndex}).`);
+      }
+      
+      if (!data.capacity || data.capacity <= 0) {
+        throw new Error(`Cannot publish: Room "${data.roomNumber}" for programme "${data.programme}" has invalid capacity (${data.capacity}).`);
+      }
+      
+      if (!uniqueRooms.has(data.roomNumber)) {
+        uniqueRooms.set(data.roomNumber, {
+          roomNumber: data.roomNumber,
+          capacity: data.capacity,
+          programme: data.programme,
+          school: data.schoolCode || data.school,
+          plannerId: plannerId,
+          status: 'ACTIVE',
+          block: data.block || '',
+          floor: data.floor || '',
+          building: ''
+        });
+      }
+    }
+
+    // ── Seed Runtime Rooms ──────────────────────────────────────────────────
+    // We must safely seed rooms without overwriting existing runtime state (occupied, remainingSeats)
+    const roomsBatch = db.batch();
+    const existingRoomsSnap = await db.collection('rooms').get();
+    const existingRoomIds = new Set(existingRoomsSnap.docs.map(d => d.id));
+    
+    for (const [roomNo, roomData] of uniqueRooms.entries()) {
+      if (!existingRoomIds.has(roomNo)) {
+        // Room does not exist in runtime collection; seed it safely.
+        const roomRef = db.collection('rooms').doc(roomNo);
+        roomsBatch.set(roomRef, {
+          ...roomData,
+          occupied: 0,
+          remainingSeats: roomData.capacity,
+        });
+      }
+    }
+    await roomsBatch.commit();
+
     // ── Find current PUBLISHED planner to archive ─────────────────────────
     const activeSnap = await db.collection('induction_planners')
       .where('status', '==', 'PUBLISHED')

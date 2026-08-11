@@ -2,7 +2,7 @@ import { createLazyFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Building4, SearchNormal1, Refresh, Export, TickCircle, CloseCircle } from "iconsax-react";
-import { Users, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { Users, AlertTriangle, CheckCircle2, Clock, Edit, Trash2, X } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
@@ -12,6 +12,86 @@ import { toast } from "sonner";
 export const Route = createLazyFileRoute("/admin/rooms")({
   component: AdminRooms,
 });
+
+// ── Inline Editable Row ────────────────────────────────────────────────────────
+function RoomRow({ room, onUpdate, onDelete }: { room: Room, onUpdate: (r: any) => Promise<void>, onDelete: (id: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState(room);
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onUpdate({ ...formData, originalRoomNumber: room.roomNumber });
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const fillPct = pct(room.occupancy ?? 0, room.capacity);
+  const isFull = (room.remainingSeats ?? 0) <= 0;
+
+  if (editing) {
+    return (
+      <tr className="border-b border-gray-100 bg-white">
+        <td className="p-3"><input className="w-full text-sm border rounded px-2 py-1" value={formData.roomNumber} onChange={e => setFormData({...formData, roomNumber: e.target.value.toUpperCase()})} /></td>
+        <td className="p-3"><input className="w-full text-sm border rounded px-2 py-1" value={formData.block} onChange={e => setFormData({...formData, block: e.target.value})} /></td>
+        <td className="p-3">
+          <select className="w-full text-sm border rounded px-2 py-1" value={formData.school} onChange={e => setFormData({...formData, school: e.target.value})}>
+            {Object.keys(SCHOOL_LABELS).map(k => <option key={k} value={k}>{SCHOOL_LABELS[k]}</option>)}
+          </select>
+        </td>
+        <td className="p-3"><input type="number" className="w-full text-sm border rounded px-2 py-1" value={formData.capacity} onChange={e => setFormData({...formData, capacity: Number(e.target.value)})} /></td>
+        <td className="p-3 text-sm text-center">{room.occupancy ?? 0}</td>
+        <td className="p-3">
+          <select className="w-full text-sm border rounded px-2 py-1" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="BLOCKED">BLOCKED</option>
+            <option value="MAINTENANCE">MAINTENANCE</option>
+          </select>
+        </td>
+        <td className="p-3 flex items-center justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => { setFormData(room); setEditing(false); }} disabled={saving}>Cancel</Button>
+          <Button size="sm" className="bg-[#8a4a22] text-white" onClick={handleSave} disabled={saving}>{saving ? "..." : "Save"}</Button>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-b border-[#8a4a22]/10 hover:bg-white/40 transition-colors">
+      <td className="p-3 font-bold text-[#2c1208]">{room.roomNumber}</td>
+      <td className="p-3 text-sm font-medium text-[#7a4020]/80">Block {room.block}</td>
+      <td className="p-3">
+        <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${SCHOOL_COLORS[room.school] ?? "bg-gray-100 text-gray-600"}`}>
+          {SCHOOL_LABELS[room.school] ?? room.school.toUpperCase()}
+        </span>
+      </td>
+      <td className="p-3 text-sm text-center">{room.capacity}</td>
+      <td className="p-3 text-sm text-center">
+        <div className="flex flex-col items-center">
+          <span>{room.occupancy ?? 0} / {room.capacity}</span>
+          <div className="w-16 h-1 mt-1 rounded-full bg-gray-200 overflow-hidden">
+            <div className={`h-full ${fillPct >= 90 ? "bg-red-500" : fillPct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${fillPct}%` }} />
+          </div>
+        </div>
+      </td>
+      <td className="p-3 text-center">
+        <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${statusColor(room.status)}`}>
+          {room.status}
+        </span>
+      </td>
+      <td className="p-3 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <button onClick={() => setEditing(true)} className="p-1.5 text-[#8a4a22]/60 hover:text-[#8a4a22] hover:bg-white rounded-md transition-colors">
+            <Edit className="w-4 h-4" />
+          </button>
+          <button onClick={() => onDelete(room.roomNumber)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-white rounded-md transition-colors">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const SCHOOL_LABELS: Record<string, string> = {
@@ -68,6 +148,9 @@ function AdminRooms() {
   const [seeding, setSeeding] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
 
+  const [editingRoom, setEditingRoom] = useState<Room | "new" | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
   // ── Real-time room listener ────────────────────────────────────────────────
   useEffect(() => {
     const q = query(collection(db, "rooms"), orderBy("allocationOrder", "asc"));
@@ -86,6 +169,86 @@ function AdminRooms() {
   const adminToken = useCallback(async (): Promise<string | null> => {
     return auth.currentUser?.getIdToken() || null;
   }, []);
+
+  // ── Handle Save/Delete ───────────────────────────────────────────────────
+  const handleSaveRoom = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(formData.entries());
+    const action = editingRoom === "new" ? "create_room" : "update_room";
+    if (editingRoom !== "new" && editingRoom) {
+      payload.originalRoomNumber = editingRoom.roomNumber;
+    }
+    
+    const token = await adminToken();
+    if (!token) return toast.error("Not authenticated");
+    
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/room-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action, ...payload }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success(editingRoom === "new" ? "Room created" : "Room updated");
+        setEditingRoom(null);
+      } else {
+        toast.error(data.error || "Failed to save room");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateRoomInline = async (payload: any) => {
+    const token = await adminToken();
+    if (!token) {
+      toast.error("Not authenticated");
+      return;
+    }
+    
+    try {
+      const res = await fetch("/api/room-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "update_room", ...payload }),
+      });
+      const data = await res.json();
+      if (data.ok) toast.success("Room updated");
+      else toast.error(data.error || "Failed to update room");
+    } catch {
+      toast.error("Network error");
+    }
+  };
+
+  const handleDeleteRoom = async (roomNumber: string) => {
+    if (!confirm(`Are you sure you want to delete room ${roomNumber}?`)) return;
+    const token = await adminToken();
+    if (!token) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/room-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: "delete_room", room_number: roomNumber }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Room deleted");
+        setEditingRoom(null);
+      } else {
+        toast.error(data.error || "Failed to delete room");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ── Seed rooms ────────────────────────────────────────────────────────────
   const handleSeed = useCallback(async () => {
@@ -285,6 +448,15 @@ function AdminRooms() {
             variant="liquidGlassWhite"
             size="sm"
             className="rounded-full text-[#2c1208]"
+            onClick={() => setEditingRoom("new")}
+          >
+            + Add Room
+          </Button>
+
+          <Button
+            variant="liquidGlassWhite"
+            size="sm"
+            className="rounded-full text-[#2c1208]"
             onClick={handleExport}
             disabled={rooms.length === 0}
           >
@@ -338,67 +510,30 @@ function AdminRooms() {
           <p className="font-semibold">No rooms match your filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {filtered.map((room, i) => {
-            const fillPct = pct(room.occupancy ?? 0, room.capacity);
-            const isFull  = (room.remainingSeats ?? 0) <= 0;
-            return (
-              <motion.div
-                key={room.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.02, 0.4) }}
-                className="glass-premium-v2 rounded-2xl p-4 flex flex-col gap-2 hover:scale-[1.02] transition-transform"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-base font-bold text-[#2c1208]">{room.roomNumber}</div>
-                    <div className="text-[10px] text-[#7a4020]/60 font-medium">Block {room.block}</div>
-                  </div>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${SCHOOL_COLORS[room.school] ?? "bg-gray-100 text-gray-600"}`}>
-                    {SCHOOL_LABELS[room.school] ?? room.school.toUpperCase()}
-                  </span>
-                </div>
-
-                {/* Fill bar */}
-                <div>
-                  <div className="flex justify-between text-[10px] text-[#7a4020]/60 mb-1">
-                    <span>{room.occupancy ?? 0}/{room.capacity}</span>
-                    <span className={isFull ? "text-red-600 font-bold" : ""}>{fillPct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-[#8a4a22]/10 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        fillPct >= 90 ? "bg-red-500" :
-                        fillPct >= 70 ? "bg-amber-500" : "bg-emerald-500"
-                      }`}
-                      style={{ width: `${fillPct}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center justify-between mt-auto">
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${statusColor(room.status)}`}>
-                    {room.status}
-                  </span>
-                  {isFull ? (
-                    <CloseCircle className="w-4 h-4 text-red-500" />
-                  ) : (
-                    <TickCircle className="w-4 h-4 text-emerald-500" />
-                  )}
-                </div>
-
-                {/* Equipment */}
-                {room.equipmentType && (
-                  <div className="text-[9px] text-[#7a4020]/50 font-medium truncate">
-                    {room.equipmentType}
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+        <div className="glass-premium-v2 rounded-2xl overflow-hidden overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+              <tr className="bg-black/5 text-[#7a4020]/80 text-xs uppercase tracking-wider">
+                <th className="p-3 font-bold">Room No</th>
+                <th className="p-3 font-bold">Block</th>
+                <th className="p-3 font-bold">School</th>
+                <th className="p-3 font-bold text-center">Capacity</th>
+                <th className="p-3 font-bold text-center">Occupancy</th>
+                <th className="p-3 font-bold text-center">Status</th>
+                <th className="p-3 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((room) => (
+                <RoomRow 
+                  key={room.id} 
+                  room={room} 
+                  onUpdate={handleUpdateRoomInline}
+                  onDelete={handleDeleteRoom}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -407,6 +542,98 @@ function AdminRooms() {
         <p className="mt-6 text-center text-[10px] text-[#7a4020]/50 font-medium">
           Showing {filtered.length} of {rooms.length} rooms · Updates in real-time
         </p>
+      )}
+
+      {/* ── Room Modal ──────────────────────────────────────────────────────── */}
+      {editingRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-[#2c1208] text-lg">
+                {editingRoom === "new" ? "Add New Room" : `Edit Room: ${(editingRoom as Room).roomNumber}`}
+              </h3>
+              <button
+                onClick={() => setEditingRoom(null)}
+                className="text-gray-400 hover:text-gray-600"
+                type="button"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveRoom} className="p-4 overflow-y-auto flex-1 flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Room Number *</label>
+                  <input required name="roomNumber" defaultValue={editingRoom !== "new" ? editingRoom.roomNumber : ""} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Block</label>
+                  <input name="block" defaultValue={editingRoom !== "new" ? editingRoom.block : ""} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">School ID *</label>
+                  <select required name="school" defaultValue={editingRoom !== "new" ? editingRoom.school : ""} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm">
+                    <option value="">Select...</option>
+                    {Object.keys(SCHOOL_LABELS).map(k => <option key={k} value={k}>{SCHOOL_LABELS[k]}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">School Code</label>
+                  <input name="schoolCode" defaultValue={editingRoom !== "new" ? editingRoom.schoolCode : ""} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm uppercase" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Capacity *</label>
+                  <input required type="number" min="1" name="capacity" defaultValue={editingRoom !== "new" ? editingRoom.capacity : 60} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Allocation Order</label>
+                  <input type="number" name="allocationOrder" defaultValue={editingRoom !== "new" ? editingRoom.allocationOrder : 99} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                  <select name="status" defaultValue={editingRoom !== "new" ? editingRoom.status : "ACTIVE"} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm">
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="BLOCKED">BLOCKED</option>
+                    <option value="MAINTENANCE">MAINTENANCE</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Room Type</label>
+                  <input name="roomType" defaultValue={editingRoom !== "new" ? editingRoom.roomType : "classroom"} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Equipment Type</label>
+                <input name="equipmentType" defaultValue={editingRoom !== "new" ? editingRoom.equipmentType : ""} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-[#8a4a22]/40 outline-none text-sm" />
+              </div>
+              
+              <div className="mt-4 flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
+                {editingRoom !== "new" ? (
+                  <button 
+                    type="button" 
+                    onClick={() => handleDeleteRoom(editingRoom.roomNumber)}
+                    className="text-red-500 hover:text-red-600 text-sm font-semibold flex items-center gap-1"
+                    disabled={submitting}
+                  >
+                    <Trash2 className="w-4 h-4" /> Delete
+                  </button>
+                ) : <div />}
+                
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setEditingRoom(null)} disabled={submitting}>Cancel</Button>
+                  <Button type="submit" disabled={submitting} className="bg-[#8a4a22] text-white hover:bg-[#6a3818]">
+                    {submitting ? "Saving..." : "Save Room"}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </motion.div>
+        </div>
       )}
     </AdminShell>
   );

@@ -15,7 +15,7 @@ import { m, AnimatePresence } from "framer-motion";
 import {
   AlertCircle, Calendar, CalendarDays, Clock, Bell, User, LogOut, ChevronRight,
   CheckCircle2, ScanLine, MapPin, Megaphone,
-  UsersRound, Users, Shield, HelpCircle, Wallet, LogIn, UserPlus, Menu, X, CircleUserRound
+  UsersRound, Users, Shield, HelpCircle, Wallet, LayoutDashboard, LogIn, UserPlus, Menu, X, CircleUserRound
 } from "lucide-react";
 
 /* ─── Nav Items ─────────────────────────────────────────────────── */
@@ -41,7 +41,7 @@ const AUTH_NAV_ITEMS: NavItem[] = [
   { to: "/schedule", label: "Schedule", icon: CalendarDays },
   { to: "/clubs", label: "Clubs", icon: Users },
   { to: "/campus", label: "Campus", icon: MapPin },
-  { to: "/my-pass", label: "Wallet", icon: Wallet },
+  { to: "/my-pass", label: "Dashboard", icon: LayoutDashboard },
   { to: "/announcements", label: "Announcements", icon: Megaphone },
   { to: "/help", label: "Help", icon: HelpCircle },
 ];
@@ -463,8 +463,8 @@ export function SiteHeader() {
                     <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
                       <Link to="/my-pass" className="flex items-center justify-between w-full">
                         <span className="flex items-center gap-3">
-                          <Wallet className="w-4 h-4 opacity-70" /> 
-                          <span>Student Wallet</span>
+                          <LayoutDashboard className="w-4 h-4 opacity-70" /> 
+                          <span>Dashboard</span>
                         </span>
                         <ChevronRight className="w-4 h-4 opacity-40" />
                       </Link>
@@ -599,8 +599,8 @@ export function SiteHeader() {
                   className="flex items-center justify-between text-xs font-semibold text-[#8a4a22] hover:text-[#5a1a25] transition-colors py-1"
                 >
                   <span className="flex items-center gap-2">
-                    <Wallet className="w-4 h-4" />
-                    <span>Student Wallet</span>
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Dashboard</span>
                   </span>
                   <ChevronRight className="w-4 h-4 opacity-50" />
                 </Link>

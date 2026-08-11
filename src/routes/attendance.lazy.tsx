@@ -754,7 +754,7 @@ function AttendancePage() {
               animate={{ opacity: 1, y: 0 }} 
               className="md:hidden text-center space-y-1 mb-6"
             >
-              <h1 className="text-2xl font-bold text-primary">Attendance Pass</h1>
+              <h1 className="text-2xl font-bold text-primary">Attendance Status</h1>
               <p className="text-xs text-muted-foreground">Fast • Secure • Verified</p>
             </motion.div>
 

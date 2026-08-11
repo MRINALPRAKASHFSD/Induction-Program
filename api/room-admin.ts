@@ -17,7 +17,7 @@
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { ROOM_MASTER_DATA, allocateRoom } from '../server/room-allocation.js';
+import { allocateRoom } from '../server/room-allocation.js';
 import { verifyFirebaseIdToken, extractBearerToken } from '../server/verify-id-token.js';
 
 // ── Firebase Admin Init ────────────────────────────────────────────────────────
@@ -69,29 +69,7 @@ export default async function handler(req: any, res: any) {
   try {
     // ── SEED ────────────────────────────────────────────────────────────────
     if (action === 'seed') {
-      const { force = false } = payload;
-      let created = 0;
-      let skipped = 0;
-
-      const batch = db.batch();
-      for (const room of ROOM_MASTER_DATA) {
-        const ref = db.collection('rooms').doc(room.roomNumber);
-        if (!force) {
-          const snap = await ref.get();
-          if (snap.exists) { skipped++; continue; }
-        }
-        batch.set(ref, {
-          ...room,
-          occupancy:      0,
-          remainingSeats: room.capacity,
-          status:         'ACTIVE',
-          createdAt:      now,
-          updatedAt:      now,
-        }, { merge: !force });
-        created++;
-      }
-      await batch.commit();
-      return res.json({ ok: true, created, skipped, total: ROOM_MASTER_DATA.length });
+      return res.status(400).json({ error: 'Seeding is now performed automatically when a Planner is published.' });
     }
 
     // ── RECALCULATE (Emergency Recovery) ────────────────────────────────────
@@ -111,16 +89,29 @@ export default async function handler(req: any, res: any) {
         try {
           const result = await db.runTransaction(async (t) => {
             const roomAssignment = await allocateRoom(
-              db, t, student.department_id, studentDoc.id,
+              db, t, student.department_id, student.course || '', student.branch_id || student.program || '', studentDoc.id,
             );
             t.update(studentDoc.ref, {
-              roomAssignment,
+              roomNumber: roomAssignment.roomNumber,
+              roomId: roomAssignment.roomId,
+              plannerId: roomAssignment.plannerId,
+              allocatedAt: roomAssignment.allocatedAt,
+              allocationStatus: roomAssignment.allocationStatus,
+              block: roomAssignment.block,
+              capacity: roomAssignment.capacity,
               room_no:   roomAssignment.roomNumber ?? FieldValue.delete(),
               updatedAt: now,
             });
-            if (roomAssignment.allocationStatus === 'allocated') {
+            if (roomAssignment.allocationStatus === 'ALLOCATED') {
               const auditRef = db.collection('room_allocations').doc();
               t.set(auditRef, {
+                studentUid:     studentDoc.id,
+                room:           roomAssignment.roomNumber,
+                programme:      student.branch_id || student.program || '',
+                planner:        roomAssignment.plannerId,
+                allocatedBy:    'admin',
+                allocatedAt:    now,
+                // Legacy fields
                 enrollment_no:  studentDoc.id,
                 student_name:   student.full_name,
                 department_id:  student.department_id,
@@ -134,7 +125,7 @@ export default async function handler(req: any, res: any) {
             }
             return roomAssignment;
           });
-          if (result.allocationStatus === 'allocated') allocated++;
+          if (result.allocationStatus === 'ALLOCATED') allocated++;
           else stillPending++;
         } catch (e) {
           console.error('Recalculate error for', studentDoc.id, e);
@@ -195,19 +186,26 @@ export default async function handler(req: any, res: any) {
 
         const newAssignment = {
           roomNumber:       newRoom.roomNumber,
-          block:            newRoom.block,
+          roomId:           newRoom.roomNumber,
+          plannerId:        null, // Admin override, planner is detached
+          block:            newRoom.block || null,
           school:           newRoom.school,
-          schoolCode:       newRoom.schoolCode,
           capacity:         newRoom.capacity,
           allocatedAt:      now,
-          allocationStatus: 'allocated' as const,
+          allocationStatus: 'ALLOCATED' as const,
         };
 
         // Update student
         t.update(studentRef, {
-          roomAssignment: newAssignment,
-          room_no:        newRoom.roomNumber,
-          updatedAt:      now,
+          roomNumber:       newAssignment.roomNumber,
+          roomId:           newAssignment.roomId,
+          plannerId:        newAssignment.plannerId,
+          block:            newAssignment.block,
+          capacity:         newAssignment.capacity,
+          allocatedAt:      newAssignment.allocatedAt,
+          allocationStatus: newAssignment.allocationStatus,
+          room_no:          newRoom.roomNumber,
+          updatedAt:        now,
         });
 
         // Audit trail
@@ -251,6 +249,102 @@ export default async function handler(req: any, res: any) {
       return res.json({ ok: true });
     }
 
+    // ── CREATE ROOM ──────────────────────────────────────────────────────────
+    if (action === 'create_room') {
+      const { roomNumber, block, school, schoolCode, capacity, roomType, equipmentType, allocationOrder, status = 'ACTIVE' } = payload;
+      if (!roomNumber || !school || !capacity) return res.status(400).json({ error: 'Missing required fields' });
+      
+      const ref = db.collection('rooms').doc(roomNumber.toUpperCase().trim());
+      const snap = await ref.get();
+      if (snap.exists) return res.status(400).json({ error: 'Room already exists' });
+      
+      const newRoom = {
+        roomNumber: roomNumber.toUpperCase().trim(),
+        block: block || '',
+        school: school.toLowerCase().trim(),
+        schoolCode: (schoolCode || school).toUpperCase().trim(),
+        capacity: Number(capacity),
+        occupancy: 0,
+        remainingSeats: Number(capacity),
+        status,
+        roomType: roomType || 'classroom',
+        equipmentType: equipmentType || '',
+        allocationOrder: Number(allocationOrder) || 99,
+        createdAt: now,
+        updatedAt: now,
+      };
+      
+      await ref.set(newRoom);
+      return res.json({ ok: true, room: newRoom });
+    }
+
+    // ── UPDATE ROOM ──────────────────────────────────────────────────────────
+    if (action === 'update_room') {
+      const { originalRoomNumber, ...updates } = payload;
+      if (!originalRoomNumber) return res.status(400).json({ error: 'Missing originalRoomNumber' });
+      
+      const ref = db.collection('rooms').doc(originalRoomNumber.toUpperCase().trim());
+      const result = await db.runTransaction(async (t) => {
+        const snap = await t.get(ref);
+        if (!snap.exists) throw new Error('Room not found');
+        
+        const oldRoom = snap.data()!;
+        let newOccupancy = oldRoom.occupancy ?? 0;
+        let newRemainingSeats = oldRoom.remainingSeats ?? oldRoom.capacity;
+        
+        // If capacity changes, adjust remaining seats
+        if (updates.capacity !== undefined && updates.capacity !== oldRoom.capacity) {
+          const capDiff = Number(updates.capacity) - oldRoom.capacity;
+          newRemainingSeats = Math.max(0, newRemainingSeats + capDiff);
+        }
+        
+        const updatedData = {
+          ...oldRoom,
+          ...updates,
+          capacity: updates.capacity !== undefined ? Number(updates.capacity) : oldRoom.capacity,
+          allocationOrder: updates.allocationOrder !== undefined ? Number(updates.allocationOrder) : oldRoom.allocationOrder,
+          remainingSeats: newRemainingSeats,
+          updatedAt: now,
+        };
+        
+        // If room number changes, we need to create a new doc and delete the old one
+        if (updates.roomNumber && updates.roomNumber.toUpperCase().trim() !== originalRoomNumber.toUpperCase().trim()) {
+          const newRef = db.collection('rooms').doc(updates.roomNumber.toUpperCase().trim());
+          const newSnap = await t.get(newRef);
+          if (newSnap.exists) throw new Error('New room number already exists');
+          
+          updatedData.roomNumber = updates.roomNumber.toUpperCase().trim();
+          t.set(newRef, updatedData);
+          t.delete(ref);
+        } else {
+          t.update(ref, updatedData);
+        }
+        return { ok: true, room: updatedData };
+      });
+      return res.json(result);
+    }
+
+    // ── DELETE ROOM ──────────────────────────────────────────────────────────
+    if (action === 'delete_room') {
+      const { room_number } = payload;
+      if (!room_number) return res.status(400).json({ error: 'Missing room_number' });
+      
+      const ref = db.collection('rooms').doc(room_number.toUpperCase().trim());
+      const result = await db.runTransaction(async (t) => {
+        const snap = await t.get(ref);
+        if (!snap.exists) throw new Error('Room not found');
+        
+        const room = snap.data()!;
+        if ((room.occupancy ?? 0) > 0) {
+          throw new Error('Cannot delete room with existing occupancy. Reassign students first.');
+        }
+        
+        t.delete(ref);
+        return { ok: true };
+      });
+      return res.json(result);
+    }
+
     // ── RESET (Super Admin, requires confirmation token) ─────────────────────
     if (action === 'reset') {
       const { confirm } = payload;
@@ -278,14 +372,15 @@ export default async function handler(req: any, res: any) {
       const studentBatch = db.batch();
       for (const doc of studentsSnap.docs) {
         studentBatch.update(doc.ref, {
-          roomAssignment: {
-            roomNumber: null, block: null,
-            school: doc.data().department_id ?? '',
-            schoolCode: (doc.data().department_id ?? '').toUpperCase(),
-            capacity: null, allocatedAt: now,
-            allocationStatus: 'pending',
-          },
+          roomNumber: null,
+          roomId: null,
+          plannerId: null,
+          block: null,
+          capacity: null,
+          allocatedAt: now,
+          allocationStatus: 'PENDING',
           room_no: FieldValue.delete(),
+          roomAssignment: FieldValue.delete(), // clear old legacy field if present
           updatedAt: now,
         });
       }

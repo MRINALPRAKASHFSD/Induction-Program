@@ -23,6 +23,7 @@ try {
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
     });
+    getFirestore().settings({ ignoreUndefinedProperties: true });
   }
   firebaseInitialized = true;
 } catch (e: any) {
@@ -193,6 +194,19 @@ export default async function handler(req: any, res: any) {
         }
         if (existing?.auth_uid && existing.auth_uid === auth_uid) {
           // Same device/UID, idempotent
+          if (existing?.roomNumber || existing?.room_no) {
+             const roomAssignment = {
+                roomNumber: existing.roomNumber || existing.room_no,
+                roomId: existing.roomId || existing.room_no,
+                plannerId: existing.plannerId || null,
+                block: existing.block || null,
+                school: existing.department_id,
+                capacity: existing.capacity || null,
+                allocatedAt: existing.allocatedAt || existing.created_at,
+                allocationStatus: existing.allocationStatus || 'ALLOCATED'
+             };
+             return { ok: true, student_id: normalizedAppNo, duplicate: true, roomAssignment };
+          }
           db.collection('security_events').add({
             request_id,
             event_type: 'DUPLICATE_ACCOUNT',
@@ -215,38 +229,59 @@ export default async function handler(req: any, res: any) {
 
       // ── Room allocation (same as register.ts) ────────────────────────────
       const roomAssignment = await allocateRoom(
-        db, t, participant.school || '', normalizedAppNo,
+        db, t, participant.school || '', participant.course || '', participant.program || '', normalizedAppNo,
       );
 
       // ── Write student document from induction participant data ────────────
-      t.set(studentRef, {
-        id:             normalizedAppNo,
-        application_number: normalizedAppNo,
-        full_name:      participant.student_name || '',
-        course:         participant.course || '',
-        department_id:  participant.school || '',
-        program:        participant.program || '',
-        auth_uid:       auth_uid || null,
-        points:         0,
-        roomAssignment,
-        room_no:        roomAssignment.roomNumber ?? undefined,
-        registration_source: 'induction_fast_track',
-        registration_metadata: {
-          ip_hash: ipHash,
-          device_hash: deviceHash,
-          user_agent_hash: deviceHash,
-          registered_at: now,
-          registered_via: 'fast_track',
-          dataset_id: participant.dataset_id || null,
-          schema_version: '1.0'
-        },
-        created_at:     now,
-      });
+      const studentPayload = Object.fromEntries(
+        Object.entries({
+          id:             normalizedAppNo,
+          enrollment_no:  normalizedAppNo,
+          full_name:      participant.student_name,
+          department_id:  participant.school || '',
+          branch_id:      participant.program || '',
+          course:         participant.course || '',
+          year:           1,
+          points:         0,
+          created_at:     now,
+          auth_uid,
+          
+          roomNumber:     roomAssignment.roomNumber,
+          roomId:         roomAssignment.roomId,
+          plannerId:      roomAssignment.plannerId,
+          block:          roomAssignment.block,
+          capacity:       roomAssignment.capacity,
+          allocatedAt:    roomAssignment.allocatedAt,
+          allocationStatus: roomAssignment.allocationStatus,
+          
+          // Legacy fields for backward compat
+          room_no:        roomAssignment.roomNumber ?? null,
+          registration_source: 'induction_fast_track',
+          registration_metadata: {
+            ip_hash: ipHash,
+            device_hash: deviceHash,
+            user_agent: uaRaw,
+            registered_at: now,
+            registered_via: 'fast_track',
+            dataset_id: participant.dataset_id || null,
+            schema_version: '1.0'
+          }
+        }).filter(([_, v]) => v !== undefined)
+      );
+
+      t.set(studentRef, studentPayload, { merge: true });
 
       // ── Audit log: room_allocations ──────────────────────────────────────
-      if (roomAssignment.allocationStatus === 'allocated') {
+      if (roomAssignment.allocationStatus === 'ALLOCATED') {
         const auditRef = db.collection('room_allocations').doc();
         t.set(auditRef, {
+          studentUid:     normalizedAppNo,
+          room:           roomAssignment.roomNumber,
+          programme:      participant.program || '',
+          planner:        roomAssignment.plannerId,
+          allocatedBy:    'system',
+          allocatedAt:    now,
+          // Legacy fields
           application_number: normalizedAppNo,
           student_name:   participant.student_name || '',
           department_id:  participant.school || '',

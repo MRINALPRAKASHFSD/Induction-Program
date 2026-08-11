@@ -19,6 +19,7 @@ try {
         privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       }),
     });
+    getFirestore().settings({ ignoreUndefinedProperties: true });
   }
   firebaseInitialized = true;
 } catch (e: any) {
@@ -186,6 +187,20 @@ export default async function handler(req: any, res: any) {
           // Legacy user claiming their account -> allow update
         } else {
           // Same UID (device switch / spam click) -> safe idempotency bypass
+          // BUT IF they already have a room, return it immediately without reallocation!
+          if (existing?.roomNumber || existing?.room_no) {
+             const roomAssignment = {
+                roomNumber: existing.roomNumber || existing.room_no,
+                roomId: existing.roomId || existing.room_no,
+                plannerId: existing.plannerId || null,
+                block: existing.block || null,
+                school: existing.department_id,
+                capacity: existing.capacity || null,
+                allocatedAt: existing.allocatedAt || existing.created_at,
+                allocationStatus: existing.allocationStatus || 'ALLOCATED'
+             };
+             return { ok: true, student_id: enrollmentKey, duplicate: true, roomAssignment };
+          }
           return { ok: true, student_id: enrollmentKey, duplicate: true };
         }
       }
@@ -200,16 +215,24 @@ export default async function handler(req: any, res: any) {
       // ── Room Allocation (within this same transaction) ──────────────────
       // allocateRoom never throws — returns allocationStatus: 'pending' on error.
       const roomAssignment = await allocateRoom(
-        db, t, parsed.department_id, enrollmentKey,
+        db, t, parsed.department_id, parsed.course, parsed.branch_id, enrollmentKey,
       );
 
       // ── Writes ──────────────────────────────────────────────────────────
-      const studentPayload = {
-        ...publicData,
-        roomAssignment,
-        // Legacy flat field for backward compat with admin exports + local-db
-        room_no: roomAssignment.roomNumber ?? undefined,
-      };
+      const studentPayload = Object.fromEntries(
+        Object.entries({
+          ...publicData,
+          roomNumber: roomAssignment.roomNumber,
+          roomId: roomAssignment.roomId,
+          plannerId: roomAssignment.plannerId,
+          allocatedAt: roomAssignment.allocatedAt,
+          allocationStatus: roomAssignment.allocationStatus,
+          block: roomAssignment.block,
+          capacity: roomAssignment.capacity,
+          // Legacy flat field for backward compat with admin exports + local-db
+          room_no: roomAssignment.roomNumber ?? null,
+        }).filter(([_, v]) => v !== undefined)
+      );
 
       if (studentSnap.exists) {
         t.set(studentRef, { ...studentPayload, auth_uid: auth_uid || null }, { merge: true });
@@ -225,9 +248,16 @@ export default async function handler(req: any, res: any) {
       }
 
       // ── Audit log: room_allocations ─────────────────────────────────────
-      if (roomAssignment.allocationStatus === 'allocated') {
+      if (roomAssignment.allocationStatus === 'ALLOCATED') {
         const auditRef = db.collection('room_allocations').doc();
         t.set(auditRef, {
+          studentUid:     enrollmentKey,
+          room:           roomAssignment.roomNumber,
+          programme:      parsed.branch_id || '',
+          planner:        roomAssignment.plannerId,
+          allocatedBy:    'system',
+          allocatedAt:    now,
+          // Legacy fields
           enrollment_no:  enrollmentKey,
           student_name:   parsed.full_name,
           department_id:  parsed.department_id,

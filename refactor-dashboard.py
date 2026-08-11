@@ -1,21 +1,11 @@
-import { createLazyFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
-import {
-  CalendarDays, Zap, ArrowRight, ShieldCheck, Bell, Check,
-  Copy, TrendingUp, Percent, Trophy, Star, Users, Clock,
-  Wallet, ScanLine, Compass, Sunrise, Handshake, Globe, Landmark, Library,
-  MessageCircle, Lock, CheckCircle2, History, BookOpen, MapPin, ChevronRight
-} from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
-import { localDb, type LocalStudent } from "@/lib/local-db";
-import { lookupStudent } from "@/lib/students.functions";
-import { listClubs, listClubRegistrations } from "@/lib/admin.functions";
-import { CLUB_REGISTRATION_OPEN_DATE, isClubRegistrationOpen } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { auth } from "@/lib/firebase/config";
+import re
 
+with open("src/routes/my-pass.lazy.tsx", "r", encoding="utf-8") as f:
+    content = f.read()
+
+# Replace Imports
+# Find the line `import { auth } from "@/lib/firebase/config";`
+import_injection = """
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { IdentityPanel } from "@/components/dashboard/identity-panel";
 import { DashboardHero } from "@/components/dashboard/dashboard-hero";
@@ -27,215 +17,13 @@ import { RoomCard } from "@/components/dashboard/room-card";
 import { InductionProgress } from "@/components/dashboard/induction-progress";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { LayoutDashboard } from "lucide-react";
+"""
+content = content.replace('import { auth } from "@/lib/firebase/config";', 'import { auth } from "@/lib/firebase/config";\n' + import_injection)
 
+# Replace Render
+render_start = content.find("  /* ── Not Registered State")
 
-// ── Planner API helper ────────────────────────────────────────────────────────
-async function fetchPlannerDashboard() {
-  const user = await new Promise<any>((resolve) => {
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-      unsubscribe();
-      resolve(u);
-    });
-  });
-  if (!user) return null;
-  try {
-    const token = await user.getIdToken();
-    const res = await fetch('/api/planner-student-dashboard', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
-
-// ── Time helpers ──────────────────────────────────────────────────────────────
-function timeToMin(t: string): number {
-  const [h, m] = (t || '00:00').split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
-}
-function nowISTMinutes(): number {
-  const now = new Date();
-  const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  return ist.getHours() * 60 + ist.getMinutes();
-}
-function formatTime(t: string): string {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hr = h % 12 || 12;
-  return `${hr}:${String(m).padStart(2,'0')} ${period}`;
-}
-function formatDate(iso: string): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', weekday: 'short' });
-}
-
-export const Route = createLazyFileRoute("/my-pass")({
-  // @ts-expect-error - Route type options do not include head in this version
-  head: () => ({
-    meta: [
-      { title: "Student Dashboard · KRMU Induction" },
-      { name: "description", content: "Your KRMU Induction Student Dashboard — ID, attendance, rewards, and achievements." },
-    ],
-  }),
-  component: MyPassPage,
-});
-
-/* ─── Mouse Tilt Hook (GPU-only, no layout thrash) ───────────────── */
-function useTilt(ref: React.RefObject<HTMLDivElement | null>) {
-  const [style, setStyle] = useState<React.CSSProperties>({});
-
-  const onMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    const rotateX = (0.5 - y) * 8;
-    const rotateY = (x - 0.5) * 8;
-    setStyle({
-      transform: `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`,
-      transition: 'transform 0.1s ease-out',
-    });
-  }, [ref]);
-
-  const onLeave = useCallback(() => {
-    setStyle({
-      transform: 'perspective(800px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
-      transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
-    });
-  }, []);
-
-  return { style, onMove, onLeave };
-}
-
-/* ─── Badge Data (UI shells — connect to backend later) ──────────── */
-const BADGES = [
-  { id: "explorer", name: "Explorer", icon: Compass, color: "text-blue-500", bg: "bg-blue-500/10", desc: "Visit 3 campus zones", unlocked: false },
-  { id: "early-bird", name: "Early Bird", icon: Sunrise, color: "text-amber-500", bg: "bg-amber-500/10", desc: "First scan of the day", unlocked: true },
-  { id: "social", name: "Social Butterfly", icon: Users, color: "text-purple-500", bg: "bg-purple-500/10", desc: "Join 3+ clubs", unlocked: false },
-  { id: "perfect", name: "Perfect Week", icon: Star, color: "text-yellow-500", bg: "bg-yellow-500/10", desc: "100% attendance", unlocked: false },
-  { id: "helper", name: "Helping Hand", icon: Handshake, color: "text-emerald-500", bg: "bg-emerald-500/10", desc: "Help a peer register", unlocked: false },
-  { id: "champion", name: "Champion", icon: Trophy, color: "text-rose-500", bg: "bg-rose-500/10", desc: "Top 10 leaderboard", unlocked: false },
-];
-
-function MyPassPage() {
-  const [profile, setProfile] = useState<LocalStudent | null>(null);
-  const [livePoints, setLivePoints] = useState<number | null>(null);
-  const [liveRoomAssignment, setLiveRoomAssignment] = useState<any | null>(null);
-  const [liveStudent, setLiveStudent] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [clubs, setClubs] = useState<any[]>([]);
-  const [registrations, setRegistrations] = useState<any[]>([]);
-  const [planner, setPlanner] = useState<any | null>(null);
-  const [plannerLoading, setPlannerLoading] = useState(true);
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const tilt = useTilt(cardRef);
-
-  useEffect(() => {
-    const p = localDb.getStudentProfile();
-    const savedStudentId = localStorage.getItem("krmu_verified_student_id");
-    const enrollmentNo = p?.enrollment_no || savedStudentId;
-
-    if (enrollmentNo) {
-      if (!p) {
-        lookupStudent({ data: { enrollment_no: enrollmentNo } })
-          .then((res: any) => {
-            if (res?.student) {
-              setProfile({
-                id: res.student.id,
-                full_name: res.student.name || "Student",
-                enrollment_no: res.student.enrollment_no || enrollmentNo,
-                course: res.student.course || "KRMU",
-                branch: res.student.department || "General",
-                semester: res.student.semester || "1st",
-                year: res.student.year || 1,
-              } as any);
-            }
-          })
-          .catch(console.error);
-      } else {
-        setProfile(p);
-      }
-
-      // Fetch live points + room assignment from server
-      lookupStudent({ data: { enrollment_no: enrollmentNo } })
-        .then((res: any) => {
-          if (res.student) {
-            setLiveStudent(res.student);
-            setLivePoints(res.student.points || 0);
-            // Check for flat room properties first (newer schema) or nested (older schema)
-            const ra = res.student.roomAssignment;
-            if (res.student.roomNumber && res.student.allocationStatus) {
-              setLiveRoomAssignment({
-                allocationStatus: res.student.allocationStatus,
-                roomNumber: res.student.roomNumber,
-                block: res.student.block || '?',
-                capacity: res.student.capacity || '?',
-                plannerId: res.student.plannerId,
-              });
-            } else if (ra) {
-              setLiveRoomAssignment(ra);
-            } else if (res.student.room_no || p?.room_no) {
-              // Fallback for older records
-              setLiveRoomAssignment({
-                allocationStatus: 'ALLOCATED',
-                roomNumber: res.student.room_no || p?.room_no,
-                block: res.student.block || (p as any)?.block || '?',
-                capacity: res.student.capacity || '?'
-              });
-            } else {
-              setLiveRoomAssignment({ allocationStatus: 'PENDING' });
-            }
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false));
-
-      // Fetch clubs and registrations
-      Promise.all([
-        listClubs().catch(() => ({ clubs: [] })),
-        listClubRegistrations().catch(() => []),
-      ]).then(([clubsRes, allRegs]: [any, any[]]) => {
-        const allClubs = Array.isArray(clubsRes?.clubs) ? clubsRes.clubs : [];
-        setClubs(allClubs);
-        if (enrollmentNo && Array.isArray(allRegs)) {
-          const myRegs = allRegs.filter(
-            (r: any) =>
-              r.enrollment_no === enrollmentNo ||
-              r.student_id === enrollmentNo ||
-              (liveStudent && r.student_id === liveStudent.id)
-          );
-          setRegistrations(myRegs);
-        }
-      });
-    } else {
-      setLoading(false);
-    }
-
-    // Fetch planner dashboard (independent of student lookup)
-    fetchPlannerDashboard()
-      .then(data => setPlanner(data))
-      .catch(() => setPlanner(null))
-      .finally(() => setPlannerLoading(false));
-  }, []);
-
-  const copyEnrollment = useCallback(() => {
-    if (!profile?.enrollment_no) return;
-    navigator.clipboard.writeText(profile.enrollment_no).then(() => {
-      setCopied(true);
-      toast.success("Student ID copied!");
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      toast.error("Failed to copy");
-    });
-  }, [profile]);
-
-  const userInitial = profile?.full_name?.[0]?.toUpperCase() || "?";
-
-  /* ── Not Registered State ─────────────────────────────────────── */
+new_render = """  /* ── Not Registered State ─────────────────────────────────────── */
   if (!profile && !loading) {
     return (
       <DashboardShell>
@@ -296,6 +84,9 @@ function MyPassPage() {
           <div className="lg:col-span-2 flex flex-col gap-[var(--dashboard-gap)]">
             <IdentityPanel 
               profile={profile} 
+              onOpenQR={() => {
+                toast.success("QR feature coming soon!");
+              }} 
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--dashboard-gap)]">
@@ -440,7 +231,7 @@ function MyPassPage() {
           </div>
 
           {/* Sidebar Column (Right - 1/3) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-col gap-[var(--dashboard-gap)]">
+          <div className="flex flex-col gap-[var(--dashboard-gap)]">
             <QuickStatus profile={profile} />
             <QuickActions />
             <InductionProgress />
@@ -472,3 +263,9 @@ function MyPassPage() {
     </>
   );
 }
+"""
+
+with open("src/routes/my-pass.lazy.tsx", "w", encoding="utf-8") as f:
+    f.write(content[:render_start] + new_render)
+
+print("Update complete")

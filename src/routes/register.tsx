@@ -408,11 +408,11 @@ function RegisterPage() {
               className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
               <SuccessBurst
                 title="Registration Complete!"
-                subtitle="Your account has been activated. Your digital pass is ready."
+                subtitle="Your account has been activated. Your dashboard is ready."
               />
               <div className="mt-8 grid gap-3">
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Digital Pass</Link>
+                  <Link to="/my-pass">View Dashboard</Link>
                 </Button>
                 <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium h-12">
                   <Link to="/">Back to Home</Link>
@@ -446,7 +446,7 @@ function RegisterPage() {
               </p>
               <div className="mt-4 grid gap-3">
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Digital Pass</Link>
+                  <Link to="/my-pass">View Dashboard</Link>
                 </Button>
                 <Button
                   variant="liquidGlassDark"
@@ -603,7 +603,7 @@ function RegisterPage() {
                 </div>
                 <h1 className="text-2xl font-bold mb-3">Your account has already been activated.</h1>
                 <p className="text-muted-foreground mb-8 text-[15px]">
-                  Hi {inductionRecord.student_name}, your induction registration is complete. Sign in to access your digital pass.
+                  Hi {inductionRecord.student_name}, your induction registration is complete. Sign in to access your dashboard.
                 </p>
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="w-full rounded-full font-semibold h-12">
                   <Link to="/login">Continue to Sign In</Link>
@@ -746,8 +746,8 @@ function RegisterPage() {
                       <Ticket className="h-6 w-6 text-primary" />
                     </div>
                     <div className="pt-0.5">
-                      <h3 className="font-bold text-foreground text-[16px] tracking-tight">Digital Entry Pass</h3>
-                      <p className="text-[14px] text-muted-foreground mt-1.5 leading-relaxed pr-2 text-pretty">Secure your smart wallet pass for frictionless campus entry and check-ins.</p>
+                      <h3 className="font-bold text-foreground text-[16px] tracking-tight">Dashboard</h3>
+                      <p className="text-[14px] text-muted-foreground mt-1.5 leading-relaxed pr-2 text-pretty">Secure your student dashboard for frictionless campus entry and check-ins.</p>
                     </div>
                   </div>
                   

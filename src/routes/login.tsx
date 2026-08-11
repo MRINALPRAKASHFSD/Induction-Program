@@ -65,11 +65,11 @@ function LoginPage() {
               </div>
               <h1 className="text-2xl font-bold text-foreground mb-3">You're Signed In</h1>
               <p className="text-muted-foreground mb-8">
-                You're already logged in. Head to your wallet or sign out to switch accounts.
+                You're already logged in. Head to your dashboard or sign out to switch accounts.
               </p>
               <div className="grid gap-3">
                 <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Digital Pass</Link>
+                  <Link to="/my-pass">View Dashboard</Link>
                 </Button>
                 <Button variant="liquidGlassDark" size="lg" className="rounded-full font-medium h-12"
                   onClick={async () => { await signOut(auth); localStorage.clear(); window.location.reload(); }}>
@@ -175,7 +175,7 @@ function LoginPage() {
               </div>
               <div className="relative z-10 grid gap-8 mt-7">
                 {([
-                  { icon: Ticket,   title: "Digital Entry Pass",  desc: "Secure your smart wallet pass for frictionless campus entry." },
+                  { icon: Ticket,   title: "Dashboard",  desc: "Secure your student dashboard for frictionless campus entry." },
                   { icon: QrCode,   title: "QR Attendance",       desc: "Lightning-fast event check-ins from your mobile device." },
                   { icon: Sparkles, title: "Exclusive Access",    desc: "Verified access to premium clubs and networking events." },
                 ] as const).map(({ icon: Icon, title, desc }) => (

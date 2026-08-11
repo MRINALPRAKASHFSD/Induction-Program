@@ -482,20 +482,7 @@ export function parsePlannerExcel(
     }
   }
 
-  // Validation Check 1: Duplicate mappingKey → multiple rooms (WARNING because schools can have multiple induction rooms)
-  const mappingKeySeen = new Map<string, number[]>();
-  for (const a of roomAllocations) {
-    const existing = mappingKeySeen.get(a.mappingKey) ?? [];
-    existing.push(a.rowIndex);
-    mappingKeySeen.set(a.mappingKey, existing);
-  }
-  for (const [key, rows] of mappingKeySeen.entries()) {
-    if (rows.length > 1) {
-      addError('WARNING', cm.roomAllocation.sheet, rows[0], 'mappingKey',
-        'DUPLICATE_ROOM_MAPPING',
-        `Mapping key "${key}" is assigned to ${rows.length} rooms (rows: ${rows.join(', ')})`);
-    }
-  }
+
 
   // ── Parse Schedule(s) ──────────────────────────────────────────────────────
   const sessions: ParsedSession[] = [];
@@ -678,6 +665,7 @@ export function parsePlannerExcel(
       const isParallelActivity = (name: string) =>
         /full\s*day|documentation|feedback|erp|industry|visit/i.test(name);
       if (timeToMinutes(curr.startTime) < timeToMinutes(prev.endTime) &&
+          curr.sessionName !== prev.sessionName &&
           !isParallelActivity(curr.sessionName) &&
           !isParallelActivity(prev.sessionName)) {
         addError('WARNING', cm.schedule.sheet, curr.rowIndex, 'Start Time',
@@ -696,10 +684,11 @@ export function parsePlannerExcel(
     docDaysByScope.set(key, arr);
   }
   for (const [scopeKey, docSessions] of docDaysByScope.entries()) {
-    if (docSessions.length > 1) {
+    const uniqueDays = new Set(docSessions.map(s => s.dayNumber));
+    if (uniqueDays.size > 1) {
       addError('WARNING', cm.schedule.sheet, docSessions[1].rowIndex, 'Documentation Day',
         'DUPLICATE_DOC_DAY',
-        `Scope "${scopeKey}" has ${docSessions.length} documentation days (rows: ${docSessions.map(s => s.rowIndex).join(', ')})`);
+        `Scope "${scopeKey}" has documentation sessions scheduled across multiple days (${Array.from(uniqueDays).join(', ')}) (rows: ${docSessions.map(s => s.rowIndex).join(', ')})`);
     }
   }
 

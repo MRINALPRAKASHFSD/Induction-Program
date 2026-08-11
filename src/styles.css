@@ -81,6 +81,17 @@
   --gradient-card: linear-gradient(180deg, var(--card) 0%, oklch(0.98 0.01 60) 100%);
   --shadow-elegant: 0 10px 40px -10px color-mix(in srgb, var(--primary) 30%, transparent);
   --shadow-glow: 0 0 60px color-mix(in srgb, var(--accent) 40%, transparent);
+
+  /* Dashboard Design Tokens */
+  --dashboard-radius: 28px;
+  --dashboard-shadow: 0 8px 32px 0 rgba(138, 74, 34, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --dashboard-card-bg: rgba(255, 255, 255, 0.4);
+  --dashboard-border: 1px solid rgba(255, 255, 255, 0.4);
+  --dashboard-spacing: clamp(16px, 4vw, 32px);
+  --dashboard-gap: clamp(16px, 3vw, 24px);
+  --dashboard-padding: clamp(20px, 4vw, 28px);
+  --dashboard-glass-blur: 16px;
+  --dashboard-transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark {
@@ -106,6 +117,11 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.78 0.14 75);
+
+  /* Dashboard Dark Mode Tokens */
+  --dashboard-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --dashboard-card-bg: rgba(20, 20, 20, 0.6);
+  --dashboard-border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 @layer base {

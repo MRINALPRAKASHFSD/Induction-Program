@@ -115,9 +115,16 @@ export default async function handler(req: any, res: any) {
     const plannerId     = activePlanner.plannerId;
 
     // ── Step 2: Get student record (enrollment + course + branch) ──────────
-    // Student is identified by auth_uid
+    // Student is identified by auth_uid, which might be 'email:xxx' or just 'xxx' due to a bug in registration
+    const uidsToTry = [studentUid];
+    if (studentUid.startsWith('email:')) {
+      uidsToTry.push(studentUid.replace('email:', ''));
+    } else {
+      uidsToTry.push(`email:${studentUid}`);
+    }
+
     const studentSnap = await db.collection('students')
-      .where('auth_uid', '==', studentUid)
+      .where('auth_uid', 'in', uidsToTry)
       .limit(1)
       .get();
 
