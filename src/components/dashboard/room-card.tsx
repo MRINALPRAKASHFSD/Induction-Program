@@ -1,4 +1,4 @@
-import { MapPin, CheckCircle2 } from "lucide-react";
+import { MapPin, CheckCircle2, DoorOpen, Users } from "lucide-react";
 
 interface RoomCardProps {
   roomAssignment: any | null;
@@ -11,54 +11,105 @@ export function RoomCard({ roomAssignment, plannerRoom, isLoading }: RoomCardPro
   
   if (isLoading) {
     return (
-      <div className="rounded-[var(--dashboard-radius)] p-[var(--dashboard-padding)] bg-[var(--dashboard-card-bg)] border-[var(--dashboard-border)] shadow-[var(--dashboard-shadow)] backdrop-blur-[var(--dashboard-glass-blur)] animate-pulse flex flex-col justify-center items-center h-full min-h-[160px]">
+      <div className="rounded-[24px] p-8 bg-[var(--dashboard-card-bg)] border-[var(--dashboard-border)] shadow-[var(--dashboard-shadow)] backdrop-blur-[var(--dashboard-glass-blur)] animate-pulse flex flex-col justify-center items-center h-full min-h-[160px]">
         <div className="h-10 w-24 bg-black/10 dark:bg-white/10 rounded-xl mb-3" />
         <div className="h-4 w-32 bg-black/5 dark:bg-white/5 rounded-md" />
       </div>
     );
   }
 
+  const roomData = plannerRoom || (legacyRoom ? roomAssignment : null);
+
+  if (!roomData && !isLoading && roomAssignment?.allocationStatus !== 'PENDING' && roomAssignment?.allocationStatus !== 'pending') {
+    return (
+      <div className="rounded-[24px] p-6 bg-white/60 dark:bg-zinc-900/60 border border-black/5 dark:border-white/5 shadow-sm backdrop-blur-xl flex flex-col justify-between h-full relative overflow-hidden group">
+        <div className="flex items-center justify-between mb-4 relative z-10">
+          <div>
+            <h3 className="font-serif font-bold text-xl text-foreground">Room Allocation</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Basecamp for Induction</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-500 group-hover:scale-110 transition-transform duration-300">
+            <MapPin className="w-5 h-5" />
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+           <div className="text-lg font-serif font-bold text-muted-foreground">Not Allocated</div>
+        </div>
+      </div>
+    );
+  }
+
+  const roomNumStr = roomData?.roomNumber ? String(roomData.roomNumber) : "";
+  const floorIndicator = roomData?.floor ? 
+    (String(roomData.floor).includes('Floor') ? roomData.floor : `${roomData.floor}${roomData.floor === 1 ? 'st' : roomData.floor === 2 ? 'nd' : roomData.floor === 3 ? 'rd' : 'th'} Floor`) :
+    (roomNumStr.length >= 3 ? (roomNumStr[1] === '0' ? 'Ground' : roomNumStr[1] === '1' ? '1st' : roomNumStr[1] === '2' ? '2nd' : roomNumStr[1] === '3' ? '3rd' : `${roomNumStr[1]}th`) + " Floor" : "Unknown Floor");
+
   return (
-    <div className="rounded-[var(--dashboard-radius)] p-[var(--dashboard-padding)] bg-[var(--dashboard-card-bg)] border-[var(--dashboard-border)] shadow-[var(--dashboard-shadow)] backdrop-blur-[var(--dashboard-glass-blur)] flex flex-col justify-between h-full relative overflow-hidden group">
-      <div className="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500" />
+    <div className="rounded-[24px] p-6 bg-white/60 dark:bg-zinc-900/60 border border-black/5 dark:border-white/5 shadow-sm backdrop-blur-xl flex flex-col justify-between h-full relative overflow-hidden group">
       
-      <div className="flex items-center justify-between mb-2 relative z-10">
-        <h3 className="font-semibold text-lg text-foreground">Room Allocation</h3>
-        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-500">
+      {/* Decorative gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+      <div className="absolute -right-12 -top-12 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl group-hover:bg-amber-500/20 transition-colors duration-700" />
+      
+      <div className="flex items-center justify-between mb-4 relative z-10">
+        <div>
+          <h3 className="font-serif font-bold text-xl text-foreground">Room Allocation</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Basecamp for Induction</p>
+        </div>
+        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-500 group-hover:scale-110 transition-transform duration-300">
           <MapPin className="w-5 h-5" />
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center relative z-10 mt-2">
-        {plannerRoom ? (
+      <div className="flex-1 flex flex-col justify-end relative z-10">
+        {roomData ? (
           <div>
-            <div className="text-4xl text-primary font-bold tracking-tight">{plannerRoom.roomNumber}</div>
-            <div className="text-sm font-medium text-muted-foreground mt-2 flex flex-wrap gap-x-2 gap-y-1">
-              {plannerRoom.block && <span>Block {plannerRoom.block}</span>}
-              {plannerRoom.floor && <span>· {String(plannerRoom.floor).includes('Floor') ? plannerRoom.floor : `${plannerRoom.floor}${plannerRoom.floor === 1 ? 'st' : plannerRoom.floor === 2 ? 'nd' : plannerRoom.floor === 3 ? 'rd' : 'th'} Floor`}</span>}
-              {plannerRoom.capacity && <span>· Capacity {plannerRoom.capacity}</span>}
+            <div className="flex items-end gap-3 mb-4">
+              <div className="text-5xl text-foreground font-serif font-bold tracking-tight">{roomNumStr}</div>
+              <div className="mb-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 flex items-center gap-1 bg-emerald-500/10 px-2 py-1 rounded-full">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Allocated
+              </div>
             </div>
-            <div className="text-xs font-semibold text-green-600 dark:text-green-500 mt-3 flex items-center gap-1.5 bg-green-500/10 px-3 py-1.5 rounded-full inline-flex">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Induction Room
-            </div>
-          </div>
-        ) : legacyRoom ? (
-          <div>
-            <div className="text-4xl text-primary font-bold tracking-tight">{roomAssignment.roomNumber}</div>
-            <div className="text-sm font-medium text-muted-foreground mt-2 flex flex-wrap gap-x-2 gap-y-1">
-              <span>Block {roomAssignment.block || roomAssignment.roomNumber[0]}</span>
-              {roomAssignment.roomNumber.length >= 3 && <span>· {roomAssignment.roomNumber[1] === '0' ? 'Ground' : roomAssignment.roomNumber[1] === '1' ? '1st' : roomAssignment.roomNumber[1] === '2' ? '2nd' : roomAssignment.roomNumber[1] === '3' ? '3rd' : `${roomAssignment.roomNumber[1]}th`} Floor</span>}
-              {roomAssignment.capacity && <span>· Capacity {roomAssignment.capacity}</span>}
+            
+            <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-black/5 dark:border-white/5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0">
+                  <DoorOpen className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Location</p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {roomData.block ? `Block ${roomData.block}` : `Block ${roomNumStr[0] || '?'}`}
+                    <br />
+                    <span className="text-muted-foreground font-medium text-xs">
+                      {floorIndicator}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Capacity</p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">
+                    {roomData.capacity || '40'} Seats
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         ) : roomAssignment?.allocationStatus === 'PENDING' || roomAssignment?.allocationStatus === 'pending' ? (
-          <div className="flex flex-col items-center justify-center py-4">
-             <div className="text-lg font-bold text-muted-foreground">Pending Allocation</div>
-             <p className="text-xs text-muted-foreground/70 mt-1 text-center">Your room will be assigned soon</p>
+          <div className="flex flex-col items-center justify-center py-6">
+             <div className="w-12 h-12 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin mb-3" />
+             <div className="text-lg font-serif font-bold text-foreground">Pending Allocation</div>
+             <p className="text-xs font-medium text-muted-foreground mt-1 text-center">Your room will be assigned soon</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-4 text-center">
-             <div className="text-lg font-bold text-muted-foreground">Not Allocated</div>
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+             <div className="text-lg font-serif font-bold text-muted-foreground">Not Allocated</div>
           </div>
         )}
       </div>

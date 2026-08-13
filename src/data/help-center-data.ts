@@ -192,7 +192,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
   },
   {
     id: 'REGISTRATION_DUPLICATE_ERROR',
-    title: 'Resolving "Enrollment Number Already Registered" errors',
+    title: 'Resolving "Application Number Already Registered" errors',
     categoryId: 'registration',
     summary: 'Steps to take if the system reports that your student ID or email is already registered.',
     difficulty: 'Medium',
@@ -832,7 +832,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         description: 'You can update your mobile number and emergency contact anytime from your Profile Settings page.',
       },
       {
-        title: 'Locked Fields (Name, Enrollment Number, Course, Official Email)',
+        title: 'Locked Fields (Name, Application Number, Course, Official Email)',
         description: 'Official academic details are locked after registration to preserve attendance integrity.',
       },
       {
@@ -902,7 +902,7 @@ export const HELP_FAQS: HelpFAQ[] = [
   {
     id: 'faq_edit_profile',
     question: 'Can I edit my profile information after verification?',
-    answerSummary: 'You can update your phone and emergency contact anytime. Enrollment number and name corrections require coordinator assistance.',
+    answerSummary: 'You can update your phone and emergency contact anytime. Application number and name corrections require coordinator assistance.',
     targetArticleId: 'ACCOUNT_EDIT_PROFILE',
   },
   {

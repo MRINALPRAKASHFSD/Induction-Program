@@ -71,11 +71,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       apiMockPlugin(),
-      tanstackStart({
-        spa: {
-          enabled: true,
-        },
-      }),
+      tanstackStart(),
       react(),
       tailwindcss(),
       tsconfigPaths(),

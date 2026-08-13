@@ -9,6 +9,8 @@ export type LocalStudent = {
   department_id?: string;
   profile_picture_url?: string;
   photo_url?: string;
+  course?: string;
+  year?: string | number;
 };
 
 // ─── Room Allocation Configuration ────────────────────────────────────────
