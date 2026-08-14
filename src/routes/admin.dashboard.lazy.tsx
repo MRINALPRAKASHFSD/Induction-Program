@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Profile2User, ScanBarcode, MagicStar, Calendar1, Import, DocumentText, TableDocument, DocumentCode, Document } from "iconsax-react";
 import { AdminShell } from "@/components/admin-shell";
-import { collection, query, orderBy, getDocs, onSnapshot, where, limit } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, onSnapshot, where, limit, doc, updateDoc, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { Button } from "@/components/ui/button";
 
@@ -49,7 +49,7 @@ const getClubStatus = (s: any, clubRegs: Set<string>) => clubRegs.has(s.applicat
 
 // ── Export Utilities ──────────────────────────────────────────────────────────
 function exportCSV(data: any[], clubRegs: Set<string>) {
-  const headers = ["Enrollment Number", "Student Name", "Validation Status", "Registration Status", "Club Status", "Orientation Status", "Last Activity"];
+  const headers = ["Application Number", "Student Name", "Validation Status", "Registration Status", "Club Status", "Orientation Status", "Last Activity"];
   const rows = data.map((s) => [
     s.application_number ?? s.enrollment_no ?? "",
     s.student_name ?? "",
@@ -83,7 +83,7 @@ function exportJSON(data: any[], clubRegs: Set<string>) {
 async function exportXLSX(data: any[], clubRegs: Set<string>) {
   const XLSX = await import("xlsx");
   const rows = data.map((s) => ({
-    "Enrollment Number": s.application_number ?? s.enrollment_no ?? "",
+    "Application Number": s.application_number ?? s.enrollment_no ?? "",
     "Student Name": s.student_name ?? "",
     "Validation Status": getValidationStatus(s),
     "Registration Status": getRegistrationStatus(s),
@@ -109,7 +109,7 @@ async function exportPDF(data: any[], clubRegs: Set<string>) {
 
   autoTable(doc, {
     startY: 28,
-    head: [["Enrollment Number", "Student Name", "Validation Status", "Registration Status", "Club Status", "Orientation Status", "Last Activity"]],
+    head: [["Application Number", "Student Name", "Validation Status", "Registration Status", "Club Status", "Orientation Status", "Last Activity"]],
     body: data.map((s) => [
       s.application_number ?? s.enrollment_no ?? "",
       s.student_name ?? "",
@@ -144,12 +144,51 @@ function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [exporting, setExporting] = useState<string | null>(null);
 
-  // 1. Fetch active dataset
+  // 1. Fetch active dataset (with auto-repair for production dataset)
   useEffect(() => {
-    const q = query(collection(db, "induction_datasets"), where("status", "==", "ACTIVE"), limit(1));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        setActiveDataset({ id: snap.docs[0].id, ...snap.docs[0].data() });
+    const q = query(collection(db, "induction_datasets"));
+    const unsubscribe = onSnapshot(q, async (snap) => {
+      if (snap.empty) {
+        setActiveDataset(null);
+        return;
+      }
+      
+      const datasets = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // We will manually count participants to find the original 4200+ dataset robustly,
+      // in case metadata like 'total_rows' is missing.
+      let maxCount = -1;
+      let largestDatasetId: string | null = null;
+      
+      for (const d of datasets) {
+        try {
+          const c = await getCountFromServer(query(collection(db, "induction_participants"), where("dataset_id", "==", d.id)));
+          if (c.data().count > maxCount) {
+            maxCount = c.data().count;
+            largestDatasetId = d.id;
+          }
+        } catch (e) {
+          console.error("Error counting participants for", d.id, e);
+        }
+      }
+
+      const prodDataset = datasets.find(d => d.id === largestDatasetId) || datasets[0];
+
+      if (prodDataset) {
+        setActiveDataset(prodDataset);
+        
+        // Auto-repair Firestore status if a smaller/demo dataset hijacked the ACTIVE state
+        const currentActive = datasets.find((d: any) => d.status === "ACTIVE");
+        if (currentActive?.id !== prodDataset.id) {
+          try {
+            await updateDoc(doc(db, "induction_datasets", prodDataset.id), { status: "ACTIVE" });
+            if (currentActive) {
+              await updateDoc(doc(db, "induction_datasets", currentActive.id), { status: "ARCHIVED" });
+            }
+          } catch (e) {
+            console.error("Auto-repair permissions error:", e);
+          }
+        }
       } else {
         setActiveDataset(null);
       }
@@ -391,7 +430,7 @@ function AdminDashboard() {
           <table className="admin-table w-full whitespace-nowrap">
             <thead className="sticky top-0 bg-muted/50 z-10">
               <tr>
-                <th className="text-left font-semibold py-3 px-4">Enrollment Number</th>
+                <th className="text-left font-semibold py-3 px-4">Application Number</th>
                 <th className="text-left font-semibold py-3 px-4">Student Name</th>
                 <th className="text-left font-semibold py-3 px-4">Validation Status</th>
                 <th className="text-left font-semibold py-3 px-4">Registration Status</th>

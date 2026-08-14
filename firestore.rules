@@ -309,5 +309,19 @@ service cloud.firestore {
       allow read:  if false;  // API only — /api/planner-admin-status
       allow write: if false;  // Admin SDK only (planner-engine.ts)
     }
+
+    // ── 32. LANDING EXPERIENCE (CMS) ──────────────────────────────────────────
+    match /landing_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdminOrCoordinator();
+    }
+    match /landing_collections/{collectionId} {
+      allow read: if true;
+      allow write: if isAdminOrCoordinator();
+    }
+    match /landing_slides/{slideId} {
+      allow read: if true;
+      allow write: if isAdminOrCoordinator();
+    }
   }
 }

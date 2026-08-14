@@ -65,17 +65,16 @@ export default async function handler(req: any, res: any) {
       db.collection('club_registrations').count().get(),
       db.collection('events').where('is_active', '==', true).count().get(),
       db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).count().get(),
-      db.collection('event_datasets').where('status', '==', 'ACTIVE').get(), // Need docs to sum valid_rows
+      db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).get(), // Need docs to sum valid_rows
       db.collection('announcements').where('status', '==', 'active').count().get(),
       db.collection('departments').count().get(),
       db.collection('clubs').count().get()
     ]);
 
-    // Calculate sum of participants from active datasets
     let participants = 0;
     activeDatasetsDocs.forEach(doc => {
       const data = doc.data();
-      participants += (data.valid_rows || 0);
+      participants += (data.statistics?.rows?.valid || data.valid_rows || 0);
     });
 
     const stats = {

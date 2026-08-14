@@ -44,7 +44,7 @@ function formatDateTimeExport(isoString: string) {
 }
 
 function exportCSV(data: any[]) {
-  const headers = ["#", "Full Name", "Enrollment No", "Course", "Branch", "Semester", "Room No", "Registered At"];
+  const headers = ["#", "Full Name", "Application No", "Course", "Branch", "Semester", "Room No", "Registered At"];
   const rows = data.map((s, i) => [
     i + 1,
     s.full_name ?? "",
@@ -82,7 +82,7 @@ async function exportXLSX(data: any[]) {
   const rows = data.map((s, i) => ({
     "#": i + 1,
     "Full Name": s.full_name ?? "",
-    "Enrollment No": s.enrollment_no ?? "",
+    "Application No": s.enrollment_no ?? "",
     "Course": s.course ?? "",
     "Branch": s.branch ?? "",
     "Semester": s.semester ?? "",
@@ -107,7 +107,7 @@ async function exportPDF(data: any[]) {
 
   autoTable(doc, {
     startY: 28,
-    head: [["#", "Full Name", "Enrollment No", "Course", "Branch", "Semester", "Room No", "Registered At"]],
+    head: [["#", "Full Name", "Application No", "Course", "Branch", "Semester", "Room No", "Registered At"]],
     body: data.map((s, i) => [
       i + 1,
       s.full_name ?? "",
@@ -343,7 +343,7 @@ function AdminStudents() {
             <Input
               type="search"
               id="student-search"
-              placeholder="Search name, enrollment..."
+              placeholder="Search name, application..."
               className="pl-9 glass-card-hero"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -536,7 +536,7 @@ function AdminStudents() {
           <TableHeader>
             <TableRow className="bg-muted/30">
               <TableHead>Student</TableHead>
-              <TableHead>Enrollment No.</TableHead>
+              <TableHead>Application No.</TableHead>
               <TableHead>Program</TableHead>
               <TableHead>Room No.</TableHead>
               <TableHead>Registered At</TableHead>

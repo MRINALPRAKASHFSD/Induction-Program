@@ -19,6 +19,7 @@ import { Route as EventAttendEventIdRouteImport } from './routes/event-attend.$e
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminPlannersRouteImport } from './routes/admin.planners'
 import { Route as AdminPlannerRouteImport } from './routes/admin.planner'
+import { Route as AdminLandingRouteImport } from './routes/admin.landing'
 import { Route as AdminEventGuestsRouteImport } from './routes/admin.event-guests'
 import { Route as AdminDocumentsRouteImport } from './routes/admin.documents'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
@@ -201,6 +202,11 @@ const AdminPlannerRoute = AdminPlannerRouteImport.update({
   path: '/admin/planner',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/admin.planner.lazy').then((d) => d.Route))
+const AdminLandingRoute = AdminLandingRouteImport.update({
+  id: '/admin/landing',
+  path: '/admin/landing',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/admin.landing.lazy').then((d) => d.Route))
 const AdminEventGuestsRoute = AdminEventGuestsRouteImport.update({
   id: '/admin/event-guests',
   path: '/admin/event-guests',
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/event-guests': typeof AdminEventGuestsRoute
+  '/admin/landing': typeof AdminLandingRoute
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/event-guests': typeof AdminEventGuestsRoute
+  '/admin/landing': typeof AdminLandingRoute
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
@@ -318,6 +326,7 @@ export interface FileRoutesById {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/documents': typeof AdminDocumentsRoute
   '/admin/event-guests': typeof AdminEventGuestsRoute
+  '/admin/landing': typeof AdminLandingRoute
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/event-guests'
+    | '/admin/landing'
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/event-guests'
+    | '/admin/landing'
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/documents'
     | '/admin/event-guests'
+    | '/admin/landing'
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
@@ -457,6 +469,7 @@ export interface RootRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDocumentsRoute: typeof AdminDocumentsRoute
   AdminEventGuestsRoute: typeof AdminEventGuestsRoute
+  AdminLandingRoute: typeof AdminLandingRoute
   AdminPlannerRoute: typeof AdminPlannerRoute
   AdminPlannersRoute: typeof AdminPlannersRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
@@ -671,6 +684,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPlannerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/landing': {
+      id: '/admin/landing'
+      path: '/admin/landing'
+      fullPath: '/admin/landing'
+      preLoaderRoute: typeof AdminLandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/event-guests': {
       id: '/admin/event-guests'
       path: '/admin/event-guests'
@@ -721,6 +741,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDocumentsRoute: AdminDocumentsRoute,
   AdminEventGuestsRoute: AdminEventGuestsRoute,
+  AdminLandingRoute: AdminLandingRoute,
   AdminPlannerRoute: AdminPlannerRoute,
   AdminPlannersRoute: AdminPlannersRoute,
   AdminStudentsRoute: AdminStudentsRoute,

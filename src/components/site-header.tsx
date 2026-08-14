@@ -234,187 +234,181 @@ export function SiteHeader() {
     return path.startsWith(to);
   };
 
+  const isHomePage = path === "/";
+  const isTransparent = isHomePage && !scrolled;
+
+  const textColor = isTransparent ? "text-white" : "text-[#00509e]";
+  const textHoverColor = isTransparent ? "hover:text-white/80" : "hover:text-[#d2232a]";
+  const borderBottomColor = isTransparent ? "border-white/20" : "border-[#00509e]/10";
+  const topBarBg = isTransparent ? "bg-transparent border-b border-white/20" : "bg-[#d2232a]";
+
   return (
     <>
-      {/* ── Floating Nav Bar ─────────────────────────────────────── */}
+      {/* ── Institutional Header ───────────────────────────────────── */}
       <header
-        className="nav-floating"
-        data-scrolled={scrolled ? "true" : "false"}
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isTransparent ? 'bg-gradient-to-b from-black/80 via-black/40 to-transparent' : 'bg-white shadow-md'}`}
       >
-        <div className="nav-inner flex items-center justify-between px-4 md:px-5">
+        <div className={`hidden lg:flex items-center justify-between px-6 py-2 text-white text-xs font-semibold tracking-wide transition-colors duration-300 ${topBarBg}`}>
+          <div className="flex items-center gap-6">
+            <span className="bg-white/20 px-3 py-1 rounded-full uppercase text-[10px] tracking-widest border border-white/30">
+              AARAMBH 2026
+            </span>
+            <Link 
+              to="/help" 
+              className="relative group text-white hover:text-[#fcfaf8] transition-colors duration-300"
+            >
+              Contact Us
+              <span className={`absolute left-0 -bottom-1.5 w-full h-[2px] rounded-full bg-[#d2232a] shadow-[0_0_8px_rgba(210,35,42,0.5)] origin-left transition-transform duration-300 ease-in-out ${isActive("/help") ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
+            </Link>
+            <Link 
+              to="/campus" 
+              className="relative group text-white hover:text-[#fcfaf8] transition-colors duration-300"
+            >
+              Campus Map
+              <span className={`absolute left-0 -bottom-1.5 w-full h-[2px] rounded-full bg-[#d2232a] shadow-[0_0_8px_rgba(210,35,42,0.5)] origin-left transition-transform duration-300 ease-in-out ${isActive("/campus") ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
+            </Link>
+          </div>
+          <div className="flex items-center gap-6">
+            <a 
+              href="https://eozka.com/community" 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative group text-white hover:text-[#fcfaf8] transition-colors duration-300"
+            >
+              Careers
+              <span className="absolute left-0 -bottom-1.5 w-full h-[2px] rounded-full bg-[#d2232a] shadow-[0_0_8px_rgba(210,35,42,0.5)] origin-left transition-transform duration-300 ease-in-out scale-x-0 group-hover:scale-x-100" />
+            </a>
+          </div>
+        </div>
+
+        {/* Main Navigation */}
+        <div className={`flex items-center justify-between px-4 lg:px-8 py-3 lg:py-5 border-b transition-colors duration-300 ${borderBottomColor}`}>
           
           {/* Left: Logo */}
-          <Link to="/" className="flex items-center shrink-0 pt-2 pb-1" onClick={() => setMobileOpen(false)}>
-            <m.span 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="deekshaarambh-brand-wordmark text-[2rem] md:text-[2.45rem] tracking-wide relative group"
-            >
-              Deekshaarambh
-              <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-gradient-to-r from-[#b06f3b] to-transparent group-hover:w-1/2 transition-all duration-700 ease-out opacity-50" />
-            </m.span>
+          <Link to="/" className={`flex items-center shrink-0 transition-all duration-300 ${isTransparent ? 'bg-white/95 px-3 py-1 rounded-md shadow-sm' : ''}`} onClick={() => setMobileOpen(false)}>
+             <img src="/krmu-logo-transparent.png" alt="K.R. Mangalam University" className="h-10 lg:h-12 object-contain" />
           </Link>
 
-          {/* Center: Desktop Nav Links (hidden on mobile) */}
-          <nav className="hidden md:flex items-center gap-0.5 mx-4">
-            {navItems.map((item) => (
-              item.comingSoon ? (
+          {/* Center: Desktop Nav Links */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 mx-4">
+            {navItems.map((item) => {
+              const active = isActive(item.to);
+              const activeColor = isTransparent ? "text-white" : "text-[#d2232a]";
+              const underlineColor = isTransparent ? "bg-white" : "bg-[#d2232a]";
+              
+              return item.comingSoon ? (
                 <button
                   key={item.label}
-                  className={`nav-link`}
+                  className={`${textColor} font-bold ${textHoverColor} transition-colors text-xs xl:text-sm uppercase tracking-wider relative group`}
                   onClick={() => toast.info(`${item.label} is coming soon!`, { description: "We're building something special." })}
                 >
-                  <item.icon className="w-3.5 h-3.5 opacity-60" />
                   {item.label}
+                  <span className={`absolute -bottom-1 left-0 w-0 h-[2px] ${underlineColor} group-hover:w-full transition-all duration-300`} />
                 </button>
               ) : (
                 <Link
                   key={item.to}
                   to={item.to as any}
-                  className={`nav-link ${isActive(item.to) ? "active" : ""}`}
+                  className={`text-xs xl:text-sm uppercase tracking-wider font-bold transition-colors relative group ${active ? activeColor : `${textColor} ${textHoverColor}`}`}
                 >
-                  <item.icon className="w-3.5 h-3.5 opacity-60" />
                   {item.label}
+                  <span className={`absolute -bottom-1 left-0 h-[2px] ${underlineColor} transition-all duration-300 ${active ? "w-full" : "w-0 group-hover:w-full"}`} />
                 </Link>
               )
-            ))}
+            })}
           </nav>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
-
-            {/* Scanner CTA — only show when registered */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Scanner CTA */}
             {isRegistered && (
               <Link
                 to="/attendance"
-                className="nav-scanner-btn nav-scanner-btn-compact md:nav-scanner-btn-compact-off relative"
+                className={`hidden lg:flex items-center gap-2 border px-4 py-2 transition-colors text-xs font-bold uppercase tracking-wider ${isTransparent ? 'text-white border-white hover:bg-white hover:text-[#00509e]' : 'text-[#00509e] border-[#00509e] hover:bg-[#00509e] hover:text-white'}`}
               >
                 <ScanLine className="w-4 h-4" />
-                <span className="hidden sm:inline">Scan</span>
-                <span className="sm:hidden">Scan</span>
-                <span className="nav-scanner-btn-ring" />
+                <span>Scan</span>
               </Link>
             )}
 
             {/* Auth CTAs for guests */}
             {!isRegistered && !user && (
-              <div className="hidden sm:flex items-center gap-2">
-                <Button variant="liquidGlassMaroon" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold">
-                  <Link to="/register">Register Now</Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild className="rounded-full px-4 h-8 text-xs font-bold border-[#8a4a22]/30 text-[#8a4a22] hover:bg-[#8a4a22]/5">
+              <div className="hidden lg:flex items-center gap-3">
+                <Button variant="outline" size="sm" asChild className={`rounded-none transition-colors px-6 h-10 font-bold uppercase tracking-wider text-xs ${isTransparent ? 'border-white text-white hover:bg-white hover:text-black bg-transparent backdrop-blur-sm' : 'border-[#00509e] text-[#00509e] hover:bg-[#00509e] hover:text-white'}`}>
                   <Link to="/login">Login</Link>
+                </Button>
+                <Button size="sm" asChild className="rounded-none bg-[#d2232a] hover:bg-[#b01d22] text-white px-6 h-10 font-bold uppercase tracking-wider text-xs shadow-md border-none">
+                  <Link to="/register">Apply Now</Link>
                 </Button>
               </div>
             )}
 
-            {/* Notification Bell — only show when registered */}
+            {/* Notification Bell */}
             {isRegistered && (
               <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
                 <DropdownMenuTrigger asChild>
-                  <button className="nav-icon-btn" aria-label="Notifications">
-                    <Bell className="w-[18px] h-[18px]" />
+                  <button className={`relative p-2 rounded-full transition-colors ${textColor} hover:bg-white/10`} aria-label="Notifications">
+                    <Bell className="w-6 h-6" />
                     {unreadCount > 0 && (
-                      <span className="nav-badge">{displayCount}</span>
+                      <span className="absolute top-1 right-1 w-4 h-4 bg-[#d2232a] text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-white">
+                        {displayCount}
+                      </span>
                     )}
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-[calc(100vw-2rem)] sm:w-96 max-w-sm p-0 glass-premium-v2 border-none shadow-2xl rounded-2xl overflow-hidden mt-2"
-                >
-                  {/* Notification Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#8a4a22]/10 bg-white/50">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-[#2c1208] text-sm">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <span className="text-[10px] font-bold text-[#8a4a22] bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">
-                          {unreadCount} new
-                        </span>
-                      )}
-                    </div>
+                <DropdownMenuContent align="end" className="w-80 lg:w-96 p-0 bg-white border border-[#00509e]/10 shadow-xl rounded-none mt-2">
+                  <div className="flex items-center justify-between px-4 py-3 bg-[#00509e] text-white">
+                    <h3 className="font-bold text-sm uppercase tracking-wider">Notifications</h3>
                     {unreadCount > 0 && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={markAllAsRead} 
-                        className="h-6 px-2 text-[10px] uppercase font-bold text-[#8a4a22] hover:bg-[#8a4a22]/10 rounded-full transition-colors"
-                      >
-                        <CheckCircle2 className="w-3 h-3 mr-1" /> Mark all read
-                      </Button>
+                      <button onClick={markAllAsRead} className="text-[10px] uppercase font-bold text-white/80 hover:text-white transition-colors flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Mark all read
+                      </button>
                     )}
                   </div>
-
-                  {/* Notification List */}
-                  <div className="max-h-[60vh] overflow-y-auto hide-scrollbar bg-gradient-to-b from-[#fdfbf9] to-[#faf6f3]">
+                  <div className="max-h-[60vh] overflow-y-auto">
                     {announcements.length === 0 ? (
-                      <div className="p-10 text-center text-[#7a4020]/60">
-                        <div className="w-12 h-12 rounded-full bg-[#8a4a22]/5 flex items-center justify-center mx-auto mb-3">
-                          <Bell className="h-6 w-6 opacity-40" />
-                        </div>
-                        <p className="text-sm font-bold text-[#5a2c14]/60">You're all caught up!</p>
+                      <div className="p-8 text-center text-[#00509e]/60">
+                        <Bell className="h-8 w-8 opacity-40 mx-auto mb-3" />
+                        <p className="text-sm font-bold">You're all caught up!</p>
                       </div>
                     ) : (
-                      <div className="flex flex-col">
-                        <AnimatePresence>
-                          {announcements.map((a) => {
-                            const isRead = readIds.has(a.id);
-                            return (
-                              <m.div
-                                key={a.id}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                              >
-                                <Link 
-                                  to="/announcements" 
-                                  onClick={() => { markAsRead(a.id); setNotifOpen(false); }}
-                                  className={`block p-4 border-b border-[#8a4a22]/5 transition-colors hover:bg-white/80 relative group ${!isRead ? "bg-white" : "bg-transparent opacity-80"}`}
-                                >
-                                  {!isRead && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 rounded-r-full" />}
-                                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                                    <h4 className={`text-sm tracking-tight line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#2c1208]" : "font-semibold text-[#5a2c14]"}`}>
-                                      {a.title}
-                                    </h4>
-                                    {a.isImportant && (
-                                      <span className="absolute top-3 right-4 bg-red-100 text-red-700 text-[9px] uppercase px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5 shadow-sm">
-                                        <AlertCircle className="w-2.5 h-2.5" /> Urgent
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className={`text-xs line-clamp-2 leading-relaxed mb-3 ${!isRead ? "text-[#5a2c14]" : "text-[#7a4020]"}`}>
-                                    {a.content}
-                                  </p>
-                                  <div className="flex items-center justify-between">
-                                    <div className="text-[10px] font-semibold text-[#8a4a22]/60 flex items-center gap-1 bg-[#8a4a22]/5 px-1.5 py-0.5 rounded-md">
-                                      <Clock className="w-3 h-3" />
-                                      {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
-                                    </div>
-                                    {!isRead && (
-                                      <button onClick={(e) => {
-                                          e.preventDefault();
-                                          markAsRead(a.id);
-                                        }} 
-                                        className="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/50 px-2 py-0.5 rounded-full transition-all flex items-center gap-1 z-10 relative">
-                                        <CheckCircle2 className="w-3 h-3" /> Mark read
-                                      </button>
-                                    )}
-                                  </div>
-                                </Link>
-                              </m.div>
-                            );
-                          })}
-                        </AnimatePresence>
+                      <div className="flex flex-col divide-y divide-[#00509e]/5">
+                        {announcements.map((a) => {
+                          const isRead = readIds.has(a.id);
+                          return (
+                            <Link 
+                              key={a.id}
+                              to="/announcements" 
+                              onClick={() => { markAsRead(a.id); setNotifOpen(false); }}
+                              className={`block p-4 transition-colors hover:bg-slate-50 ${!isRead ? "bg-white" : "bg-slate-50/50 opacity-70"}`}
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <h4 className={`text-sm line-clamp-1 pr-16 ${!isRead ? "font-bold text-[#00509e]" : "font-semibold text-[#00509e]/80"}`}>
+                                  {a.title}
+                                </h4>
+                                {a.isImportant && (
+                                  <span className="absolute top-4 right-4 bg-[#d2232a] text-white text-[9px] uppercase px-1.5 py-0.5 rounded font-bold">
+                                    Urgent
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-xs line-clamp-2 leading-relaxed mb-2 ${!isRead ? "text-slate-700" : "text-slate-500"}`}>
+                                {a.content}
+                              </p>
+                              <div className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(a.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                              </div>
+                            </Link>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-
-                  {/* Footer */}
-                  <div className="p-2 border-t border-[#8a4a22]/10 bg-white/80">
-                    <Button variant="ghost" className="w-full text-xs font-bold text-[#5a2c14] rounded-xl hover:bg-[#8a4a22]/5" asChild>
+                  <div className="p-2 border-t border-[#00509e]/10 bg-slate-50">
+                    <Button variant="ghost" className="w-full text-xs font-bold text-[#00509e] rounded-none hover:bg-[#00509e]/5 uppercase tracking-wider" asChild>
                       <Link to="/announcements" onClick={() => setNotifOpen(false)}>
-                        View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block opacity-70" />
+                        View All Announcements <ChevronRight className="w-4 h-4 ml-1 inline-block" />
                       </Link>
                     </Button>
                   </div>
@@ -425,97 +419,82 @@ export function SiteHeader() {
             {/* Profile Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="nav-icon-btn overflow-hidden" aria-label="User menu">
+                <button className={`p-2 rounded-full transition-colors flex items-center gap-2 ${textColor} hover:bg-white/10`} aria-label="User menu">
                   {user ? (
                     profilePhoto ? (
-                      <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                      <img src={profilePhoto} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-white/20" />
                     ) : profileInitial ? (
-                      <span className="nav-avatar">{profileInitial}</span>
+                      <span className={`w-8 h-8 flex items-center justify-center text-white rounded-full text-sm font-bold ${isTransparent ? 'bg-white/20 border border-white/40' : 'bg-[#00509e]'}`}>{profileInitial}</span>
                     ) : (
-                      <CircleUserRound className="w-5 h-5 text-[#8a4a22]" />
+                      <CircleUserRound className="w-6 h-6" />
                     )
                   ) : (
-                    <User className="w-[18px] h-[18px]" />
+                    <User className="w-6 h-6" />
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="glass-premium-v2 w-64 mt-2 p-3 rounded-2xl border-none shadow-2xl">
+              <DropdownMenuContent align="end" className="w-64 mt-2 p-0 bg-white border border-[#00509e]/10 shadow-xl rounded-none">
                 {user ? (
                   <>
-                    {/* Profile header */}
-                    <div className="px-2 py-2 mb-2">
+                    <div className="px-4 py-4 bg-slate-50 border-b border-[#00509e]/10">
                       <div className="flex items-center gap-3">
                         {profilePhoto ? (
-                          <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover shrink-0 shadow-sm border border-[#8a4a22]/10" />
+                          <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover border border-[#00509e]/20" />
                         ) : profileInitial ? (
-                          <span className="nav-avatar-ring w-10 h-10 nav-avatar text-sm font-bold shrink-0 shadow-sm">{profileInitial}</span>
+                          <span className="w-10 h-10 flex items-center justify-center bg-[#00509e] text-white rounded-full text-sm font-bold">{profileInitial}</span>
                         ) : (
-                          <CircleUserRound className="w-10 h-10 text-[#8a4a22]/80 shrink-0" />
+                          <CircleUserRound className="w-10 h-10 text-[#00509e]/80" />
                         )}
-                        <div className="min-w-0 flex flex-col justify-center">
-                          <p className="text-[#2c1208] font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
-                          <p className="text-xs text-[#8a4a22]/70 mt-0.5 truncate">{user.email}</p>
-                          <div className="mt-1">
-                            <span className="uppercase tracking-wider text-xs font-semibold bg-[#8a4a22]/10 text-[#8a4a22] px-2 py-0.5 rounded-full inline-block">
-                              {isRegistered ? profile?.branch || "Student" : "Registered Member"}
-                            </span>
-                          </div>
+                        <div className="min-w-0 flex flex-col">
+                          <p className="text-[#00509e] font-bold truncate">{profile?.full_name || user.email}</p>
+                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                          <span className="mt-1 text-[10px] uppercase font-bold tracking-wider text-[#d2232a]">
+                            {isRegistered ? profile?.branch || "Student" : "Registered Member"}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 mb-2" />
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
-                      <Link to="/my-pass" className="flex items-center justify-between w-full">
-                        <span className="flex items-center gap-3">
-                          <LayoutDashboard className="w-4 h-4 opacity-70" /> 
-                          <span>Dashboard</span>
-                        </span>
-                        <ChevronRight className="w-4 h-4 opacity-40" />
-                      </Link>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator className="bg-black/5 dark:bg-white/10 mx-1 my-2" />
-                    <DropdownMenuItem
-                      onClick={handleLogout}
-                      className="cursor-pointer rounded-xl px-2 py-2 text-red-600 font-medium focus:bg-red-500/10 focus:text-red-700 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4 mr-3 opacity-70" /> 
-                      <span>Log out</span>
-                    </DropdownMenuItem>
+                    <div className="p-1">
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e] font-semibold hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/my-pass" className="flex items-center justify-between w-full">
+                          <span className="flex items-center gap-3">
+                            <LayoutDashboard className="w-4 h-4" /> Dashboard
+                          </span>
+                          <ChevronRight className="w-4 h-4 opacity-50" />
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-[#00509e]/10 mx-1" />
+                      <DropdownMenuItem onClick={handleLogout} className="cursor-pointer rounded-none px-3 py-2.5 text-[#d2232a] font-semibold hover:bg-[#d2232a]/5 transition-colors focus:bg-[#d2232a]/5 focus:text-[#d2232a]">
+                        <LogOut className="w-4 h-4 mr-3" /> Log out
+                      </DropdownMenuItem>
+                    </div>
                   </>
                 ) : (
-                  <>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                  <div className="p-1">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e] font-semibold hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
                       <Link to="/register" className="flex items-center gap-3 w-full">
-                        <UserPlus className="w-4 h-4 opacity-70" /> 
-                        <span>Register now</span>
+                        <UserPlus className="w-4 h-4" /> Apply Now
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 text-secondary font-medium focus:bg-black/5 dark:focus:bg-white/10 focus:text-primary transition-colors">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e] font-semibold hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
                       <Link to="/login" className="flex items-center gap-3 w-full">
-                        <LogIn className="w-4 h-4 opacity-70" /> 
-                        <span>Login</span>
+                        <LogIn className="w-4 h-4" /> Login
                       </Link>
                     </DropdownMenuItem>
-                  </>
+                  </div>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Mobile Hamburger (visible < md) */}
-            <m.button
+            {/* Mobile Hamburger (visible < lg) */}
+            <button
               type="button"
-              className="nav-hamburger md:hidden"
+              className={`lg:hidden p-2 ml-2 transition-colors rounded-full ${textColor} hover:bg-white/10`}
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              data-open={mobileOpen}
-              whileTap={{ scale: 0.96 }}
-              transition={{ duration: 0.12 }}
             >
-              <span />
-              <span />
-              <span />
-            </m.button>
+              {mobileOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+            </button>
           </div>
         </div>
       </header>
@@ -524,178 +503,89 @@ export function SiteHeader() {
       <AnimatePresence>
         {mobileOpen && (
           <m.div
-            className="nav-mobile-backdrop md:hidden"
+            className="fixed inset-0 bg-[#00509e]/20 backdrop-blur-sm z-40 lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             onClick={() => setMobileOpen(false)}
           />
         )}
       </AnimatePresence>
 
-      {/* ── Mobile Navigation Sheet (Apple-Inspired Layered Glass) ── */}
+      {/* ── Mobile Navigation Sheet ───────────────────────────────── */}
       <AnimatePresence>
         {mobileOpen && (
           <m.nav
-            className="nav-mobile-sheet md:hidden"
+            className="fixed top-0 right-0 bottom-0 w-[85vw] max-w-sm bg-white z-50 shadow-2xl lg:hidden flex flex-col"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
-            transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={(_, info) => {
-              if (info.offset.x > 60 || info.velocity.x > 200) {
-                setMobileOpen(false);
-              }
-            }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
           >
-            {/* Sheet Header with Close Button */}
-            <div className="flex items-center justify-between pb-2 mb-1 border-b border-[#8a4a22]/10">
-              <span className="text-xs font-semibold tracking-wider uppercase text-[#8a4a22]/70">Navigation</span>
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                className="nav-icon-btn h-8 w-8 text-[#8a4a22]"
-                aria-label="Close navigation"
-              >
-                <X className="w-5 h-5" />
+            <div className="flex items-center justify-between p-4 border-b border-[#00509e]/10">
+              <span className="text-xs font-bold tracking-widest uppercase text-[#00509e]">Menu</span>
+              <button onClick={() => setMobileOpen(false)} className="p-2 text-[#00509e] hover:bg-[#00509e]/5 rounded-full">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Profile Section or Auth CTAs */}
-            {authLoading ? (
-              <div className="nav-profile-card">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#8a4a22]/10 animate-pulse shrink-0" />
-                  <div className="flex flex-col gap-1.5 w-full">
-                    <div className="h-4 w-32 bg-[#8a4a22]/10 rounded animate-pulse" />
-                    <div className="h-3 w-20 bg-[#8a4a22]/10 rounded animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            ) : user ? (
-              <div className="nav-profile-card">
-                <div className="flex items-center gap-3">
-                  {profilePhoto ? (
-                    <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover shrink-0 shadow-sm border border-[#8a4a22]/15" />
-                  ) : profileInitial ? (
-                    <span className="nav-avatar-ring w-10 h-10 nav-avatar text-sm font-bold shrink-0">{profileInitial}</span>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              {/* Navigation List */}
+              <div className="flex flex-col gap-4">
+                {navItems.map((item) => {
+                  const active = isActive(item.to);
+                  return item.comingSoon ? (
+                    <button
+                      key={item.label}
+                      type="button"
+                      className="flex items-center text-left text-[#00509e]/60"
+                      onClick={() => {
+                        toast.info(`${item.label} is coming soon!`);
+                        setMobileOpen(false);
+                      }}
+                    >
+                      <item.icon className="w-5 h-5 mr-4" />
+                      <span className="font-bold text-lg uppercase tracking-wider">{item.label}</span>
+                      <span className="ml-auto text-[10px] font-bold text-white bg-[#00509e]/40 px-2 py-0.5 rounded uppercase">Soon</span>
+                    </button>
                   ) : (
-                    <CircleUserRound className="w-10 h-10 text-[#8a4a22]/80 shrink-0" />
-                  )}
-                  <div className="min-w-0 flex flex-col justify-center">
-                    <p className="text-[#2c1208] font-semibold truncate leading-tight">{profile?.full_name || user.email}</p>
-                    <p className="text-xs text-[#8a4a22]/70 truncate mt-0.5">{user.email}</p>
-                    <div className="mt-1">
-                      <span className="uppercase tracking-wider text-xs font-semibold bg-[#8a4a22]/10 text-[#8a4a22] px-2 py-0.5 rounded-full inline-block">
-                        {isRegistered ? profile?.branch || "Student" : "Registered Member"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="border-t border-[#8a4a22]/10 my-1" />
-                <Link
-                  to="/my-pass"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center justify-between text-xs font-semibold text-[#8a4a22] hover:text-[#5a1a25] transition-colors py-1"
-                >
-                  <span className="flex items-center gap-2">
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>Dashboard</span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 opacity-50" />
-                </Link>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 my-1">
-                <Link
-                  to="/register"
-                  className="nav-mobile-scanner"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <UserPlus className="w-5 h-5" />
-                  Register Now
-                </Link>
-                <Link
-                  to="/login"
-                  className="nav-mobile-link justify-center font-semibold text-[#8a4a22]"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  <LogIn className="w-5 h-5" />
-                  Login
-                </Link>
-                <div className="border-t border-[#8a4a22]/10 my-1" />
-              </div>
-            )}
-
-            {/* Navigation List (Frozen Order, Hierarchy, Trailing Chevron & Micro-Haptics) */}
-            <div className="flex flex-col gap-1 my-1">
-              {navItems.map((item) => {
-                const active = isActive(item.to);
-                return item.comingSoon ? (
-                  <button
-                    key={item.label}
-                    type="button"
-                    className="nav-mobile-link group"
-                    onClick={() => {
-                      toast.info(`${item.label} is coming soon!`, { description: "We're building something special." });
-                      setMobileOpen(false);
-                    }}
-                  >
-                    <item.icon className="w-5 h-5 opacity-60 shrink-0" />
-                    <span className="font-medium text-[0.9375rem]">{item.label}</span>
-                    <span className="ml-auto text-[10px] font-bold text-[#8a4a22]/50 bg-[#8a4a22]/10 px-2 py-0.5 rounded-full">Soon</span>
-                  </button>
-                ) : (
-                  <m.div
-                    key={item.to}
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ duration: 0.12 }}
-                  >
                     <Link
+                      key={item.to}
                       to={item.to as any}
-                      className={`nav-mobile-link group ${active ? "active" : ""}`}
+                      className={`flex items-center transition-colors group ${active ? "text-[#d2232a]" : "text-[#00509e] hover:text-[#d2232a]"}`}
                       onClick={() => setMobileOpen(false)}
                     >
-                      {active && (
-                        <span className="w-1.5 h-6 bg-gradient-to-b from-[#6b2418] to-[#8a4a22] rounded-full shrink-0 -ml-1 mr-1" />
-                      )}
-                      <item.icon className={`w-5 h-5 shrink-0 ${active ? "opacity-100 text-[#5a1a25]" : "opacity-60"}`} />
-                      <span className="font-medium text-[0.9375rem]">{item.label}</span>
-                      <ChevronRight className="w-4 h-4 opacity-40 group-hover:opacity-80 ml-auto transition-opacity" />
+                      <item.icon className={`w-5 h-5 mr-4 ${active ? "opacity-100" : "opacity-60 group-hover:opacity-100"}`} />
+                      <span className="font-bold text-lg uppercase tracking-wider">{item.label}</span>
+                      <ChevronRight className={`w-5 h-5 ml-auto ${active ? "opacity-100" : "opacity-30 group-hover:opacity-100"}`} />
                     </Link>
-                  </m.div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Intentional Separated Logout Action Row (at bottom) */}
-            {user && (
-              <div className="border-t border-[#8a4a22]/10 pt-2 mt-auto">
-                <m.button
-                  type="button"
-                  whileTap={{ scale: 0.98 }}
-                  transition={{ duration: 0.12 }}
-                  className="nav-mobile-logout w-full"
-                  onClick={() => {
-                    handleLogout();
-                    setMobileOpen(false);
-                  }}
-                >
-                  <LogOut className="w-5 h-5 opacity-70 shrink-0" />
-                  <span>Log out</span>
-                </m.button>
-              </div>
-            )}
+            <div className="p-6 border-t border-[#00509e]/10 bg-slate-50">
+              {!isRegistered && !user ? (
+                <div className="flex flex-col gap-3">
+                  <Button asChild className="w-full rounded-none bg-[#d2232a] hover:bg-[#b01d22] text-white h-12 font-bold uppercase tracking-wider">
+                    <Link to="/register" onClick={() => setMobileOpen(false)}>Apply Now</Link>
+                  </Button>
+                  <Button variant="outline" asChild className="w-full rounded-none border-[#00509e] text-[#00509e] hover:bg-[#00509e] hover:text-white h-12 font-bold uppercase tracking-wider">
+                    <Link to="/login" onClick={() => setMobileOpen(false)}>Login</Link>
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={() => { handleLogout(); setMobileOpen(false); }} className="w-full rounded-none border-[#d2232a] text-[#d2232a] hover:bg-[#d2232a] hover:text-white h-12 font-bold uppercase tracking-wider">
+                  <LogOut className="w-4 h-4 mr-2" /> Log out
+                </Button>
+              )}
+            </div>
           </m.nav>
         )}
       </AnimatePresence>
 
-      {/* ── Spacer ───────────────────────────────────────────────── */}
-      <div className="nav-spacer" />
+      {/* Spacer to push content below the taller fixed header */}
+      {!isHomePage && <div className="h-[100px] lg:h-[120px]" />}
     </>
   );
 }

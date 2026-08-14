@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SCHOOLS } from "@/lib/constants";
 import { auth, db } from "@/lib/firebase/config";
 import { collection, query, where, orderBy, onSnapshot, limit } from "firebase/firestore";
 
@@ -26,20 +27,6 @@ export const Route = createLazyFileRoute("/admin/attendance")({
   }),
   component: AdminAttendance,
 });
-
-// ── Schools / Programmes ──────────────────────────────────────────────────────
-const PROGRAMMES = [
-  { id: "soet", name: "School of Engineering & Technology" },
-  { id: "soms", name: "School of Management Studies" },
-  { id: "sols", name: "School of Legal Studies" },
-  { id: "soa", name: "School of Architecture" },
-  { id: "soah", name: "School of Allied Health Sciences" },
-  { id: "soe", name: "School of Education" },
-  { id: "somc", name: "School of Media & Communication" },
-  { id: "sosc", name: "School of Science" },
-  { id: "sohs", name: "School of Hospitality Studies" },
-  { id: "sofa", name: "School of Fine Arts & Design" },
-];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AttendanceSession {
@@ -253,7 +240,7 @@ function AdminAttendance() {
 
   // ── Create session ────────────────────────────────────────────────────────
   const handleCreate = async () => {
-    const programme = PROGRAMMES.find(p => p.id === formProgramme);
+    const programme = SCHOOLS.find(p => p.id === formProgramme);
     if (!programme) { toast.error("Select a programme"); return; }
     if (!formEventId.trim()) { toast.error("Enter event/session title"); return; }
     if (!formVenue.trim()) { toast.error("Enter venue"); return; }
@@ -432,7 +419,7 @@ function AdminAttendance() {
                   <Select value={formProgramme} onValueChange={setFormProgramme}>
                     <SelectTrigger><SelectValue placeholder="Select programme" /></SelectTrigger>
                     <SelectContent>
-                      {PROGRAMMES.map(p => (
+                      {SCHOOLS.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>

@@ -2,7 +2,7 @@ import { Link, useNavigate, Navigate, useRouterState } from "@tanstack/react-rou
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText, Building4, Gallery, CalendarAdd, UserTick
+  Element3, Calendar1, Profile2User, MagicStar, Chart1, Activity, Logout, HambergerMenu, CloseSquare, ScanBarcode, ShieldTick, DocumentText, Building4, Gallery, CalendarAdd, UserTick, MonitorMobbile, Notification
 } from "iconsax-react";
 // Supabase auth is bypassed — using local session flag instead
 import { useSession } from "@/hooks/use-session";
@@ -20,22 +20,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Only render on the client — avoids SSR hydration mismatch with auth state
 const isClient = typeof window !== 'undefined';
 
-const NAV = [
-  { to: "/admin/dashboard",   label: "Dashboard",          icon: Element3     },
-  { to: "/admin/attendance",  label: "Attendance",          icon: ScanBarcode  },
-  { to: "/admin/events",      label: "Events",              icon: Calendar1    },
-  { to: "/admin/planner",     label: "Induction Planner",   icon: CalendarAdd  },
-  { to: "/admin/planners",    label: "Event Planners",      icon: CalendarAdd  },
-  { to: "/admin/event-guests", label: "Guest Analytics",    icon: UserTick     },
-  { to: "/admin/datasets",    label: "Dataset Management",  icon: DocumentText },
-  { to: "/admin/students",    label: "Students",            icon: Profile2User },
-  { to: "/admin/rooms",       label: "Rooms",               icon: Building4    },
-  { to: "/admin/clubs",       label: "Clubs",               icon: MagicStar    },
-  { to: "/admin/media",       label: "Media Library",       icon: Gallery      },
-  { to: "/admin/announcements", label: "Announcements",     icon: Bell         },
-  { to: "/admin/documents",   label: "Documents",           icon: ShieldTick   },
-  { to: "/admin/analytics",   label: "Analytics",           icon: Chart1       },
-  { to: "/admin/activity",    label: "Activity",            icon: Activity     },
+// Navigation grouped into sections for the sidebar.
+// Each section has a label (shown when sidebar is expanded) and a list of items.
+const NAV_SECTIONS = [
+  {
+    label: "Operations",
+    items: [
+      { to: "/admin/dashboard",     label: "Dashboard",          icon: Element3      },
+      { to: "/admin/attendance",    label: "Attendance",          icon: ScanBarcode   },
+      { to: "/admin/events",        label: "Events",              icon: Calendar1     },
+      { to: "/admin/planner",       label: "Induction Planner",   icon: CalendarAdd   },
+      { to: "/admin/planners",      label: "Event Planners",      icon: CalendarAdd   },
+      { to: "/admin/event-guests",  label: "Guest Analytics",     icon: UserTick      },
+      { to: "/admin/rooms",         label: "Rooms",               icon: Building4     },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { to: "/admin/landing",       label: "Landing Experience",  icon: MonitorMobbile },
+      { to: "/admin/media",         label: "Media Library",       icon: Gallery        },
+      { to: "/admin/announcements", label: "Announcements",       icon: Notification   },
+      { to: "/admin/documents",     label: "Documents",           icon: ShieldTick     },
+    ],
+  },
+  {
+    label: "Management",
+    items: [
+      { to: "/admin/students",      label: "Students",            icon: Profile2User  },
+      { to: "/admin/clubs",         label: "Clubs",               icon: MagicStar     },
+      { to: "/admin/datasets",      label: "Dataset Management",  icon: DocumentText  },
+      { to: "/admin/analytics",     label: "Analytics",           icon: Chart1        },
+      { to: "/admin/activity",      label: "Activity",            icon: Activity      },
+    ],
+  },
 ] as const;
 
 export function AdminShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
@@ -296,27 +314,41 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                 </button>
              </div>
              
-             <nav className="grid gap-1.5 admin-card p-3">
-               {NAV.map(({ to, label, icon: Icon }) => {
-                 const active = path === to;
-                 return (
-                   <Link
-                     key={to} to={to} onClick={() => setOpen(false)}
-                     title={isCollapsed ? label : undefined}
-                     className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all group relative overflow-hidden ${
-                       active 
-                         ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20" 
-                         : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                     } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                   >
-                     {active && (
-                       <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-white/90 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
-                     )}
-                     <Icon variant={active ? "Bold" : "TwoTone"} className={`h-5 w-5 shrink-0 transition-transform group-hover:scale-110 ${active ? "text-white" : "text-primary/60 group-hover:text-primary"}`} /> 
-                     {!isCollapsed && <span>{label}</span>}
-                   </Link>
-                 );
-               })}
+             <nav className="flex flex-col gap-3">
+               {NAV_SECTIONS.map((section) => (
+                 <div key={section.label} className="admin-card p-3">
+                   {!isCollapsed && (
+                     <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/35 px-1 mb-2">
+                       {section.label}
+                     </p>
+                   )}
+                   <div className="grid gap-1">
+                     {section.items.map(({ to, label, icon: Icon }) => {
+                       const active = path === to;
+                       return (
+                         <Link
+                           key={to} to={to} onClick={() => setOpen(false)}
+                           title={isCollapsed ? label : undefined}
+                           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all group relative overflow-hidden ${
+                             active
+                               ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20"
+                               : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                           } ${isCollapsed ? "justify-center px-0" : ""}`}
+                         >
+                           {active && (
+                             <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-white/90 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                           )}
+                           <Icon
+                             variant={active ? "Bold" : "TwoTone"}
+                             className={`h-5 w-5 shrink-0 transition-transform group-hover:scale-110 ${active ? "text-white" : "text-primary/60 group-hover:text-primary"}`}
+                           />
+                           {!isCollapsed && <span>{label}</span>}
+                         </Link>
+                       );
+                     })}
+                   </div>
+                 </div>
+               ))}
              </nav>
 
              {/* Privacy block - hide when collapsed */}
