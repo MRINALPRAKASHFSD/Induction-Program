@@ -6,69 +6,7 @@ import { HeroConfig } from './schema';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// Elegant Countdown
-const Countdown = React.memo(function Countdown({ targetDate, label }: { targetDate: string, label?: string }) {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-  const target = new Date(targetDate).getTime();
-  
-  // Format the date for display (e.g. "24 August 2026")
-  const dateObj = new Date(targetDate);
-  const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  // Format the time for display (e.g. "09:00 AM")
-  const formattedTime = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-  useEffect(() => {
-    const calculate = () => {
-      const difference = target - new Date().getTime();
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((difference % (1000 * 60)) / 1000),
-        });
-      }
-    };
-    calculate();
-    const interval = setInterval(calculate, 1000);
-    return () => clearInterval(interval);
-  }, [targetDate]);
-
-  return (
-    <div className="flex items-center gap-4 md:gap-8 bg-black/40 backdrop-blur-md border border-white/20 p-4 md:px-8 md:py-5 rounded-none shadow-2xl">
-      <div className="flex flex-col pr-4 md:pr-8 border-r border-white/20">
-        <span className="text-white/80 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-1">
-          {label || 'INDUCTION'}
-        </span>
-        <span className="text-white text-sm md:text-base font-serif italic whitespace-nowrap">
-          {formattedDate}<br/>{formattedTime}
-        </span>
-      </div>
-      <div className="flex items-center gap-3 md:gap-6">
-        {[
-          { v: timeLeft.days, l: "Days" },
-          { v: timeLeft.hours, l: "Hrs" },
-          { v: timeLeft.minutes, l: "Min" },
-          { v: timeLeft.seconds, l: "Sec" }
-        ].map((item, idx, arr) => (
-          <React.Fragment key={item.l}>
-            <div className="flex flex-col items-center">
-              <span className="text-white font-serif text-2xl md:text-4xl tabular-nums leading-none">
-                {item.v.toString().padStart(2, '0')}
-              </span>
-              <span className="text-white/60 text-[9px] md:text-[10px] uppercase tracking-wider mt-2">
-                {item.l}
-              </span>
-            </div>
-            {idx < arr.length - 1 && (
-              <span className="text-white/40 text-xl md:text-3xl font-serif font-light mb-3">:</span>
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-});
 
 const getThemeClasses = (theme?: string) => {
   switch (theme) {
@@ -182,19 +120,31 @@ export default function HeroComponent({ config }: { config: HeroConfig }) {
                 }
               })()}
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 relative z-30">
                 {slides[currentSlide]?.primaryCTA && (
                   <Button size="lg" asChild className={`rounded-none px-8 h-14 font-bold uppercase tracking-wider text-sm shadow-xl transition-all hover:scale-105 ${getThemeClasses(slides[currentSlide]?.theme)}`}>
-                    <Link to={slides[currentSlide]?.primaryCTALink || "/register"}>
-                      {slides[currentSlide]?.primaryCTA} <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
+                    {slides[currentSlide]?.primaryCTALink?.startsWith('http') ? (
+                      <a href={slides[currentSlide]?.primaryCTALink} target="_blank" rel="noopener noreferrer">
+                        {slides[currentSlide]?.primaryCTA} <ArrowRight className="ml-2 h-5 w-5" />
+                      </a>
+                    ) : (
+                      <Link to={slides[currentSlide]?.primaryCTALink || "/register"}>
+                        {slides[currentSlide]?.primaryCTA} <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    )}
                   </Button>
                 )}
                 {slides[currentSlide]?.secondaryCTA && (
                   <Button variant="outline" asChild className="rounded-none border-white text-white hover:bg-white hover:text-black px-8 h-14 font-bold uppercase tracking-wider text-sm shadow-xl transition-colors bg-transparent backdrop-blur-sm">
-                    <Link to={slides[currentSlide]?.secondaryCTALink || "/attendance"}>
-                      {slides[currentSlide]?.secondaryCTA}
-                    </Link>
+                    {slides[currentSlide]?.secondaryCTALink?.startsWith('http') ? (
+                      <a href={slides[currentSlide]?.secondaryCTALink} target="_blank" rel="noopener noreferrer">
+                        {slides[currentSlide]?.secondaryCTA}
+                      </a>
+                    ) : (
+                      <Link to={slides[currentSlide]?.secondaryCTALink || "/attendance"}>
+                        {slides[currentSlide]?.secondaryCTA}
+                      </Link>
+                    )}
                   </Button>
                 )}
               </div>
@@ -204,24 +154,9 @@ export default function HeroComponent({ config }: { config: HeroConfig }) {
         </div>
       </div>
 
-      {/* Countdown and Slide Indicators Container */}
-      <div className="absolute bottom-0 left-0 w-full z-30 pb-16 md:pb-[120px] pt-24 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row md:items-end justify-between gap-8">
-          
-          {/* Countdown Box */}
-          {config.settings?.showCountdown && (
-            <m.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              <Countdown 
-                targetDate={slides[currentSlide]?.endDate || "2026-08-24T09:00:00+05:30"} 
-                label={slides[currentSlide]?.eyebrow || "INDUCTION"}
-              />
-            </m.div>
-          )}
-
+      {/* Slide Indicators Container */}
+      <div className="absolute bottom-0 left-0 w-full z-20 pb-16 md:pb-[120px] pt-24 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none">
+        <div className="container mx-auto px-6 flex justify-center md:justify-end pointer-events-auto">
           {/* Slide Indicators */}
           {slides.length > 1 && (
             <div className="flex gap-3 mb-2 md:mb-6">
