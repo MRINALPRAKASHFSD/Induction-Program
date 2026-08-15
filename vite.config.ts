@@ -71,7 +71,11 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       apiMockPlugin(),
-      tanstackStart(),
+      tanstackStart({
+        server: {
+          preset: 'vercel',
+        }
+      }),
       react(),
       tailwindcss(),
       tsconfigPaths(),
