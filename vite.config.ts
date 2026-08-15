@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { nitro } from "nitro/vite";
 
 const apiMockPlugin = (): Plugin => ({
   name: 'api-mock-plugin',
@@ -71,11 +72,8 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       apiMockPlugin(),
-      tanstackStart({
-        server: {
-          preset: 'vercel',
-        }
-      }),
+      tanstackStart(),
+      nitro({ preset: 'vercel' }),
       react(),
       tailwindcss(),
       tsconfigPaths(),
