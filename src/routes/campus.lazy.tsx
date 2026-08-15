@@ -1,6 +1,6 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { createLazyFileRoute, Link } from '@tanstack/react-router';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, X } from 'lucide-react';
 
 export const Route = createLazyFileRoute('/campus')({
   component: CampusRoute,
@@ -14,6 +14,9 @@ function CampusRoute() {
           <h1 className="text-lg font-bold text-[#5a1a25]">Campus Map</h1>
           <p className="text-xs text-slate-500 font-medium">Pinch or scroll to zoom, drag to pan</p>
         </div>
+        <Link to="/" className="p-2 bg-slate-100 hover:bg-slate-200 rounded-full text-slate-600 transition-colors flex items-center justify-center">
+          <X className="w-5 h-5" />
+        </Link>
       </div>
       
       <div className="flex-1 w-full relative overflow-hidden bg-[#e8e4e1] touch-none">
@@ -59,7 +62,7 @@ function CampusRoute() {
                 contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
               >
                 <img
-                  src="/campus-map.jpg"
+                  src="/campus-map-new.jpg"
                   alt="KRMU Campus Map"
                   className="w-full h-full object-contain pointer-events-none drop-shadow-sm"
                   style={{ maxHeight: '100%', maxWidth: '100%' }}

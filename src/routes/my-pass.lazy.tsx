@@ -40,7 +40,7 @@ async function fetchPlannerDashboard() {
   if (!user) return null;
   try {
     const token = await user.getIdToken();
-    const res = await fetch('/api/event-schedule?type=orientation', {
+    const res = await fetch('/api/planner-student-dashboard', {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
@@ -48,15 +48,10 @@ async function fetchPlannerDashboard() {
     
     if (!data.plannerActive) return null;
 
-    // Use current date for "today"
     const now = new Date();
-    // Assuming browser local time is close enough, or we just format to YYYY-MM-DD
-    const todayStr = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 10);
     const nowMin = now.getHours() * 60 + now.getMinutes();
 
-    let todaySessions = (data.sessions || []).filter((s: any) => s.date === todayStr);
-    
-    todaySessions = todaySessions.map((s: any) => {
+    let todaySessions = (data.today?.sessions || []).map((s: any) => {
       const start = timeToMin(s.startTime);
       const end = timeToMin(s.endTime);
       let status = 'upcoming';
@@ -72,16 +67,19 @@ async function fetchPlannerDashboard() {
       };
     });
     
+    // Sort just in case
     todaySessions.sort((a: any, b: any) => timeToMin(a.startTime) - timeToMin(b.startTime));
     const nextSession = todaySessions.find((s: any) => s.status === 'upcoming' || s.status === 'current');
 
     return {
       plannerActive: true,
+      room: data.room || null,
       today: {
-        date: todayStr,
+        date: data.today?.date,
         sessions: todaySessions
       },
-      nextSession: nextSession || null
+      nextSession: nextSession || data.nextSession || null,
+      scheduleSummary: data.scheduleSummary || []
     };
   } catch {
     return null;
@@ -336,6 +334,8 @@ function MyPassPage() {
               profile={profile} 
             />
             
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-900/10 dark:via-amber-500/10 to-transparent my-2" />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-[var(--dashboard-gap)]">
               <ScheduleTimeline planner={planner} isLoading={plannerLoading} />
               
@@ -352,8 +352,10 @@ function MyPassPage() {
               </div>
             </div>
 
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-900/10 dark:via-amber-500/10 to-transparent my-2" />
+
             {/* My Clubs & Societies */}
-            <div className="space-y-3 pt-4">
+            <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between px-1">
                 <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider mt-0">My Clubs & Societies</p>
                 <p className="text-[10px] font-bold text-[#8a4a22]/40 uppercase tracking-wider">
@@ -483,8 +485,10 @@ function MyPassPage() {
             <QuickActions />
             <InductionProgress />
             
+            <div className="hidden lg:block w-full h-px bg-gradient-to-r from-transparent via-amber-900/10 dark:via-amber-500/10 to-transparent my-2" />
+
             {/* Rankings */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4 pt-2">
               <p className="text-sm text-muted-foreground uppercase font-bold tracking-wider px-1">Rankings</p>
               <div className="flex flex-col gap-2">
                 {[

@@ -19,7 +19,7 @@ function PrivacyPolicy() {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg leading-none">E</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-[#2c1208]">EOZKA</span>
+              <span className="font-bold text-lg tracking-tight text-[#2c1208]">eOzka</span>
             </div>
           </div>
         </div>
@@ -31,7 +31,7 @@ function PrivacyPolicy() {
           <p className="text-sm text-[#7a4020]/60 mb-8">Last Updated: {new Date().toLocaleDateString()}</p>
           
           <div className="prose prose-orange max-w-none text-body-primary text-secondary space-y-6">
-            <p>At EOZKA, we are deeply committed to protecting your privacy and personal data. This Privacy Policy outlines our practices regarding data collection, protection, and usage in strict alignment with privacy-first principles, the <strong>Information Technology Act, 2000</strong>, the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act)</strong>, and university guidelines.</p>
+            <p>At eOzka, we are deeply committed to protecting your privacy and personal data. This Privacy Policy outlines our practices regarding data collection, protection, and usage in strict alignment with privacy-first principles, the <strong>Information Technology Act, 2000</strong>, the <strong>Digital Personal Data Protection Act, 2023 (DPDP Act)</strong>, and university guidelines.</p>
             
             <h2 className="text-heading text-primary font-bold mt-8 mb-4">1. Information Collected</h2>
             <p>To provide a seamless and secure induction experience, we collect specific categories of information.</p>
@@ -94,7 +94,7 @@ function PrivacyPolicy() {
             </ul>
 
             <h2 className="text-heading text-primary font-bold mt-8 mb-4">4. Data Sharing</h2>
-            <p><strong>EOZKA does NOT sell student data to any third parties, advertisers, or external brokers.</strong></p>
+            <p><strong>eOzka does NOT sell student data to any third parties, advertisers, or external brokers.</strong></p>
             <p>Your information is tightly controlled and is only accessible to:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Authorized university administrators and faculty members</li>
@@ -113,7 +113,7 @@ function PrivacyPolicy() {
             </ul>
 
             <h2 className="text-heading text-primary font-bold mt-8 mb-4">6. Cookies</h2>
-            <p>We respect your digital footprint. The EOZKA platform utilizes <strong>only essential cookies</strong> required for the core functionality and security of the application. <strong>We do not use advertising cookies, nor do we employ third-party tracking cookies.</strong> For detailed information, please review our <Link to="/cookies" className="text-[#8a4a22] hover:underline">Cookie Policy</Link>.</p>
+            <p>We respect your digital footprint. The eOzka platform utilizes <strong>only essential cookies</strong> required for the core functionality and security of the application. <strong>We do not use advertising cookies, nor do we employ third-party tracking cookies.</strong> For detailed information, please review our <Link to="/cookies" className="text-[#8a4a22] hover:underline">Cookie Policy</Link>.</p>
 
             <h2 className="text-heading text-primary font-bold mt-8 mb-4">7. Data Retention</h2>
             <p>Data is retained only as long as necessary to fulfill its intended purpose and in compliance with university directives. Specific retention periods include:</p>
@@ -127,14 +127,14 @@ function PrivacyPolicy() {
             <h2 className="text-heading text-primary font-bold mt-8 mb-4">8. Contact</h2>
             <p>For any questions regarding this Privacy Policy, your data, or security concerns, please contact:</p>
             <p><strong>Support Email:</strong> privacy@eozka.com</p>
-            <p><strong>Organization:</strong> EOZKA in partnership with K.R. Mangalam University</p>
+            <p><strong>Organization:</strong> eOzka in partnership with K.R. Mangalam University</p>
           </div>
         </div>
       </main>
 
       <footer className="w-full text-center py-6 border-t border-[#8a4a22]/10 mt-auto flex-none">
         <p className="text-xs text-[#7a4020]/60">
-          &copy; 2026 EOZKA Technologies. Developed for K.R. Mangalam University. All rights reserved.
+          &copy; 2026 eOzka Technologies. Developed for K.R. Mangalam University. All rights reserved.
         </p>
       </footer>
     </div>

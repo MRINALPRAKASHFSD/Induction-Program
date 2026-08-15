@@ -1256,7 +1256,7 @@ function RegistrationWizardModal({ club, onClose, onSuccess }: RegistrationWizar
 
   const handleVerifyStudent = async () => {
     if (!enrollmentNo.trim()) {
-      toast.error("Please enter your Student ID / Enrollment Number");
+      toast.error("Please enter your Student ID / Application Number");
       return;
     }
     setLookupLoading(true);
@@ -1346,7 +1346,7 @@ function RegistrationWizardModal({ club, onClose, onSuccess }: RegistrationWizar
 
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-[#7a4020]">
-                Enter Your Student ID / Enrollment Number
+                Enter Your Student ID / Application Number
               </Label>
               <Input
                 value={enrollmentNo}

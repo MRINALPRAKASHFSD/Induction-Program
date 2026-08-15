@@ -755,9 +755,9 @@ function HelpCenterPage() {
               showToast={showToast}
             />
             <CoordinatorCard
-              name="Aman Chapadia"
-              designation="Logistics & Operations Head"
-              phone="+91 82879 95636"
+              name="Kushagra Bhardwaj"
+              designation="Main Tech Coordinator"
+              phone="7428690322"
               showToast={showToast}
             />
             <CoordinatorCard

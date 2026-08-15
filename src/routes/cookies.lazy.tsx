@@ -19,7 +19,7 @@ function CookiePolicy() {
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg leading-none">E</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-[#2c1208]">EOZKA</span>
+              <span className="font-bold text-lg tracking-tight text-[#2c1208]">eOzka</span>
             </div>
           </div>
         </div>
@@ -31,7 +31,7 @@ function CookiePolicy() {
           <p className="text-sm text-[#7a4020]/60 mb-8">Last Updated: {new Date().toLocaleDateString()}</p>
           
           <div className="prose prose-orange max-w-none text-[#5a2c14] space-y-6">
-            <p>At EOZKA, we believe in transparent, privacy-first technology. This Cookie Policy explains how and why we use cookies on the Induction Management Platform.</p>
+            <p>At eOzka, we believe in transparent, privacy-first technology. This Cookie Policy explains how and why we use cookies on the Induction Management Platform.</p>
             
             <h2 className="text-xl font-bold text-[#2c1208] mt-8 mb-4">1. What Are Cookies?</h2>
             <p>Cookies are small text files stored on your browser or device by websites you visit. They are widely used to make platforms function efficiently, as well as to provide critical security and state management during your session.</p>
@@ -60,7 +60,7 @@ function CookiePolicy() {
             <p>Most modern web browsers (Chrome, Safari, Firefox, Edge) allow you to manage your cookie preferences through their settings menus. You can configure your browser to refuse all cookies or to indicate when a cookie is being sent.</p>
             
             <h3 className="text-lg font-semibold text-[#2c1208] mt-6 mb-3">Effect of Disabling Cookies</h3>
-            <p>Because the EOZKA platform relies solely on strictly necessary cookies, disabling them will severely impact your ability to use the system. Specifically:</p>
+            <p>Because the eOzka platform relies solely on strictly necessary cookies, disabling them will severely impact your ability to use the system. Specifically:</p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Effect on login:</strong> You will be unable to maintain a logged-in state, forcing a logout immediately after authentication.</li>
               <li><strong>Effect on QR attendance:</strong> Your device will not be able to securely verify your identity during a QR scan, preventing you from logging attendance.</li>
@@ -75,7 +75,7 @@ function CookiePolicy() {
 
       <footer className="w-full text-center py-6 border-t border-[#8a4a22]/10 mt-auto flex-none">
         <p className="text-xs text-[#7a4020]/60">
-          &copy; 2026 EOZKA Technologies. Developed for K.R. Mangalam University. All rights reserved.
+          &copy; 2026 eOzka Technologies. Developed for K.R. Mangalam University. All rights reserved.
         </p>
       </footer>
     </div>

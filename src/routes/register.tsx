@@ -13,6 +13,7 @@ import {
 import { localDb } from "@/lib/local-db";
 import { registerStudent } from "@/lib/students.functions";
 import { lookupInductionParticipant, registerInductionStudent } from "@/lib/admin.functions";
+import { SCHOOLS, PROGRAM_LEVELS } from "@/lib/constants";
 
 import { auth } from "@/lib/firebase/config";
 import { signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
@@ -45,28 +46,6 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
 
-// ─── Static KRMU data (no DB call needed) ──────────────────────────────────
-const DEPARTMENTS = [
-  { id: "soet",  code: "SOET",  name: "School of Engineering & Technology" },
-  { id: "somc",  code: "SOMC",  name: "School of Management and Commerce" },
-  { id: "sols",  code: "SOLS",  name: "School of Legal Studies" },
-  { id: "smas",  code: "SMAS",  name: "School of Medical & Allied Sciences" },
-  { id: "sola",  code: "SOLA",  name: "School of Liberal Arts" },
-  { id: "sbas",  code: "SBAS",  name: "School of Basic & Applied Sciences" },
-  { id: "soad",  code: "SOAD",  name: "School of Architecture & Design" },
-  { id: "sprs",  code: "SPRS",  name: "School of Physiotherapy and Rehabilitation Sciences" },
-  { id: "semc",  code: "SEMC",  name: "School of Emerging Media and Creator Economy" },
-  { id: "soe",   code: "SOE",   name: "School of Education" },
-  { id: "sas",   code: "SAS",   name: "School of Agricultural Sciences" },
-  { id: "shmct", code: "SHMCT", name: "School of Hotel Management & Catering Technology" },
-];
-
-const PROGRAM_LEVELS = [
-  "Undergraduate Programmes",
-  "Postgraduate Programmes",
-  "Doctoral Programmes",
-  "Diploma Programmes",
-];
 
 function RegisterPage() {
   const navigate = useNavigate();
@@ -138,7 +117,7 @@ function RegisterPage() {
 
 
   const branches  = form.department_id ? PROGRAM_LEVELS : [];
-  const deptName  = DEPARTMENTS.find(d => d.id === form.department_id)?.name ?? "";
+  const deptName  = SCHOOLS.find(s => s.id === form.department_id)?.name ?? "";
 
   // ── Phase 0: Lookup Application Number ───────────────────────────────────────
   const onLookupAppNumber = async () => {
@@ -724,11 +703,11 @@ function RegisterPage() {
           <div className="grid gap-12 lg:grid-cols-12 items-start">
             
             {/* Left Column - Value Prop */}
-            <div className="lg:col-span-5 lg:sticky lg:top-32 hidden lg:flex flex-col gap-8 rounded-[2rem] p-10 shadow-2xl border border-primary/20 bg-gradient-to-br from-background via-background to-primary/5 backdrop-blur-xl relative overflow-hidden">
+            <div className="lg:col-span-5 lg:sticky lg:top-32 hidden lg:flex flex-col gap-8 rounded-[2rem] p-10 shadow-2xl border border-amber-500/20 bg-gradient-to-br from-background via-background to-amber-500/5 backdrop-blur-xl relative overflow-hidden">
                {/* Decorative background meshes */}
-               <div className="absolute -top-32 -right-32 w-80 h-80 bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-               <div className="absolute top-1/2 -left-32 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none" />
-               <div className="absolute -bottom-20 right-0 w-72 h-72 bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
+               <div className="absolute -top-32 -right-32 w-80 h-80 bg-amber-500/20 rounded-full blur-[100px] pointer-events-none" />
+               <div className="absolute top-1/2 -left-32 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
+               <div className="absolute -bottom-20 right-0 w-72 h-72 bg-amber-500/10 rounded-full blur-[80px] pointer-events-none" />
                
                {/* Subtle grid pattern overlay */}
                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMTgyLCAzNCwgNTEsIDAuMDUpIi8+PC9zdmc+')] [mask-image:linear-gradient(to_bottom,white,transparent)] pointer-events-none" />
@@ -787,7 +766,7 @@ function RegisterPage() {
                  <p className="mt-3 text-[15px] text-muted-foreground">Takes about 30 seconds. Required for QR attendance.</p>
                </motion.div>
 
-               <form onSubmit={onSubmitForm} className="rounded-3xl sm:rounded-[2rem] panel-liquid-glass p-5 sm:p-10 shadow-glow border border-primary/10 relative z-10 bg-background/70 backdrop-blur-2xl">
+               <form onSubmit={onSubmitForm} className="rounded-3xl sm:rounded-[2rem] panel-liquid-glass p-6 sm:p-12 shadow-glow border border-border/40 relative z-10 bg-background/70 backdrop-blur-2xl">
                  
                  <div className="space-y-8 sm:space-y-10">
 
@@ -795,7 +774,10 @@ function RegisterPage() {
                    <div className="space-y-6">
                      <div className="flex items-center gap-3 border-b border-border/30 pb-3">
                        <div className="h-6 w-1.5 rounded-full bg-primary" />
-                       <h3 className="font-bold text-xl tracking-tight">1. Personal Identity</h3>
+                       <div>
+                         <h3 className="font-bold text-xl tracking-tight">1. Personal Identity</h3>
+                         <p className="text-sm text-muted-foreground mt-0.5">Tell us who you are.</p>
+                       </div>
                      </div>
 
                      <Field label="Full Name *">
@@ -804,7 +786,7 @@ function RegisterPage() {
                      </Field>
 
                      <div className="grid gap-6 sm:grid-cols-2">
-                       <Field label="Enrollment Number *">
+                       <Field label="Application Number *">
                          <IconInput icon={Hash} required value={form.enrollment_no}
                            onChange={(e: any) => update("enrollment_no", e.target.value)}
                            placeholder="e.g. KRMU24CS0001" className="uppercase" />
@@ -896,7 +878,10 @@ function RegisterPage() {
                    <div className="space-y-6">
                      <div className="flex items-center gap-3 border-b border-border/30 pb-3">
                        <div className="h-6 w-1.5 rounded-full bg-primary" />
-                       <h3 className="font-bold text-xl tracking-tight">2. Academic Profile</h3>
+                       <div>
+                         <h3 className="font-bold text-xl tracking-tight">2. Academic Profile</h3>
+                         <p className="text-sm text-muted-foreground mt-0.5">Help us identify your programme.</p>
+                       </div>
                      </div>
 
                      <div className="grid gap-6 sm:grid-cols-2">
@@ -908,8 +893,8 @@ function RegisterPage() {
                            <Select value={form.department_id} onValueChange={(v) => update("department_id", v)}>
                              <SelectTrigger className="pl-10 h-12 text-[15px] bg-background/50 border-border/50 focus:ring-primary/20 [&>span]:truncate"><SelectValue placeholder="Select school" /></SelectTrigger>
                              <SelectContent>
-                               {DEPARTMENTS.map((d) => (
-                                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                               {SCHOOLS.map((s) => (
+                                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                ))}
                              </SelectContent>
                            </Select>
