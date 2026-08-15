@@ -73,7 +73,7 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       apiMockPlugin(),
       tanstackStart(),
-      nitro({ preset: 'vercel' }),
+      command === 'build' ? nitro({ preset: 'vercel' }) : undefined,
       react(),
       tailwindcss(),
       tsconfigPaths(),
