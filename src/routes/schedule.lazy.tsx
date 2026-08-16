@@ -202,12 +202,11 @@ function UnifiedSchedulePage() {
   const fetchOrientation = async () => {
     try {
       const token = await getAuthToken();
-      if (!token) return;
-      const res = await fetch("/api/event-schedule?type=orientation", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch("/api/event-schedule?type=orientation", { headers });
       const data = await res.json();
-      if (data.plannerActive) {
+      if (data.plannerActive || data.sessions) {
         setOrientationSessions(data.sessions || []);
       }
     } catch (e) {
@@ -303,27 +302,8 @@ function UnifiedSchedulePage() {
     loadInductionSessions(d, isMasterView);
   };
 
-  // ── Guard: no profile ──────────────────────────────────────────────────────
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-background">
-        <SiteHeader />
-        <main className="container mx-auto px-4 py-16 text-center">
-          <div className="empty-state max-w-sm mx-auto">
-            <div className="empty-state-icon"><Calendar className="h-7 w-7" /></div>
-            <div className="empty-state-title">Register First</div>
-            <div className="empty-state-text">Register to see your personalized schedule.</div>
-            <Button asChild variant="liquidGlassMaroon" size="lg" className="rounded-full px-8">
-              <Link to="/register">Register Now</Link>
-            </Button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   // ── Current View Data ──────────────────────────────────────────────────────
-  const isOrientation = scheduleType === "orientation";
+  const isOrientation = !profile ? true : scheduleType === "orientation";
   let currentSessions = isOrientation ? orientationSessions : inductionSessions;
   
   // Sort sessions
@@ -372,7 +352,7 @@ function UnifiedSchedulePage() {
   const accentColor = isCopper ? "#c27c51" : "#8a4a22"; // Copper vs Maroon
 
   return (
-    <div className="min-h-screen bg-background pb-12 overflow-x-hidden">
+    <div className="min-h-dvh transition-colors duration-700 relative overflow-x-hidden" style={{ backgroundColor: '#FFFDFC' }}>
       <SiteHeader />
       <NavSpacer />
       
@@ -382,6 +362,15 @@ function UnifiedSchedulePage() {
         style={{ '--tw-gradient-to': isCopper ? '#f5d9c6' : '#f5ede4' } as any}
         aria-hidden="true" 
       />
+      
+      {/* ── Aarambh Ambient Background ──────────────────────────────── */}
+      <div className="ambient-bg" aria-hidden="true">
+        <div className="ambient-blob ambient-blob-1" />
+        <div className="ambient-blob ambient-blob-2" />
+        <div className="ambient-blob ambient-blob-3" />
+        <div className="watermark" aria-hidden="true">AARAMBH</div>
+      </div>
+      <div className="bg-hero-premium fixed inset-0 -z-10 opacity-40" aria-hidden="true" />
 
       <main className="relative container mx-auto max-w-2xl px-4 py-6">
         <m.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -396,32 +385,42 @@ function UnifiedSchedulePage() {
             </p>
           </div>
 
-          {/* ── Segmented Control ────────────────────────────────────────── */}
-          <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl w-full max-w-sm mx-auto shadow-inner relative">
-            <button
-              onClick={() => setScheduleType("orientation")}
-              className={`flex-1 relative z-10 py-2.5 text-[13px] font-bold rounded-lg transition-colors ${isOrientation ? 'text-white' : 'text-secondary hover:text-primary'}`}
-            >
-              📍 Orientation
-            </button>
-            <button
-              onClick={() => setScheduleType("induction")}
-              className={`flex-1 relative z-10 py-2.5 text-[13px] font-bold rounded-lg transition-colors ${!isOrientation ? 'text-white' : 'text-secondary hover:text-primary'}`}
-            >
-              🎓 Dikshaarambh
-            </button>
-            
-            {/* Animated Pill */}
-            <m.div
-              layoutId="schedule-tab-pill"
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-sm"
-              style={{ 
-                backgroundColor: accentColor,
-                left: isOrientation ? '4px' : '50%'
-              }}
-              transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-            />
-          </div>
+          {/* ── Segmented Control or Pitch ────────────────────────────────────────── */}
+          {!profile ? (
+            <div className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-5 shadow-sm text-center">
+              <h2 className="text-lg font-bold text-primary mb-2">Personalize Your Schedule</h2>
+              <p className="text-sm text-secondary mb-4">Complete your registration to unlock your digital pass and personalized Dikshaarambh schedule.</p>
+              <Button asChild className="w-full bg-[#8B1E2D] hover:bg-[#6e3a1a] text-white rounded-xl shadow-md transition-transform active:scale-95">
+                <Link to="/register">Complete Registration</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-xl w-full max-w-sm mx-auto shadow-inner relative">
+              <button
+                onClick={() => setScheduleType("orientation")}
+                className={`flex-1 relative z-10 py-2.5 text-[13px] font-bold rounded-lg transition-colors ${isOrientation ? 'text-white' : 'text-secondary hover:text-primary'}`}
+              >
+                📍 Orientation
+              </button>
+              <button
+                onClick={() => setScheduleType("induction")}
+                className={`flex-1 relative z-10 py-2.5 text-[13px] font-bold rounded-lg transition-colors ${!isOrientation ? 'text-white' : 'text-secondary hover:text-primary'}`}
+              >
+                🎓 Dikshaarambh
+              </button>
+              
+              {/* Animated Pill */}
+              <m.div
+                layoutId="schedule-tab-pill"
+                className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg shadow-sm"
+                style={{ 
+                  backgroundColor: accentColor,
+                  left: isOrientation ? '4px' : '50%'
+                }}
+                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+              />
+            </div>
+          )}
 
           {/* ── Top Bar (Date & Export) ──────────────────────────────────── */}
           <div className="flex items-center justify-between px-2 pt-2">

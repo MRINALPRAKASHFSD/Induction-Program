@@ -1,12 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
+import { TicketPDF } from '@/components/ticket-pdf';
 import { db } from '@/lib/firebase/config';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   CheckCircle2, MapPin, Clock, User, Hash,
   BookOpen, GraduationCap, Building, Check,
-  AlertTriangle, XCircle, Loader2, Users, ChevronDown, CalendarClock
+  AlertTriangle, XCircle, Loader2, Users, ChevronDown, CalendarClock,
+  Grid, Map, LifeBuoy, ArrowRight, Download, Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -38,6 +40,7 @@ interface EventData {
   qr_enabled?: boolean;
   capacity?:   number;
   attendance_count?: number;
+  coordinator?: string;
 }
 
 function formatEventTime(iso: string): string {
@@ -58,6 +61,15 @@ function getEventDisplayName(event: EventData): string {
   return event.id;
 }
 
+function getNextEvent(sessions: any[] | null) {
+  if (!sessions || sessions.length === 0) return null;
+  const now = new Date().getTime();
+  const future = sessions.filter(s => s.start_time && new Date(s.start_time).getTime() > now);
+  if (future.length === 0) return null;
+  future.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+  return future[0];
+}
+
 function EventAttendPage() {
   const { eventId } = Route.useParams();
   const shouldReduceMotion = useReducedMotion();
@@ -67,7 +79,9 @@ function EventAttendPage() {
   const [applicationNumber, setApplicationNumber] = useState('');
   const [errorMsg,          setErrorMsg]          = useState('');
   const [resultData,        setResultData]        = useState<any | null>(null);
+  const [downloadType,      setDownloadType]      = useState<'pdf' | 'png' | null>(null);
   const [hasPlanner,        setHasPlanner]        = useState(false);
+  const [scheduleSessions,  setScheduleSessions]  = useState<any[] | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -123,6 +137,9 @@ function EventAttendPage() {
           const data = await res.json();
           if (data.plannerActive) {
             setHasPlanner(true);
+          }
+          if (data.sessions && Array.isArray(data.sessions)) {
+            setScheduleSessions(data.sessions);
           }
         } catch (e) {
           console.error("Failed to check planner status", e);
@@ -214,7 +231,7 @@ function EventAttendPage() {
   // Decorative child animations play in parallel via staggerChildren.
 
   return (
-    <div className="min-h-dvh bg-background relative overflow-hidden flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-dvh relative overflow-hidden flex flex-col items-center justify-center px-4 py-8" style={{ backgroundColor: '#FFFDFC' }}>
 
       {/* ── Aarambh Ambient Background ──────────────────────────────── */}
       <div className="ambient-bg" aria-hidden="true">
@@ -238,14 +255,18 @@ function EventAttendPage() {
               exit={{ opacity: 0, y: -8 }}
               className="text-center mb-7"
             >
-              {/* Aarambh "A" logo block — matches footer branding in index.tsx */}
+              {/* KRMU Logo & Event Title */}
               <div className="inline-flex flex-col items-center gap-2">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-[#8a4a22]/25">
-                  A
-                </div>
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className="aarambh-year text-[10px]">K.R. Mangalam University</span>
-                  <span className="text-label text-secondary">Event Attendance</span>
+                <img 
+                  src="/krmu-logo-transparent.png" 
+                  alt="K.R. Mangalam University Logo" 
+                  className="h-[56px] w-auto md:h-[64px] object-contain drop-shadow-[0_4px_12px_rgba(139,30,45,0.15)]"
+                />
+                <div className="flex flex-col items-center gap-1.5 mt-2">
+                  <h1 className="text-base md:text-lg font-bold tracking-[0.08em] text-[#8B1E2D] uppercase text-center">
+                    {event ? getEventDisplayName(event) : "EVENT ATTENDANCE"}
+                  </h1>
+                  <div className="h-[2px] w-12 bg-gradient-to-r from-transparent via-[#C8A55A] to-transparent opacity-70" />
                 </div>
               </div>
             </motion.div>
@@ -363,145 +384,261 @@ function EventAttendPage() {
         )}
 
         {/* ════════════════════════════════════════════════════════════
-            SUCCESS STATE — Aarambh brand-aligned
-            Card is visible immediately. Decorative items animate in
-            parallel via stagger so perceived latency is zero.
+            SUCCESS STATE — Digital Orientation Companion
             ════════════════════════════════════════════════════════════ */}
-        {pageState === 'success' && event && resultData && (
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={popIn}
-            className="glass-premium-v2 rounded-3xl px-6 py-8 shadow-[0_20px_60px_rgba(138,74,34,0.10)]"
-          >
-            {/* ── Brand mark ─────────────────────────────────────── */}
-            <div className="text-center mb-6">
-              <div className="inline-flex flex-col items-center gap-1.5 mb-5">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#8a4a22] to-[#5a2c14] flex items-center justify-center text-white font-bold text-lg shadow-md shadow-[#8a4a22]/25">
-                  A
-                </div>
-                <span className="aarambh-year text-[10px]">Aarambh 2026 · K.R. Mangalam University</span>
-              </div>
+        {pageState === 'success' && event && resultData && (() => {
+          const nextEvent = getNextEvent(scheduleSessions);
+          
+          return (
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={popIn}
+              className="w-full"
+            >
+              <div className="bg-white rounded-3xl px-6 py-8 shadow-[0_20px_60px_rgba(137,32,44,0.10)] border border-[rgba(137,32,44,0.08)]">
+                {/* ── Brand mark ─────────────────────────────────────── */}
+                <div className="text-center mb-6">
+                  <div className="inline-flex flex-col items-center gap-1.5 mb-5">
+                    <img 
+                      src="/krmu-logo-transparent.png" 
+                      alt="K.R. Mangalam University Logo" 
+                      className="h-[48px] w-auto md:h-[56px] object-contain drop-shadow-[0_4px_12px_rgba(139,30,45,0.15)]"
+                    />
+                  </div>
 
-              {/* ── Success icon ─────────────────────────────────── */}
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 14, stiffness: 220 }}
-                className="w-[72px] h-[72px] rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center mx-auto mb-4 shadow-[0_0_24px_rgba(34,197,94,0.18)]"
-              >
-                {/* Primary: animated SVG tick. Fallback: lucide Check */}
+                  {/* ── Success icon ─────────────────────────────────── */}
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', damping: 14, stiffness: 220 }}
+                    className="w-[72px] h-[72px] rounded-full bg-[#00B26F]/10 border border-[#00B26F]/25 flex items-center justify-center mx-auto mb-4 shadow-[0_0_24px_rgba(0,178,111,0.18)]"
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.6 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.15, type: 'spring', stiffness: 220 }}
+                    >
+                      <CheckCircle2 size={36} className="text-[#00B26F]" strokeWidth={1.75} />
+                    </motion.div>
+                  </motion.div>
+
+                  <motion.div variants={fadeUp}>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#00B26F]/10 text-[#00B26F] font-bold text-xs rounded-full border border-[#00B26F]/20 mb-4">
+                      <Check size={12} strokeWidth={3} />
+                      Attendance Confirmed
+                    </div>
+                  </motion.div>
+
+                  {/* ── Heading ──────────────────────────────────────── */}
+                  <motion.h2
+                    variants={fadeUp}
+                    className="font-serif text-2xl font-bold text-primary tracking-tight mb-2"
+                  >
+                    Welcome to Aarambh 2026
+                  </motion.h2>
+                  <motion.p variants={fadeUp} className="text-body-secondary text-secondary">
+                    Your attendance has been successfully recorded.<br/>
+                    Explore today's orientation schedule,<br/>
+                    campus guidance and student activities.
+                  </motion.p>
+                  
+                  <motion.div variants={fadeUp} className="mt-5 flex flex-col items-center">
+                    <h1 className="text-lg md:text-xl font-bold tracking-[0.08em] text-[#8B1E2D] uppercase text-center">
+                      {event ? getEventDisplayName(event) : "EVENT ATTENDANCE"}
+                    </h1>
+                    <div className="h-[2px] w-12 bg-gradient-to-r from-transparent via-[#C8A55A] to-transparent opacity-70 mt-1.5" />
+                  </motion.div>
+                </div>
+
+                {/* ── Live Status Card (Next Event) ──────────────────────────── */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.6 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.15, type: 'spring', stiffness: 220 }}
+                  variants={fadeUp}
+                  className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 mb-5 shadow-sm"
                 >
-                  <CheckCircle2 size={36} className="text-emerald-500" strokeWidth={1.75} />
+                  <p className="text-sm text-primary mb-1">
+                    Good Afternoon, <span className="font-bold">{resultData.studentName?.split(' ')[0] || 'Student'}</span> 👋
+                  </p>
+                  {nextEvent ? (
+                    <p className="text-xs text-secondary leading-snug">
+                      You have successfully checked in. Next Event: <span className="font-semibold text-primary">{nextEvent.title}</span> in <span className="font-semibold text-primary">
+                        {Math.max(1, Math.round((new Date(nextEvent.start_time).getTime() - new Date().getTime()) / 60000))} mins
+                      </span>.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-secondary leading-snug">
+                      You have successfully checked in to {getEventDisplayName(event)}. Check out your schedule below.
+                    </p>
+                  )}
                 </motion.div>
-              </motion.div>
 
-              {/* ── Heading ──────────────────────────────────────── */}
-              <motion.h2
-                variants={fadeUp}
-                className="font-serif text-2xl font-bold text-primary tracking-tight mb-1"
-              >
-                Attendance Confirmed
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-body-secondary text-secondary">
-                Welcome to {getEventDisplayName(event)}
-              </motion.p>
-            </div>
+                {/* ── Card 1: Attendance Status ─────────────────────────── */}
+                <motion.div
+                  variants={staggerContainer}
+                  className="bg-white rounded-2xl px-5 py-4 mb-4 flex flex-col gap-3.5 border border-[#8B1E2D]/10"
+                >
+                  <div className="flex justify-between items-center text-label text-secondary border-b border-border pb-2.5 mb-0.5">
+                    <span>Attendance Status</span>
+                    <span className="font-bold text-[#00B26F]">✓ Confirmed</span>
+                  </div>
+                  <StudentDetailRow icon={<User size={15} className="text-[#8B1E2D]" />}   label="Name"           value={resultData.studentName} />
+                  <StudentDetailRow icon={<Hash size={15} className="text-[#8B1E2D]" />}   label="Application No." value={resultData.applicationNumber} />
+                  {resultData.school  && <StudentDetailRow icon={<Building size={15} className="text-[#8B1E2D]" />}     label="School"  value={resultData.school} />}
+                  {resultData.program && <StudentDetailRow icon={<GraduationCap size={15} className="text-[#8B1E2D]" />} label="Programme" value={resultData.program} />}
+                  
+                  <motion.div
+                    variants={fadeUp}
+                    className="flex justify-between items-center pt-2.5 border-t border-border text-sm"
+                  >
+                    <div className="flex items-center gap-2 text-secondary text-label">
+                      <Clock size={14} className="text-[#8B1E2D]/60" />
+                      Time of Check-in
+                    </div>
+                    <StatusPill status={resultData.status} />
+                  </motion.div>
+                </motion.div>
 
-            {/* ── Divider ──────────────────────────────────────────── */}
-            <div className="h-px bg-border my-5" />
+                {/* ── Card 2: Today's Event ─────────────────────────── */}
+                <motion.div
+                  variants={staggerContainer}
+                  className="bg-white rounded-2xl px-5 py-4 mb-5 flex flex-col gap-3.5 border border-[#8B1E2D]/10"
+                >
+                  <div className="text-label text-secondary border-b border-border pb-2.5 mb-0.5">
+                    Orientation Day • {resultData.school || 'Day 1'}
+                  </div>
+                  <div className="flex flex-col gap-1 mb-2">
+                    <h3 className="font-bold text-primary text-base leading-tight">
+                      {getEventDisplayName(event)}
+                    </h3>
+                  </div>
+                  
+                  <StudentDetailRow icon={<MapPin size={15} className="text-[#C8A55A]" />} label="Venue" value={event.venue} />
+                  <StudentDetailRow icon={<Clock size={15} className="text-[#C8A55A]" />} label="Time" value={formatEventTime(event.starts_at)} />
+                  {event.coordinator && <StudentDetailRow icon={<User size={15} className="text-[#C8A55A]" />} label="Coordinator" value={event.coordinator} />}
+                </motion.div>
 
-            {/* ── Event info pills ─────────────────────────────────── */}
-            <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-2 mb-5">
-              <div className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary bg-white/60 border border-border px-3 py-1.5 rounded-full backdrop-blur-sm">
-                <MapPin size={12} className="text-[#c87038]" />
-                {event.venue}
-              </div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary bg-white/60 border border-border px-3 py-1.5 rounded-full backdrop-blur-sm">
-                <Clock size={12} className="text-[#c87038]" />
-                {formatEventTime(event.starts_at)}
-              </div>
-            </motion.div>
+                {/* ── 4-step timeline ──────────────────────────────────── */}
+                <motion.div
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show:   { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
+                  }}
+                  className="flex flex-col gap-3 pl-1 mb-5"
+                >
+                  <TimelineStep text="Check-in Complete" />
+                  <TimelineStep text="Identity Verified" />
+                  <TimelineStep text="Attendance Recorded" />
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, x: shouldReduceMotion ? 0 : -10 },
+                      show:   { opacity: 1, x: 0, transition: { type: 'spring' as const, damping: 22 } },
+                    }}
+                    className="flex items-center gap-3 text-sm text-primary font-bold mt-1"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#8B1E2D]/10 border border-[#8B1E2D]/25 flex items-center justify-center shrink-0">
+                      <ArrowRight size={13} className="text-[#8B1E2D]" strokeWidth={3} />
+                    </div>
+                    Next Step: {nextEvent ? nextEvent.title : getEventDisplayName(event)}
+                  </motion.div>
+                </motion.div>
 
-            {/* ── Student information card ─────────────────────────── */}
-            <motion.div
-              variants={staggerContainer}
-              className="glass-premium-v2 rounded-2xl px-5 py-4 mb-5 flex flex-col gap-3.5"
-            >
-              {/* Section label */}
-              <div className="text-label text-secondary border-b border-border pb-2.5 mb-0.5">
-                Student Information
-              </div>
+                <GuestDrawerTrigger event={event} resultData={resultData} />
 
-              <StudentDetailRow icon={<User size={15} className="text-[#c87038]" />}   label="Name"           value={resultData.studentName} />
-              <StudentDetailRow icon={<Hash size={15} className="text-[#c87038]" />}   label="Application No." value={resultData.applicationNumber} />
-              {resultData.course  && <StudentDetailRow icon={<BookOpen size={15} className="text-[#c87038]" />}     label="Course"  value={resultData.course} />}
-              {resultData.school  && <StudentDetailRow icon={<Building size={15} className="text-[#c87038]" />}     label="School"  value={resultData.school} />}
-              {resultData.program && <StudentDetailRow icon={<GraduationCap size={15} className="text-[#c87038]" />} label="Program" value={resultData.program} />}
-
-              {/* ── Status row ─────────────────────────────────────── */}
-              <motion.div
-                variants={fadeUp}
-                className="flex justify-between items-center pt-2.5 border-t border-border text-sm"
-              >
-                <div className="flex items-center gap-2 text-secondary text-label">
-                  <CheckCircle2 size={14} className="text-[#8a4a22]/60" />
-                  Status
-                </div>
-                <StatusPill status={resultData.status} />
-              </motion.div>
-            </motion.div>
-
-            {/* ── 3-step timeline ──────────────────────────────────── */}
-            <motion.div
-              variants={{
-                hidden: { opacity: 0 },
-                show:   { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
-              }}
-              className="flex flex-col gap-3 pl-1"
-            >
-              <TimelineStep text="QR Verified" />
-              <TimelineStep text="Student Verified" />
-              <TimelineStep text="Attendance Recorded" />
-            </motion.div>
-
-            <GuestDrawerTrigger event={event} resultData={resultData} />
-
-            {/* ── Planner card (conditionally shown) ───────────────── */}
-            <AnimatePresence>
-              {hasPlanner && (
+                {/* ── Apple Wallet Style Quick Actions ───────────────── */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="mt-4 w-full"
+                  className="mt-6 w-full grid grid-cols-2 gap-3"
                 >
                   <Link
-                    to="/my-schedule"
-                    className="w-full glass-premium-v2 border border-[#8a4a22]/30 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group block"
+                    to="/schedule"
+                    className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 flex flex-col items-start gap-2 hover:shadow-md transition-all group"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-[#8a4a22]/10 flex items-center justify-center shrink-0">
-                        <CalendarClock className="w-4 h-4 text-[#8a4a22]" />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-bold text-primary">View My Schedule</p>
-                        <p className="text-xs text-secondary mt-0.5">Check what's happening next</p>
-                      </div>
+                    <div className="w-8 h-8 rounded-full bg-[#8B1E2D]/5 flex items-center justify-center group-hover:bg-[#8B1E2D]/10 transition-colors">
+                      <CalendarClock className="w-4 h-4 text-[#8B1E2D]" />
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-[#8a4a22]/5 flex items-center justify-center group-hover:bg-[#8a4a22]/10 transition-colors">
-                      <ChevronDown className="w-4 h-4 text-primary/40 group-hover:text-primary transition-colors shrink-0 -rotate-90" />
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-primary leading-tight">Schedule</p>
+                      <p className="text-[10px] text-secondary mt-0.5">View itinerary</p>
+                    </div>
+                  </Link>
+                  <Link
+                    to="/campus"
+                    className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 flex flex-col items-start gap-2 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#8B1E2D]/5 flex items-center justify-center group-hover:bg-[#8B1E2D]/10 transition-colors">
+                      <Map className="w-4 h-4 text-[#8B1E2D]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-primary leading-tight">Campus Map</p>
+                      <p className="text-[10px] text-secondary mt-0.5">Find your way</p>
+                    </div>
+                  </Link>
+                  <Link
+                    to="/clubs"
+                    className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 flex flex-col items-start gap-2 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#8B1E2D]/5 flex items-center justify-center group-hover:bg-[#8B1E2D]/10 transition-colors">
+                      <Grid className="w-4 h-4 text-[#8B1E2D]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-primary leading-tight">Explore Clubs</p>
+                      <p className="text-[10px] text-secondary mt-0.5">Join communities</p>
+                    </div>
+                  </Link>
+                  <Link
+                    to="/help"
+                    className="bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 flex flex-col items-start gap-2 hover:shadow-md transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#8B1E2D]/5 flex items-center justify-center group-hover:bg-[#8B1E2D]/10 transition-colors">
+                      <LifeBuoy className="w-4 h-4 text-[#8B1E2D]" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-primary leading-tight">Help Desk</p>
+                      <p className="text-[10px] text-secondary mt-0.5">Get support</p>
                     </div>
                   </Link>
                 </motion.div>
+
+                {/* ── Download Entry Pass Actions ───────────────── */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                  className="mt-6 flex flex-col gap-3"
+                >
+                  <button
+                    onClick={() => setDownloadType('pdf')}
+                    disabled={!!downloadType}
+                    className="w-full bg-[#8B1E2D] text-white rounded-2xl py-4 font-bold text-sm shadow-[0_4px_14px_rgba(137,32,44,0.3)] hover:shadow-[0_6px_20px_rgba(137,32,44,0.4)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    <Download size={18} className="group-hover:-translate-y-1 transition-transform" />
+                    {downloadType === 'pdf' ? 'Generating Pass...' : 'Download Official Entry Pass'}
+                  </button>
+                  <button
+                    onClick={() => setDownloadType('png')}
+                    disabled={!!downloadType}
+                    className="w-full bg-white text-[#8B1E2D] border border-[#8B1E2D]/20 rounded-2xl py-3.5 font-bold text-sm shadow-sm hover:bg-[#8B1E2D]/5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    <ImageIcon size={18} />
+                    {downloadType === 'png' ? 'Saving...' : 'Save as Image (PNG)'}
+                  </button>
+                </motion.div>
+              </div>
+
+              {/* Hidden Ticket PDF Component */}
+              {downloadType && event && resultData && (
+                <TicketPDF 
+                  event={event} 
+                  resultData={resultData} 
+                  type={downloadType}
+                  onComplete={() => setDownloadType(null)} 
+                />
               )}
-            </AnimatePresence>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })()}
 
         {/* ════════════════════════════════════════════════════════════
             DUPLICATE STATE — brand aligned
@@ -802,14 +939,14 @@ function GuestDrawerTrigger({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         onClick={() => setOpen(true)}
-        className="w-full mx-auto glass-premium-v2 border border-border/40 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group"
+        className="w-full mx-auto bg-white border border-[#8B1E2D]/10 rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-lg transition-all group shadow-sm"
       >
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#c87038]/10 flex items-center justify-center shrink-0">
-            <Users className="w-4 h-4 text-[#c87038]" />
+          <div className="w-9 h-9 rounded-xl bg-[#C8A55A]/10 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-[#C8A55A]" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-bold text-primary">Add Guest Details</p>
+            <p className="text-sm font-bold text-primary">Accompanying Guest (Optional)</p>
             <p className="text-xs text-secondary mt-0.5">Did anyone accompany them?</p>
           </div>
         </div>
