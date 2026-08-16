@@ -286,7 +286,7 @@ export function SiteHeader() {
           
           {/* Left: Logo */}
           <Link to="/" className={`flex items-center shrink-0 transition-all duration-300 ${isTransparent ? 'bg-white/95 px-3 py-1 rounded-md shadow-sm' : ''}`} onClick={() => setMobileOpen(false)}>
-             <img src="/krmu-logo-transparent.png" alt="K.R. Mangalam University" className="h-10 lg:h-12 object-contain" />
+             <img src="/krmu-emblem.webp" alt="K.R. Mangalam University" className="h-10 lg:h-12 object-contain" />
           </Link>
 
           {/* Center: Desktop Nav Links */}

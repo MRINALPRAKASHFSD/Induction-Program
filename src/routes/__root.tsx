@@ -92,10 +92,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
       { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "preload", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap", as: "style" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap" },
       { rel: "dns-prefetch", href: "https://firestore.googleapis.com" },
       { rel: "dns-prefetch", href: "https://identitytoolkit.googleapis.com" },
       { rel: "dns-prefetch", href: "https://securetoken.googleapis.com" },
@@ -112,6 +108,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap"
+          media="print"
+          // @ts-expect-error React typed events mismatch for raw HTML attribute sometimes
+          onLoad="this.media='all'"
+        />
+        <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap"
+          />
+        </noscript>
       </head>
       <body>
         {children}

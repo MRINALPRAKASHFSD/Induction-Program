@@ -280,7 +280,7 @@ function InstitutionalFooter() {
               <a href="#" className="flex-1 flex flex-col items-center justify-center group relative w-full">
                 <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/90 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl"></div>
                 <div className="h-24 md:h-28 mb-6 relative z-10">
-                  <img src="/krmu-logo-transparent.png" alt="KRMU Logo" className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-[1.08] drop-shadow-md" />
+                  <img src="/krmu-emblem.webp" alt="KRMU Logo" className="h-full w-auto object-contain transition-transform duration-500 group-hover:scale-[1.08] drop-shadow-md" />
                 </div>
                 <div className="text-center relative z-10 mt-2">
                   <h5 className="text-[28px] md:text-[32px] font-bold text-gray-900 tracking-wide mb-1">K.R. Mangalam University</h5>
