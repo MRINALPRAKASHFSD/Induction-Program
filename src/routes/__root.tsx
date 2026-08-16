@@ -108,8 +108,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel+Decorative:wght@400;700;900&family=Rozha+One&family=Gotu&family=Pinyon+Script&family=Great+Vibes&family=Yatra+One&family=Tiro+Devanagari+Hindi:ital,wght@0,400;1,400&family=Noto+Serif+Devanagari:wght@400;700;900&display=swap" />
         <link
           rel="stylesheet"

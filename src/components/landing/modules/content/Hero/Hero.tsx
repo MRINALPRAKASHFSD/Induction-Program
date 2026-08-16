@@ -27,17 +27,40 @@ export default function HeroComponent({ config }: { config: HeroConfig }) {
 
   useEffect(() => {
     if (slides.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 6000);
-    return () => clearInterval(interval);
+    
+    let interval: NodeJS.Timeout;
+    const startAutoplay = () => {
+      interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % slides.length);
+      }, 6000);
+    };
+
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(startAutoplay, { timeout: 2000 });
+    } else {
+      setTimeout(startAutoplay, 500);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [slides.length]);
 
   if (!slides.length) return null;
 
+  const firstSlide = slides[0];
+
   return (
     <section className="relative w-full min-h-[100svh] overflow-hidden bg-black flex items-center justify-center">
       
+      {/* Dynamic Preload for LCP (Hoisted to <head> by React 18) */}
+      {firstSlide?.desktopImage?.url && (
+        <link rel="preload" as="image" href={firstSlide.desktopImage.url} />
+      )}
+      {firstSlide?.mobileImage?.url && (
+        <link rel="preload" as="image" href={firstSlide.mobileImage.url} media="(max-width: 768px)" />
+      )}
+
       {/* Slides Backgrounds */}
       <AnimatePresence initial={false}>
         <m.div
@@ -48,12 +71,25 @@ export default function HeroComponent({ config }: { config: HeroConfig }) {
           transition={{ duration: 1.5, ease: "easeInOut" }}
           className="absolute inset-0 z-0"
         >
-          {slides[currentSlide]?.desktopImage?.url && (
-            <img 
-              src={slides[currentSlide].desktopImage.url} 
-              alt={slides[currentSlide]?.altText || "Hero Background"} 
-              className="w-full h-full object-cover"
-            />
+          {slides[currentSlide] && (
+            <picture>
+              {slides[currentSlide].mobileImage?.url && (
+                <source media="(max-width: 768px)" srcSet={slides[currentSlide].mobileImage.url} />
+              )}
+              {slides[currentSlide].tabletImage?.url && (
+                <source media="(max-width: 1024px)" srcSet={slides[currentSlide].tabletImage.url} />
+              )}
+              {slides[currentSlide].desktopImage?.url && (
+                <img 
+                  src={slides[currentSlide].desktopImage.url} 
+                  alt={slides[currentSlide]?.altText || "Hero Background"} 
+                  className="w-full h-full object-cover"
+                  fetchPriority={currentSlide === 0 ? "high" : "auto"}
+                  loading={currentSlide === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              )}
+            </picture>
           )}
         </m.div>
       </AnimatePresence>

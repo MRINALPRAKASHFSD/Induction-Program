@@ -108,7 +108,7 @@ function InstitutionalGallery() {
   }, [mediaData, isLoading]);
 
   return (
-    <section className="py-24 bg-white border-t border-gray-200">
+    <section className="py-24 bg-white border-t border-gray-200" style={{ contentVisibility: 'auto', containIntrinsicSize: '800px' }}>
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-serif text-[#1e293b] font-bold mb-4">Life at KRMU</h2>
@@ -142,6 +142,8 @@ function InstitutionalGallery() {
 function InstitutionalFooter() {
   return (
     <footer className="relative bg-[#fdfbf7] text-[#1a1a1a] overflow-hidden pt-32 pb-16 border-t border-transparent" style={{ 
+      contentVisibility: 'auto',
+      containIntrinsicSize: '1200px',
       backgroundImage: `
         radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.8) 0%, rgba(253, 251, 247, 0) 100%),
         url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02' fill='%23d4af37'/%3E%3C/svg%3E")
@@ -384,7 +386,7 @@ function Landing() {
         <HeroComponent config={finalHeroConfig as any} />
 
         {/* Live Stats — Institutional Design */}
-        <section className="bg-white py-20 border-b border-gray-200">
+        <section className="bg-white py-20 border-b border-gray-200" style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
           <div className="container mx-auto max-w-7xl px-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12">
               <div>
