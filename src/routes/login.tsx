@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
@@ -26,35 +26,26 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-type Step = "email" | "otp";
+type Step = "email" | "otp" | "not_found";
 
 function LoginPage() {
   const navigate = useNavigate();
-  // If Firebase session already exists, redirect to dashboard immediately.
-  // Students should never see the login page again once authenticated.
-  const { loading: loadingAuth } = useAuthRedirect({ redirectIfAuthenticated: "/my-pass" });
-
+  const { user } = useAuthRedirect();
+  
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
-  // Show a minimal loading state while Firebase resolves the session.
-  // This prevents a flash of the login form before the redirect fires.
-  if (loadingAuth) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
-          <p className="text-sm text-muted-foreground font-medium">Checking your session…</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    // Only redirect if they load the page already logged in.
+    // Do NOT interrupt the login sequence if they are actively logging in.
+    if (user && step === "email" && !sendingOtp) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [user, step, sendingOtp, navigate]);
+
 
   const onSendOtp = async () => {
     if (!email) { toast.error("Please enter your email address."); return; }
@@ -93,26 +84,49 @@ function LoginPage() {
 
       if (userExists && enrollmentNo) {
         // Existing user — sign them in and take them to their pass
-        await signInWithCustomToken(auth, token);
-        const lookupRes = await lookupStudent({ data: { enrollment_no: enrollmentNo } });
-        if (lookupRes.student) {
-          const s = lookupRes.student as any;
-          localDb.saveStudentProfile({
-            id: s.id,
-            full_name: s.full_name,
-            enrollment_no: s.enrollment_no,
-            branch: s.branch_id ? `${s.branch_id} · ${s.department_id ?? ""}` : (s.course || ""),
-            semester: s.semester ? `Semester ${s.semester}` : (s.year ? `Session 2026–2027 · ${s.course ?? ""}` : ""),
-            created_at: s.created_at || new Date().toISOString(),
-            department_id: s.department_id,
-          });
+        try {
+          await signInWithCustomToken(auth, token);
+        } catch (e) {
+          // Retry once automatically if Firebase throws
+          try {
+            await signInWithCustomToken(auth, token);
+          } catch (e2) {
+            throw new Error("We couldn't complete your sign in. Please try again.");
+          }
         }
+
+        // Wait for Firebase auth to establish locally before fetching profile
+        for (let i = 0; i < 10; i++) {
+          if (auth.currentUser) break;
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        // Save the ID so the dashboard can load properly
+        localStorage.setItem("krmu_verified_student_id", enrollmentNo);
+
+        // Pre-fetch in background without blocking navigation
+        lookupStudent({ data: { enrollment_no: enrollmentNo } }).then(lookupRes => {
+          if (lookupRes.student) {
+            const s = lookupRes.student as any;
+            localDb.saveStudentProfile({
+              id: s.id,
+              full_name: s.full_name,
+              enrollment_no: s.enrollment_no,
+              branch: s.branch_id ? `${s.branch_id} · ${s.department_id ?? ""}` : (s.course || ""),
+              semester: s.semester ? `Semester ${s.semester}` : (s.year ? `Session 2026–2027 · ${s.course ?? ""}` : ""),
+              created_at: s.created_at || new Date().toISOString(),
+              department_id: s.department_id,
+            });
+          }
+        }).catch(e => {
+          console.warn("Could not pre-fetch student profile, dashboard will fetch it", e);
+        });
+        
         toast.success("Welcome back!");
-        navigate({ to: "/my-pass" });
+        navigate({ to: "/dashboard", replace: true });
       } else {
-        // New user — send them to the full registration form
-        toast.success("Email verified! Please complete your registration.");
-        navigate({ to: "/register" });
+        // Account not found - explicit user choice
+        setStep("not_found");
       }
     } catch (err: any) {
       toast.error(err.message || "Verification failed. Please try again.");
@@ -287,6 +301,41 @@ function LoginPage() {
                           </motion.div>
                         )}
                       </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Not Found step */}
+                {step === "not_found" && (
+                  <motion.div key="not-found" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                    className="rounded-3xl sm:rounded-[2rem] panel-liquid-glass p-5 sm:p-10 shadow-glow border border-primary/10 relative z-10 bg-background/70 backdrop-blur-2xl text-center space-y-6">
+                    <div className="w-14 h-14 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+                      <ShieldCheck className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold mb-2">Account not found</h2>
+                      <p className="text-[14px] text-muted-foreground leading-relaxed">
+                        This email is not registered for Aarambh 2026.
+                        <br />
+                        Please complete your registration first.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3 pt-2">
+                      <Button
+                        onClick={() => navigate({ to: "/register" })}
+                        variant="liquidGlassMaroon"
+                        className="w-full h-12 font-bold rounded-xl text-[15px]"
+                      >
+                        Go to Registration
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => { setStep("email"); setOtp(""); }}
+                        variant="ghost"
+                        className="w-full h-12 font-bold rounded-xl text-[15px] hover:bg-primary/5"
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </motion.div>
                 )}

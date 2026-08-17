@@ -16,9 +16,9 @@ type Options = {
  *
  * Usage:
  *   // On /login — redirect to dashboard if already signed in
- *   const { user, loading } = useAuthRedirect({ redirectIfAuthenticated: '/my-pass' });
+ *   const { user, loading } = useAuthRedirect({ redirectIfAuthenticated: '/' });
  *
- *   // On /my-pass — redirect to login if not signed in
+ *   // On / — redirect to login if not signed in (if it were a protected route)
  *   const { user, loading } = useAuthRedirect({ redirectIfUnauthenticated: '/login' });
  *
  *   // Just observe, no redirect

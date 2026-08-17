@@ -162,6 +162,14 @@ class LocalDB {
     }
   }
 
+  /** Clear the active student profile from localStorage on logout.
+   *  Firebase Auth is the source of truth — this only clears the cache. */
+  clearStudentProfile() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("krmu_active_profile");
+    localStorage.removeItem("krmu_verified_student_id");
+  }
+
   getStudent(enrollment_no: string): LocalStudent | null {
     const students = this.get<LocalStudent>("krmu_local_students");
     return students.find((s) => s.enrollment_no === enrollment_no) || null;

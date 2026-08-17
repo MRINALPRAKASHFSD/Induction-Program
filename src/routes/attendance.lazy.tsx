@@ -1097,7 +1097,7 @@ function AttendancePage() {
                   View Schedule
                 </Button>
               </Link>
-              <Link to="/my-pass">
+              <Link to="/">
                 <Button variant="liquidGlassWhite" className="w-full">
                   Back to Dashboard
                 </Button>

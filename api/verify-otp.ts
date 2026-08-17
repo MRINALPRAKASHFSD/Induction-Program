@@ -98,7 +98,7 @@ export default async function handler(req: any, res: any) {
     const emailIndexSnap = await db.collection('email_index').doc(emailKey).get();
     const userExists = emailIndexSnap.exists;
     const enrollmentNo: string | null = userExists
-      ? (emailIndexSnap.data()!.enrollment_no as string)
+      ? (emailIndexSnap.data()!.enrollment_no as string || emailIndexSnap.data()!.application_number as string)
       : null;
 
     return res.status(200).json({

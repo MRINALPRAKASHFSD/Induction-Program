@@ -3,6 +3,7 @@ import { LazyMotion, domAnimation, AnimatePresence, m } from "framer-motion";
 import { Users, Calendar, Activity, Clock, ShieldCheck, ScanLine, UsersRound, Megaphone, QrCode, ArrowRight, Database, MapPin, ArrowRightIcon, BarChart3, UserPlus, Facebook, Instagram, Linkedin, Youtube, Mail } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -325,6 +326,8 @@ function InstitutionalFooter() {
 }
 
 function Landing() {
+  const { user: firebaseUser, loading: authLoading } = useAuthRedirect();
+  
   const { data, isLoading, error } = usePlatformAnalytics();
   const [relativeTime, setRelativeTime] = useState("just now");
 

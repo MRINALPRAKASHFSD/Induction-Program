@@ -30,6 +30,7 @@ const ScheduleLazyRouteImport = createFileRoute('/schedule')()
 const PrivacyLazyRouteImport = createFileRoute('/privacy')()
 const MyPassLazyRouteImport = createFileRoute('/my-pass')()
 const HelpLazyRouteImport = createFileRoute('/help')()
+const DashboardLazyRouteImport = createFileRoute('/dashboard')()
 const CookiesLazyRouteImport = createFileRoute('/cookies')()
 const ClubsLazyRouteImport = createFileRoute('/clubs')()
 const CampusLazyRouteImport = createFileRoute('/campus')()
@@ -73,6 +74,11 @@ const HelpLazyRoute = HelpLazyRouteImport.update({
   path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/help.lazy').then((d) => d.Route))
+const DashboardLazyRoute = DashboardLazyRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/dashboard.lazy').then((d) => d.Route))
 const CookiesLazyRoute = CookiesLazyRouteImport.update({
   id: '/cookies',
   path: '/cookies',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/campus': typeof CampusLazyRoute
   '/clubs': typeof ClubsLazyRoute
   '/cookies': typeof CookiesLazyRoute
+  '/dashboard': typeof DashboardLazyRoute
   '/help': typeof HelpLazyRoute
   '/my-pass': typeof MyPassLazyRoute
   '/privacy': typeof PrivacyLazyRoute
@@ -281,6 +288,7 @@ export interface FileRoutesByTo {
   '/campus': typeof CampusLazyRoute
   '/clubs': typeof ClubsLazyRoute
   '/cookies': typeof CookiesLazyRoute
+  '/dashboard': typeof DashboardLazyRoute
   '/help': typeof HelpLazyRoute
   '/my-pass': typeof MyPassLazyRoute
   '/privacy': typeof PrivacyLazyRoute
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/campus': typeof CampusLazyRoute
   '/clubs': typeof ClubsLazyRoute
   '/cookies': typeof CookiesLazyRoute
+  '/dashboard': typeof DashboardLazyRoute
   '/help': typeof HelpLazyRoute
   '/my-pass': typeof MyPassLazyRoute
   '/privacy': typeof PrivacyLazyRoute
@@ -354,6 +363,7 @@ export interface FileRouteTypes {
     | '/campus'
     | '/clubs'
     | '/cookies'
+    | '/dashboard'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -389,6 +399,7 @@ export interface FileRouteTypes {
     | '/campus'
     | '/clubs'
     | '/cookies'
+    | '/dashboard'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/campus'
     | '/clubs'
     | '/cookies'
+    | '/dashboard'
     | '/help'
     | '/my-pass'
     | '/privacy'
@@ -460,6 +472,7 @@ export interface RootRouteChildren {
   CampusLazyRoute: typeof CampusLazyRoute
   ClubsLazyRoute: typeof ClubsLazyRoute
   CookiesLazyRoute: typeof CookiesLazyRoute
+  DashboardLazyRoute: typeof DashboardLazyRoute
   HelpLazyRoute: typeof HelpLazyRoute
   MyPassLazyRoute: typeof MyPassLazyRoute
   PrivacyLazyRoute: typeof PrivacyLazyRoute
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/help'
       fullPath: '/help'
       preLoaderRoute: typeof HelpLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cookies': {
@@ -732,6 +752,7 @@ const rootRouteChildren: RootRouteChildren = {
   CampusLazyRoute: CampusLazyRoute,
   ClubsLazyRoute: ClubsLazyRoute,
   CookiesLazyRoute: CookiesLazyRoute,
+  DashboardLazyRoute: DashboardLazyRoute,
   HelpLazyRoute: HelpLazyRoute,
   MyPassLazyRoute: MyPassLazyRoute,
   PrivacyLazyRoute: PrivacyLazyRoute,

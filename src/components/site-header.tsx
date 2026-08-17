@@ -41,7 +41,7 @@ const AUTH_NAV_ITEMS: NavItem[] = [
   { to: "/schedule", label: "Schedule", icon: CalendarDays },
   { to: "/clubs", label: "Clubs", icon: Users },
   { to: "/campus", label: "Campus", icon: MapPin },
-  { to: "/my-pass", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/announcements", label: "Announcements", icon: Megaphone },
   { to: "/help", label: "Help", icon: HelpCircle },
 ];
@@ -178,9 +178,9 @@ export function SiteHeader() {
       const { auth } = await import("@/lib/firebase/config");
       const { signOut } = await import("firebase/auth");
       await signOut(auth);
-      // Clear all student-facing session keys from localStorage
-      localStorage.removeItem("krmu_active_profile");
-      localStorage.removeItem("krmu_verified_student_id");
+      // Clear cached student profile — Firebase Auth is the source of truth,
+      // localStorage is only a cache and must be wiped on logout.
+      localDb.clearStudentProfile();
       toast.success("Logged out successfully");
       window.location.href = "/";
     } catch (err) {
@@ -458,7 +458,7 @@ export function SiteHeader() {
                     </div>
                     <div className="p-1">
                       <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e] font-semibold hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
-                        <Link to="/my-pass" className="flex items-center justify-between w-full">
+                        <Link to="/dashboard" className="flex items-center justify-between w-full">
                           <span className="flex items-center gap-3">
                             <LayoutDashboard className="w-4 h-4" /> Dashboard
                           </span>
@@ -466,18 +466,8 @@ export function SiteHeader() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
-                        <Link to="/my-pass" className="flex items-center gap-3 w-full">
-                          <Shield className="w-4 h-4" /> Digital ID
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
                         <Link to="/schedule" className="flex items-center gap-3 w-full">
                           <CalendarDays className="w-4 h-4" /> Schedule
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
-                        <Link to="/clubs" className="flex items-center gap-3 w-full">
-                          <UsersRound className="w-4 h-4" /> Attendance
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
