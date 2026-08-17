@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SiteHeader } from "@/components/site-header";
@@ -9,7 +9,8 @@ import { localDb } from "@/lib/local-db";
 import { Label } from "@/components/ui/label";
 import { lookupStudent } from "@/lib/students.functions";
 import { auth } from "@/lib/firebase/config";
-import { signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
+import { signInWithCustomToken } from "firebase/auth";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import {
   Mail,
   ShieldCheck, Check, Ticket, QrCode, Sparkles, ArrowRight,
@@ -29,16 +30,9 @@ type Step = "email" | "otp";
 
 function LoginPage() {
   const navigate = useNavigate();
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setAlreadyLoggedIn(!!user);
-      setLoadingAuth(false);
-    });
-    return () => unsub();
-  }, []);
+  // If Firebase session already exists, redirect to dashboard immediately.
+  // Students should never see the login page again once authenticated.
+  const { loading: loadingAuth } = useAuthRedirect({ redirectIfAuthenticated: "/my-pass" });
 
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -46,38 +40,17 @@ function LoginPage() {
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
 
-  if (loadingAuth) return null;
-
-  if (alreadyLoggedIn) {
+  // Show a minimal loading state while Firebase resolves the session.
+  // This prevents a flash of the login form before the redirect fires.
+  if (loadingAuth) {
     return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="orb orb-1" /><div className="orb orb-2" />
-          <div className="orb orb-3" /><div className="orb orb-4" />
-        </div>
-        <div className="relative z-10">
-          <SiteHeader />
-          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-              className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
-                <ShieldCheck className="w-8 h-8" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground mb-3">You're Signed In</h1>
-              <p className="text-muted-foreground mb-8">
-                You're already logged in. Head to your dashboard or sign out to switch accounts.
-              </p>
-              <div className="grid gap-3">
-                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Dashboard</Link>
-                </Button>
-                <Button variant="liquidGlassDark" size="lg" className="rounded-full font-medium h-12"
-                  onClick={async () => { await signOut(auth); localStorage.clear(); window.location.reload(); }}>
-                  Sign Out
-                </Button>
-              </div>
-            </motion.div>
-          </main>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <p className="text-sm text-muted-foreground font-medium">Checking your session…</p>
         </div>
       </div>
     );

@@ -178,7 +178,9 @@ export function SiteHeader() {
       const { auth } = await import("@/lib/firebase/config");
       const { signOut } = await import("firebase/auth");
       await signOut(auth);
+      // Clear all student-facing session keys from localStorage
       localStorage.removeItem("krmu_active_profile");
+      localStorage.removeItem("krmu_verified_student_id");
       toast.success("Logged out successfully");
       window.location.href = "/";
     } catch (err) {
@@ -461,6 +463,31 @@ export function SiteHeader() {
                             <LayoutDashboard className="w-4 h-4" /> Dashboard
                           </span>
                           <ChevronRight className="w-4 h-4 opacity-50" />
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/my-pass" className="flex items-center gap-3 w-full">
+                          <Shield className="w-4 h-4" /> Digital ID
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/schedule" className="flex items-center gap-3 w-full">
+                          <CalendarDays className="w-4 h-4" /> Schedule
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/clubs" className="flex items-center gap-3 w-full">
+                          <UsersRound className="w-4 h-4" /> Attendance
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/announcements" className="flex items-center gap-3 w-full">
+                          <Megaphone className="w-4 h-4" /> Announcements
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-none px-3 py-2.5 text-[#00509e]/80 hover:bg-[#00509e]/5 transition-colors focus:bg-[#00509e]/5">
+                        <Link to="/help" className="flex items-center gap-3 w-full">
+                          <HelpCircle className="w-4 h-4" /> Help
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-[#00509e]/10 mx-1" />

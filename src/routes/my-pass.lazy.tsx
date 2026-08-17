@@ -1,4 +1,4 @@
-import { createLazyFileRoute, Link } from "@tanstack/react-router";
+import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import { CLUB_REGISTRATION_OPEN_DATE, isClubRegistrationOpen } from "@/lib/const
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { auth } from "@/lib/firebase/config";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { IdentityPanel } from "@/components/dashboard/identity-panel";
@@ -157,6 +158,7 @@ const BADGES = [
 ];
 
 function MyPassPage() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<LocalStudent | null>(null);
   const [livePoints, setLivePoints] = useState<number | null>(null);
   const [liveRoomAssignment, setLiveRoomAssignment] = useState<any | null>(null);
@@ -170,7 +172,21 @@ function MyPassPage() {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const tilt = useTilt(cardRef);
 
+  // ── Firebase Auth guard ───────────────────────────────────────────────────────
+  // Firebase is the source of truth. We check auth state before loading any data.
+  // If unauthenticated, redirect to /login. If authenticated but localStorage
+  // profile is empty (e.g. cleared on this device), we fetch from Firestore.
+  const { user: firebaseUser, loading: authLoading } = useAuthRedirect({
+    redirectIfUnauthenticated: "/login",
+  });
+
   useEffect(() => {
+    // Wait until Firebase auth state is resolved before doing anything.
+    // authLoading guard prevents a false "not registered" flash.
+    if (authLoading) return;
+    // firebaseUser is null → useAuthRedirect already redirected to /login above.
+    if (!firebaseUser) return;
+
     const p = localDb.getStudentProfile();
     const savedStudentId = localStorage.getItem("krmu_verified_student_id");
     const enrollmentNo = p?.enrollment_no || savedStudentId;
@@ -202,7 +218,6 @@ function MyPassPage() {
           if (res.student) {
             setLiveStudent(res.student);
             setLivePoints(res.student.points || 0);
-            // Check for flat room properties first (newer schema) or nested (older schema)
             const ra = res.student.roomAssignment;
             if (res.student.roomNumber && res.student.allocationStatus) {
               setLiveRoomAssignment({
@@ -215,7 +230,6 @@ function MyPassPage() {
             } else if (ra) {
               setLiveRoomAssignment(ra);
             } else if (res.student.room_no || p?.room_no) {
-              // Fallback for older records
               setLiveRoomAssignment({
                 allocationStatus: 'ALLOCATED',
                 roomNumber: res.student.room_no || p?.room_no,
@@ -248,7 +262,35 @@ function MyPassPage() {
         }
       });
     } else {
-      setLoading(false);
+      // Firebase session exists but no enrollment number in localStorage.
+      // Attempt to recover profile using the Firebase user's email.
+      const userEmail = firebaseUser.email;
+      if (userEmail) {
+        lookupStudent({ data: { enrollment_no: userEmail } })
+          .then((res: any) => {
+            if (res?.student) {
+              const s = res.student;
+              const recoveredProfile: LocalStudent = {
+                id: s.id,
+                full_name: s.full_name || s.name || "Student",
+                enrollment_no: s.enrollment_no || s.application_number || "",
+                branch: s.branch_id ? `${s.branch_id} · ${s.department_id ?? ""}` : (s.course || ""),
+                semester: s.semester ? `Semester ${s.semester}` : (s.year ? `Session 2026–2027` : ""),
+                created_at: s.created_at || new Date().toISOString(),
+                department_id: s.department_id,
+              };
+              localDb.saveStudentProfile(recoveredProfile);
+              setProfile(recoveredProfile);
+            } else {
+              // Authenticated but no student record found — show a graceful message.
+              setLoading(false);
+            }
+          })
+          .catch(() => setLoading(false))
+          .finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     }
 
     // Fetch planner dashboard (independent of student lookup)
@@ -256,20 +298,26 @@ function MyPassPage() {
       .then(data => setPlanner(data))
       .catch(() => setPlanner(null))
       .finally(() => setPlannerLoading(false));
-  }, []);
+  }, [authLoading, firebaseUser]);
 
-  const copyEnrollment = useCallback(() => {
-    if (!profile?.enrollment_no) return;
-    navigator.clipboard.writeText(profile.enrollment_no).then(() => {
-      setCopied(true);
-      toast.success("Student ID copied!");
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      toast.error("Failed to copy");
-    });
-  }, [profile]);
-
-  const userInitial = profile?.full_name?.[0]?.toUpperCase() || "?";
+  /* ── Auth loading — Firebase resolving session ─────────────────────────── */
+  if (authLoading) {
+    return (
+      <DashboardShell>
+        <SiteHeader />
+        <main className="container mx-auto max-w-4xl px-4 py-8 space-y-6 flex-1 flex flex-col items-center justify-center">
+          <div className="text-center space-y-2 mb-8 animate-pulse">
+            <div className="h-10 w-48 bg-black/10 dark:bg-white/10 rounded-full mx-auto" />
+            <div className="h-4 w-32 bg-black/5 dark:bg-white/5 rounded-full mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+            <div className="h-64 bg-black/5 dark:bg-white/5 rounded-[var(--dashboard-radius)] md:col-span-2 animate-pulse" />
+            <div className="h-64 bg-black/5 dark:bg-white/5 rounded-[var(--dashboard-radius)] md:col-span-1 animate-pulse" />
+          </div>
+        </main>
+      </DashboardShell>
+    );
+  }
 
   /* ── Not Registered State ─────────────────────────────────────── */
   if (!profile && !loading) {
@@ -289,10 +337,10 @@ function MyPassPage() {
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-3">Student Dashboard</h2>
               <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
-                Register to unlock your Digital Student Dashboard — your ID, achievements, attendance, and schedule all in one place.
+                We couldn't find your student profile. Please ensure you are registered or contact support if you believe this is an error.
               </p>
-              <Button asChild className="bg-[#8a4a22] hover:bg-[#6c3a1b] text-white rounded-xl px-8 h-12 font-semibold">
-                <Link to="/register">Register Now</Link>
+              <Button asChild variant="outline" className="rounded-xl px-8 h-12 font-semibold">
+                <Link to="/login">Back to Login</Link>
               </Button>
             </div>
           </motion.div>

@@ -14,9 +14,10 @@ import { localDb } from "@/lib/local-db";
 import { registerStudent } from "@/lib/students.functions";
 import { lookupInductionParticipant, registerInductionStudent } from "@/lib/admin.functions";
 import { SCHOOLS, PROGRAM_LEVELS } from "@/lib/constants";
+import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 
 import { auth } from "@/lib/firebase/config";
-import { signInWithCustomToken, onAuthStateChanged, signOut } from "firebase/auth";
+import { signInWithCustomToken } from "firebase/auth";
 import {
   User,
   Hash,
@@ -64,8 +65,12 @@ function RegisterPage() {
   });
   const [submitting, setSubmitting]           = useState(false);
   const [done, setDone]                       = useState<string | null>(null);
-  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
-  const [loadingAuth, setLoadingAuth]         = useState(true);
+
+  // ── Firebase Auth guard — redirect authenticated users to dashboard ──────────
+  // This is the fix for the infinite loop: if a student already has an active
+  // Firebase session, send them straight to /my-pass. They are already registered.
+  // Never show the registration form to an authenticated user.
+  const { loading: loadingAuth } = useAuthRedirect({ redirectIfAuthenticated: "/my-pass" });
 
   // ── Email verification states ──────────────────────────────────────────────
   const [emailVerified, setEmailVerified]     = useState(false);
@@ -91,14 +96,6 @@ function RegisterPage() {
   const [ftSendingOtp, setFtSendingOtp]           = useState(false);
   const [ftRegToken, setFtRegToken]               = useState<string | null>(null);
   const [ftSubmitting, setFtSubmitting]           = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAlreadyRegistered(!!user);
-      setLoadingAuth(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const update = <K extends keyof typeof form>(k: K, v: any) =>
     setForm((f) => ({ ...f, [k]: v, ...(k === "department_id" ? { branch: "" } : {}) }));
@@ -136,12 +133,14 @@ function RegisterPage() {
       }
       const record = result.data;
       if (record.registration_status === 'REGISTERED') {
-        // Already completed fast-track → show informational screen (handled in render)
-        setInductionRecord(record);
-        setAppPhase('fast_track');
+        // Already registered → skip any intermediate screen, go straight to Login.
+        // The student just needs to sign in — they don't need to see any message
+        // about their account being activated. This kills the "Already Activated" loop.
+        toast.success(`Welcome back${record.student_name ? `, ${record.student_name.split(' ')[0]}` : ''}! Please sign in to access your dashboard.`);
+        navigate({ to: '/login', replace: true });
         return;
       }
-      // Found + PENDING → fast-track
+      // Found + PENDING → fast-track OTP registration
       setInductionRecord(record);
       setAppPhase('fast_track');
     } catch (err: any) {
@@ -369,8 +368,20 @@ function RegisterPage() {
     }
   };
 
-  // ── Prevent flickering while checking auth ──────────────────────────────────
-  if (loadingAuth) return null;
+  // ── Show spinner while Firebase auth state resolves (prevents flash of form) ──
+  if (loadingAuth) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <p className="text-sm text-muted-foreground font-medium">Loading…</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Success screen ──────────────────────────────────────────────────────────
   if (done === 'success') {
@@ -395,49 +406,6 @@ function RegisterPage() {
                 </Button>
                 <Button variant="liquidGlassDark" asChild size="lg" className="rounded-full font-medium h-12">
                   <Link to="/">Back to Home</Link>
-                </Button>
-              </div>
-            </motion.div>
-          </main>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Already logged in screen ────────────────────────────────────────────────
-  if (alreadyRegistered) {
-    return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="orb orb-1" /><div className="orb orb-2" />
-          <div className="orb orb-3" /><div className="orb orb-4" />
-        </div>
-        <div className="relative z-10">
-          <SiteHeader />
-          <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-              </div>
-              <h1 className="text-3xl font-bold text-foreground mb-3">Already Registered</h1>
-              <p className="text-muted-foreground mb-8">
-                You are currently logged in. To register a new account, you must log out first.
-              </p>
-              <div className="mt-4 grid gap-3">
-                <Button variant="liquidGlassMaroon" asChild size="lg" className="rounded-full font-semibold h-12">
-                  <Link to="/my-pass">View Dashboard</Link>
-                </Button>
-                <Button
-                  variant="liquidGlassDark"
-                  size="lg"
-                  className="rounded-full font-medium h-12"
-                  onClick={async () => {
-                    await signOut(auth);
-                    localStorage.clear();
-                    window.location.reload();
-                  }}
-                >
-                  Log out
                 </Button>
               </div>
             </motion.div>
@@ -564,36 +532,9 @@ function RegisterPage() {
 
 
   // ── Phase 1A — Fast-track: Student found in induction_participants ──────────
+  // Note: when registration_status === 'REGISTERED', onLookupAppNumber already
+  // navigated to /login directly. This branch only renders for PENDING students.
   if (appPhase === 'fast_track' && inductionRecord) {
-    // Already REGISTERED → informational screen
-    if (inductionRecord.registration_status === 'REGISTERED') {
-      return (
-        <div className="min-h-screen bg-background relative overflow-hidden">
-          <div className="absolute inset-0 z-0 pointer-events-none">
-            <div className="orb orb-1" /><div className="orb orb-2" /><div className="orb orb-3" /><div className="orb orb-4" />
-          </div>
-          <div className="relative z-10">
-            <SiteHeader />
-            <main className="container mx-auto max-w-md px-4 py-8 sm:py-12">
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                className="panel-liquid-glass rounded-2xl p-8 shadow-glow relative z-10 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-6">
-                  <CheckCircle2 className="h-8 w-8" />
-                </div>
-                <h1 className="text-2xl font-bold mb-3">Your account has already been activated.</h1>
-                <p className="text-muted-foreground mb-8 text-[15px]">
-                  Hi {inductionRecord.student_name}, your induction registration is complete. Sign in to access your dashboard.
-                </p>
-                <Button variant="liquidGlassMaroon" asChild size="lg" className="w-full rounded-full font-semibold h-12">
-                  <Link to="/login">Continue to Sign In</Link>
-                </Button>
-              </motion.div>
-            </main>
-          </div>
-        </div>
-      );
-    }
-
     // PENDING → OTP verification
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
