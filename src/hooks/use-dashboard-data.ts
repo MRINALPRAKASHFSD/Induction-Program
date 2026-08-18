@@ -3,6 +3,8 @@ import { localDb, type LocalStudent } from "@/lib/local-db";
 import { lookupStudent } from "@/lib/students.functions";
 import { listClubs, listClubRegistrations } from "@/lib/admin.functions";
 import { fetchPlannerDashboard } from "@/lib/planner.functions";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
 export function useDashboardData(firebaseUser: any, authLoading: boolean) {
   const [profile, setProfile] = useState<LocalStudent | null>(null);
@@ -67,14 +69,26 @@ export function useDashboardData(firebaseUser: any, authLoading: boolean) {
         }
       } else {
         // Firebase session exists but no enrollment number in localStorage.
-        const userEmail = firebaseUser.email;
+        let userEmail = firebaseUser.email;
+        if (!userEmail && firebaseUser.uid && firebaseUser.uid.startsWith("email:")) {
+          userEmail = firebaseUser.uid.replace("email:", "");
+        }
+        
         if (userEmail) {
           for (let i = 0; i < 3; i++) {
             try {
-              const res: any = await lookupStudent({ data: { enrollment_no: userEmail } });
-              if (res?.student) {
-                liveStudentData = res.student;
-                break;
+              const indexRef = doc(db, "email_index", userEmail);
+              const indexSnap = await getDoc(indexRef);
+              
+              if (indexSnap.exists()) {
+                const recoveredEnrollmentNo = indexSnap.data().enrollment_no || indexSnap.data().application_number;
+                if (recoveredEnrollmentNo) {
+                  const res: any = await lookupStudent({ data: { enrollment_no: recoveredEnrollmentNo } });
+                  if (res?.student) {
+                    liveStudentData = res.student;
+                    break;
+                  }
+                }
               }
             } catch (err) { }
             await new Promise(r => setTimeout(r, 500));

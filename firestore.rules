@@ -323,5 +323,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdminOrCoordinator();
     }
+
+    // ── 33. EMAIL INDEX ───────────────────────────────────────────────────────
+    // Allows dashboard fallback to securely resolve enrollment numbers for returning users
+    match /email_index/{emailId} {
+      allow get: if request.auth != null && request.auth.uid == 'email:' + emailId;
+      allow list, write: if false;
+    }
   }
 }

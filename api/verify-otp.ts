@@ -96,10 +96,19 @@ export default async function handler(req: any, res: any) {
 
     // ── Check if this email belongs to an already-registered student ──────
     const emailIndexSnap = await db.collection('email_index').doc(emailKey).get();
-    const userExists = emailIndexSnap.exists;
-    const enrollmentNo: string | null = userExists
+    let userExists = emailIndexSnap.exists;
+    let enrollmentNo: string | null = userExists
       ? (emailIndexSnap.data()!.enrollment_no as string || emailIndexSnap.data()!.application_number as string)
       : null;
+
+    if (!userExists) {
+      // Fallback: Check if student exists in main collection directly
+      const studentQuery = await db.collection('students').where('email', '==', emailKey).limit(1).get();
+      if (!studentQuery.empty) {
+        userExists = true;
+        enrollmentNo = studentQuery.docs[0].id;
+      }
+    }
 
     return res.status(200).json({
       success: true,

@@ -99,7 +99,6 @@ function AdminLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@krmu.edu"
                 className="bg-white/70 border-[#8a4a22]/20 focus-visible:ring-[#8a4a22]/40 shadow-sm"
                 autoFocus
               />
