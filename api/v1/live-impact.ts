@@ -65,17 +65,30 @@ export default async function handler(req: any, res: any) {
       db.collection('club_registrations').count().get(),
       db.collection('events').where('is_active', '==', true).count().get(),
       db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).count().get(),
-      db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).get(), // Need docs to sum valid_rows
+      db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).get(), // Need docs to find active dataset IDs
       db.collection('announcements').where('status', '==', 'active').count().get(),
       db.collection('departments').count().get(),
       db.collection('clubs').count().get()
     ]);
 
     let participants = 0;
-    activeDatasetsDocs.forEach(doc => {
-      const data = doc.data();
-      participants += (data.statistics?.rows?.valid || data.valid_rows || 0);
-    });
+    const activeDatasetIds = activeDatasetsDocs.docs.map(doc => doc.id);
+    
+    if (activeDatasetIds.length > 0) {
+      const uniqueStudents = new Set();
+      for (let i = 0; i < activeDatasetIds.length; i += 10) {
+        const batch = activeDatasetIds.slice(i, i + 10);
+        const parts = await db.collection('event_participants')
+          .where('dataset_id', 'in', batch)
+          .select('application_number')
+          .get();
+        parts.forEach(doc => {
+          const appNo = doc.data().application_number;
+          if (appNo) uniqueStudents.add(appNo);
+        });
+      }
+      participants = uniqueStudents.size;
+    }
 
     const stats = {
       students: studentsSnap.data().count,
