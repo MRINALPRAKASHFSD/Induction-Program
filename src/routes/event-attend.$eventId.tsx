@@ -186,7 +186,12 @@ function EventAttendPage() {
         setResultData({
           studentName: json.data?.studentName || cleanApplicationNumber,
           status: 'present',
-          applicationNumber: cleanApplicationNumber
+          applicationNumber: cleanApplicationNumber,
+          guests: json.data?.guests || 0,
+          programme: json.data?.programme,
+          school: json.data?.school,
+          batch: json.data?.batch,
+          section: json.data?.section,
         });
         setPageState('duplicate');
         return;

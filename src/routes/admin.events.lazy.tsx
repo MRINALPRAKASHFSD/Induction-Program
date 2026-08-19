@@ -188,45 +188,49 @@ function EventCard({
   const qrEnabled = row.qr_enabled ?? true;
 
   return (
-    <div className="admin-card flex flex-col h-full border-2 border-transparent transition-all hover:-translate-y-1 shadow-sm hover:shadow-md overflow-hidden relative">
-      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${row.is_active ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
-      <div className="p-5 pl-6 flex-1 flex flex-col">
+    <div className="glass-premium-v2 flex flex-col h-full border border-white/40 dark:border-white/10 rounded-[24px] transition-all duration-300 hover:-translate-y-1.5 shadow-[0_8px_30px_rgba(138,74,34,0.06)] hover:shadow-[0_20px_60px_rgba(138,74,34,0.12)] overflow-hidden relative group">
+      <div className={`absolute left-0 top-0 bottom-0 w-2 transition-colors duration-500 ${row.is_active ? 'bg-gradient-to-b from-emerald-400 to-emerald-600' : 'bg-gradient-to-b from-muted/50 to-muted-foreground/30'}`} />
+      <div className="p-6 pl-8 flex-1 flex flex-col relative z-10">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -z-10 transition-transform duration-500 group-hover:scale-110" />
+        
         {/* Badges */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="admin-badge-neutral font-bold tracking-wide">Day {row.day_number}</span>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="bg-[#8a4a22]/10 text-[#8a4a22] border border-[#8a4a22]/20 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase">Day {row.day_number}</span>
           {row.is_active
-            ? <span className="admin-badge-success font-bold flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</span>
-            : <span className="admin-badge-neutral font-semibold opacity-70">Paused</span>
+            ? <span className="bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold tracking-wide flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE</span>
+            : <span className="bg-muted text-muted-foreground border border-border px-3 py-1 rounded-full text-xs font-semibold tracking-wide opacity-80">Paused</span>
           }
           {!qrEnabled && (
-            <span className="admin-badge-danger font-bold flex items-center gap-1">
+            <span className="bg-red-500/10 text-red-600 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold tracking-wide flex items-center gap-1">
               <WifiOff className="h-3 w-3" /> QR OFF
             </span>
           )}
           {isFull && (
-            <span className="admin-badge-warning font-bold">FULL</span>
+            <span className="bg-amber-500/10 text-amber-700 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-bold tracking-wide">FULL</span>
           )}
-          <span className="admin-badge-neutral font-semibold max-w-[180px] truncate">{deptName}</span>
+          <span className="bg-primary/5 text-primary/80 border border-primary/10 px-3 py-1 rounded-full text-xs font-semibold tracking-wide max-w-[180px] truncate">{deptName}</span>
 
           {/* Capacity badge */}
           {row.capacity !== undefined && (
-            <span className="admin-badge-info font-semibold">
+            <span className="bg-blue-500/10 text-blue-700 border border-blue-500/20 px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
               {attendCount}/{row.capacity} attended
             </span>
           )}
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-foreground text-lg leading-snug mb-1">{row.title}</h3>
-        <p className="text-sm text-muted-foreground font-medium mb-2">
-          {row.venue} · {new Date(row.starts_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} → {new Date(row.ends_at).toLocaleTimeString([], { timeStyle: 'short' })}
+        <h3 className="font-extrabold text-foreground text-xl tracking-tight leading-snug mb-2 group-hover:text-primary transition-colors">{row.title}</h3>
+        <p className="text-sm text-foreground/70 font-semibold mb-3 flex items-center gap-2">
+          <span className="inline-flex items-center justify-center bg-background rounded-md p-1 shadow-sm border border-border/50 text-xs">{row.venue}</span>
+          <span>·</span>
+          <span>{new Date(row.starts_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} → {new Date(row.ends_at).toLocaleTimeString([], { timeStyle: 'short' })}</span>
         </p>
         {row.description && (
-          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground/80 leading-relaxed">{row.description}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-foreground/60 leading-relaxed font-medium">{row.description}</p>
         )}
 
         {/* Action row */}
-        <div className="mt-auto pt-4 border-t border-border/50 flex flex-wrap items-center gap-2">
+        <div className="mt-auto pt-5 border-t border-border/40 flex flex-wrap items-center gap-2.5">
           <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs font-semibold" onClick={onOpenQr}>
             <QrIcon className="mr-1.5 h-3.5 w-3.5" /> QR
           </Button>

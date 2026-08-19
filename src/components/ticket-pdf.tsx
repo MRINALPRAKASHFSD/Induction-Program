@@ -256,8 +256,14 @@ export function TicketPDF({ event, resultData, type, onComplete }: TicketPDFProp
           <div className="w-full text-center mb-10">
             <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-[#8B1E2D]/20 to-transparent mb-4" />
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">ENTRY</p>
-            <p className="text-lg font-bold text-gray-800">
-              Student <span className="text-[#8B1E2D] mx-2">+</span> {guestCount} Guest{guestCount !== 1 ? 's' : ''}
+            <p className="text-lg font-bold text-gray-800 flex items-center justify-center">
+              Student
+              {guestCount > 0 && (
+                <>
+                  <span className="text-[#8B1E2D] mx-2">+</span> 
+                  {guestCount} Guest{guestCount !== 1 ? 's' : ''}
+                </>
+              )}
             </p>
             <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-[#8B1E2D]/20 to-transparent mt-4" />
           </div>

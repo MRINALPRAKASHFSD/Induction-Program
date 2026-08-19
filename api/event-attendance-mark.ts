@@ -362,9 +362,20 @@ export default async function handler(req: any, res: any) {
   // 11–13. Participant validation (O(1) — eventId_appNumber IS the document ID)
   const participantDocId = `${eventId}_${applicationNumber}`;
   const participantRef = db.collection('event_participants').doc(participantDocId);
+  const guestRef = db.collection('event_guest_counts').doc(participantDocId);
+  
   let participantDoc;
+  let guestCount = 0;
+  
   try {
-    participantDoc = await participantRef.get();
+    const [pDoc, gDoc] = await Promise.all([
+      participantRef.get(),
+      guestRef.get()
+    ]);
+    participantDoc = pDoc;
+    if (gDoc.exists) {
+      guestCount = gDoc.data()?.headcount || 0;
+    }
   } catch (err: any) {
     console.error('[event-attendance-mark] Firestore participant fetch error:', err.message);
     return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, 'Database error. Try again.', null, { requestId: reqId });
@@ -492,7 +503,16 @@ export default async function handler(req: any, res: any) {
     void incrementDuplicateCounter(eventId);
     return apiResponse(res, 200, true, RESPONSE_CODES.DUPLICATE,
       'Attendance already marked for this event.',
-      { duplicate: true, studentName, eventTitle: event.title },
+      { 
+        duplicate: true, 
+        studentName, 
+        eventTitle: event.title, 
+        guests: guestCount,
+        programme: participant.program || participant.course || '',
+        school: participant.school || '',
+        batch: participant.batch || '',
+        section: participant.section || null
+      },
       { requestId: reqId });
   }
 
@@ -503,6 +523,11 @@ export default async function handler(req: any, res: any) {
     eventTitle:   event.title,
     status,
     applicationNumber,
+    guests:       guestCount,
+    programme:    participant.program || participant.course || '',
+    school:       participant.school || '',
+    batch:        participant.batch || '',
+    section:      participant.section || null,
   };
 
   // Must set response before async post-processing
