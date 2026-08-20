@@ -212,9 +212,10 @@ function RegisterPage() {
             full_name:     s.full_name || s.name || fallbackProfileData.full_name || "Student",
             enrollment_no: s.enrollment_no || enrollmentNo,
             branch:        s.branch_id ? `${s.branch_id} · ${s.department_id ?? ""}` : (s.course || fallbackProfileData.branch || ""),
-            semester:      s.year ? `Session 2026–2027 · ${s.course ?? ""}` : (fallbackProfileData.semester || ""),
+            semester:      s.year ? s.year.toString() : (fallbackProfileData.semester || ""),
             created_at:    s.created_at || new Date().toISOString(),
             department_id: s.department_id || fallbackProfileData.department_id || "",
+            program:       s.branch_id || fallbackProfileData.program || "",
             course:        s.course || fallbackProfileData.course || "",
           });
           return true;
@@ -342,6 +343,7 @@ function RegisterPage() {
         semester: `Session 2026–2027`,
         department_id: inductionRecord.school || "",
         course: inductionRecord.course || "",
+        program: inductionRecord.program || "",
       });
 
       if (found) {
@@ -381,6 +383,7 @@ function RegisterPage() {
       semester: `Session 2026–2027`,
       department_id: form.department_id || inductionRecord?.school || "",
       course: form.course || inductionRecord?.course || "",
+      program: form.branch || inductionRecord?.program || "",
     });
 
     if (found) {
@@ -547,8 +550,9 @@ function RegisterPage() {
       const found = await pollProfileAndSave(profile.enrollment_no, {
         full_name: profile.full_name,
         branch: `${profile.branch_id} · ${profile.deptName}`,
-        semester: `Session 2026–2027 · ${profile.course}`,
+        semester: "1",
         department_id: profile.department_id,
+        program: profile.branch_id,
         course: profile.course,
       });
       

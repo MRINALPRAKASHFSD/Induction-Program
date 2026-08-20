@@ -54,6 +54,8 @@ export function useDashboardData(firebaseUser: any, authLoading: boolean) {
               semester: liveStudentData.semester ? `Semester ${liveStudentData.semester}` : (liveStudentData.year ? `Session 2026–2027` : "1st"),
               created_at: liveStudentData.created_at || new Date().toISOString(),
               department_id: liveStudentData.department_id,
+              program: liveStudentData.branch_id || liveStudentData.program || "",
+              course: liveStudentData.course || "",
             };
             setProfile(recoveredProfile);
           }
@@ -105,6 +107,8 @@ export function useDashboardData(firebaseUser: any, authLoading: boolean) {
               semester: liveStudentData.semester ? `Semester ${liveStudentData.semester}` : (liveStudentData.year ? `Session 2026–2027` : ""),
               created_at: liveStudentData.created_at || new Date().toISOString(),
               department_id: liveStudentData.department_id,
+              program: liveStudentData.branch_id || liveStudentData.program || "",
+              course: liveStudentData.course || "",
             };
             localDb.saveStudentProfile(recoveredProfile);
             setProfile(recoveredProfile);

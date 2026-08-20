@@ -13,8 +13,8 @@ export function IdentityPanel({ profile, liveCourse }: IdentityPanelProps) {
   const userInitial = profile?.full_name?.[0]?.toUpperCase() || "?";
   const fullName = profile?.full_name?.toUpperCase() || "STUDENT";
   const enrollmentNo = profile?.enrollment_no || "AWAITING ID";
-  const course = liveCourse || profile?.course;
-  const school = profile?.department_id || "School Not Assigned";
+  const school = liveCourse || profile?.course || "School Not Assigned";
+  const course = profile?.program || "Course Not Assigned";
 
   return (
     <motion.div

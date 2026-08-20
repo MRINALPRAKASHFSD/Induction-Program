@@ -79,8 +79,8 @@ export function DashboardHero({ profile, liveCourse, plannerReady }: DashboardHe
 
         {/* Student Snapshot Chips */}
         <div className="flex flex-wrap gap-2.5 mt-2">
-          <SnapshotChip icon={<Building size={14} />} label={profile?.department_id || "School Not Assigned"} />
-          <SnapshotChip icon={<BookOpen size={14} />} label={liveCourse || profile?.course || "B.Tech CSE"} />
+          <SnapshotChip icon={<Building size={14} />} label={liveCourse || profile?.course || "School Not Assigned"} />
+          <SnapshotChip icon={<BookOpen size={14} />} label={profile?.program || "Course Not Assigned"} />
           <SnapshotChip icon={<Clock size={14} />} label={`Semester ${profile?.semester || "I"}`} />
           <SnapshotChip icon={<Users size={14} />} label="Section A" />
           <SnapshotChip icon={<ShieldCheck size={14} />} label="Group 14" />
