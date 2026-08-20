@@ -8,7 +8,7 @@ import { useAuthRedirect } from "@/hooks/use-auth-redirect";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { usePlatformAnalytics } from "@/hooks/use-platform-analytics";
+import { usePlatformAnalytics, LIVE_IMPACT_ENABLED } from "@/hooks/use-platform-analytics";
 import HeroComponent from "@/components/landing/modules/content/Hero/Hero";
 import { mockAarambhModules } from "@/components/landing/core/repository";
 import "../memories.css"; // We might not need this anymore if we rip out the old styles, but keep for safety
@@ -364,7 +364,7 @@ function Landing() {
       }
       return null;
     },
-    refetchInterval: 2000,
+    staleTime: Infinity,
   });
 
   // Use Firestore config if valid, otherwise fallback to mock
@@ -389,59 +389,61 @@ function Landing() {
         <HeroComponent config={finalHeroConfig as any} />
 
         {/* Live Stats — Institutional Design */}
-        <section className="bg-white py-20 border-b border-gray-200" style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
-          <div className="container mx-auto max-w-7xl px-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12">
-              <div>
-                <h2 className="text-3xl md:text-5xl font-serif text-[#1e293b] font-bold">Live Impact</h2>
-                <div className="h-1 w-20 bg-[#d2232a] mt-4"></div>
-              </div>
-              <div className="mt-4 md:mt-0 flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-sm">
-                <span className="text-xs text-gray-700 font-medium tracking-wide">
-                  {error ? "Update Failed" : (
-                    <>
-                      <span className="font-semibold text-gray-900">🟢 Live</span>
-                      <span className="mx-1.5 text-gray-400">•</span>
-                      <span className="text-gray-500">Updated {relativeTime}</span>
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { id: 'students',     value: data?.stats.students,            label: "Validated Students",      icon: ShieldCheck },
-                { id: 'scans',        value: data?.stats.attendance,          label: "Attendance Marked",       icon: ScanLine },
-                { id: 'events',       value: data?.stats.liveEvents,          label: "Live Events",             icon: Calendar },
-                { id: 'clubs',        value: data?.stats.communities,         label: "Clubs",                   icon: UsersRound },
-                { id: 'club_regs',    value: data?.stats.clubRegistrations,   label: "Club Registrations",      icon: Users },
-                { id: 'announcements',value: data?.stats.announcements,       label: "Announcements",           icon: Megaphone },
-                { id: 'datasets',     value: data?.stats.datasets,            label: "Datasets",                icon: Database }
-              ].map((kpi, i) => (
-                <div key={kpi.id} className="bg-white p-6 border border-gray-200 hover:border-[#d2232a]/30 hover:shadow-lg transition-all duration-300 relative overflow-hidden group flex flex-col items-center justify-center text-center">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-[#d2232a] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-                  
-                  <div className="flex items-center justify-center mb-4">
-                    <kpi.icon className="w-7 h-7 text-[#1e293b]/40 group-hover:text-[#d2232a] transition-colors" />
-                  </div>
-                  
-                  {isLoading && kpi.value == null ? (
-                    <div className="h-10 w-20 bg-gray-100 rounded-sm animate-pulse mb-2" />
-                  ) : error && !data ? (
-                    <div className="text-3xl md:text-4xl font-serif font-bold text-[#1e293b] mb-2">—</div>
-                  ) : (
-                    <div className="text-3xl md:text-4xl font-serif font-bold text-[#1e293b] mb-2">
-                      <AnimatedCounter value={kpi.value ?? 0} />
-                    </div>
-                  )}
-                  
-                  <div className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-wider">{kpi.label}</div>
+        {LIVE_IMPACT_ENABLED && (
+          <section className="bg-white py-20 border-b border-gray-200" style={{ contentVisibility: 'auto', containIntrinsicSize: '600px' }}>
+            <div className="container mx-auto max-w-7xl px-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12">
+                <div>
+                  <h2 className="text-3xl md:text-5xl font-serif text-[#1e293b] font-bold">Live Impact</h2>
+                  <div className="h-1 w-20 bg-[#d2232a] mt-4"></div>
                 </div>
-              ))}
+                <div className="mt-4 md:mt-0 flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-sm">
+                  <span className="text-xs text-gray-700 font-medium tracking-wide">
+                    {error ? "Update Failed" : (
+                      <>
+                        <span className="font-semibold text-gray-900">🟢 Live</span>
+                        <span className="mx-1.5 text-gray-400">•</span>
+                        <span className="text-gray-500">Updated {relativeTime}</span>
+                      </>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                {[
+                  { id: 'students',     value: data?.stats.students,            label: "Validated Students",      icon: ShieldCheck },
+                  { id: 'scans',        value: data?.stats.attendance,          label: "Attendance Marked",       icon: ScanLine },
+                  { id: 'events',       value: data?.stats.liveEvents,          label: "Live Events",             icon: Calendar },
+                  { id: 'clubs',        value: data?.stats.communities,         label: "Clubs",                   icon: UsersRound },
+                  { id: 'club_regs',    value: data?.stats.clubRegistrations,   label: "Club Registrations",      icon: Users },
+                  { id: 'announcements',value: data?.stats.announcements,       label: "Announcements",           icon: Megaphone },
+                  { id: 'datasets',     value: data?.stats.datasets,            label: "Datasets",                icon: Database }
+                ].map((kpi, i) => (
+                  <div key={kpi.id} className="bg-white p-6 border border-gray-200 hover:border-[#d2232a]/30 hover:shadow-lg transition-all duration-300 relative overflow-hidden group flex flex-col items-center justify-center text-center">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-[#d2232a] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
+                    
+                    <div className="flex items-center justify-center mb-4">
+                      <kpi.icon className="w-7 h-7 text-[#1e293b]/40 group-hover:text-[#d2232a] transition-colors" />
+                    </div>
+                    
+                    {isLoading && kpi.value == null ? (
+                      <div className="h-10 w-20 bg-gray-100 rounded-sm animate-pulse mb-2" />
+                    ) : error && !data ? (
+                      <div className="text-3xl md:text-4xl font-serif font-bold text-[#1e293b] mb-2">—</div>
+                    ) : (
+                      <div className="text-3xl md:text-4xl font-serif font-bold text-[#1e293b] mb-2">
+                        <AnimatedCounter value={kpi.value ?? 0} />
+                      </div>
+                    )}
+                    
+                    <div className="text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-wider">{kpi.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         <InstitutionalGallery />
         

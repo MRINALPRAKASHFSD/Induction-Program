@@ -7,6 +7,7 @@ export type LocalStudent = {
   created_at: string;
   room_no?: string; // e.g. "A109" — undefined means not yet allocated
   department_id?: string;
+  program?: string;
   profile_picture_url?: string;
   photo_url?: string;
   course?: string;

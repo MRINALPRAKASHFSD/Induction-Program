@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 
+export const LIVE_IMPACT_ENABLED = false;
+
 export interface PlatformStats {
   students: number;
   attendance: number;
@@ -31,8 +33,9 @@ export function usePlatformAnalytics({ fresh = false } = {}) {
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
+    if (!LIVE_IMPACT_ENABLED) return;
+
     let cancelled = false;
-    let timer: NodeJS.Timeout | null = null;
 
     const fetchStats = async () => {
       // Prevent overlapping fetches
@@ -74,9 +77,6 @@ export function usePlatformAnalytics({ fresh = false } = {}) {
     // Fetch immediately on mount
     fetchStats();
 
-    // Set up polling interval (15 seconds)
-    timer = setInterval(fetchStats, 15000);
-
     // Add visibility change listener to fetch immediately when tab becomes active again
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -87,10 +87,13 @@ export function usePlatformAnalytics({ fresh = false } = {}) {
 
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [fresh]);
+
+  if (!LIVE_IMPACT_ENABLED) {
+    return { data: null, error: null, isLoading: false };
+  }
 
   return { data, error, isLoading };
 }
