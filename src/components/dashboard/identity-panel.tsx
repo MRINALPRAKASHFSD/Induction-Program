@@ -14,6 +14,7 @@ export function IdentityPanel({ profile, liveCourse }: IdentityPanelProps) {
   const fullName = profile?.full_name?.toUpperCase() || "STUDENT";
   const enrollmentNo = profile?.enrollment_no || "AWAITING ID";
   const course = liveCourse || profile?.course;
+  const school = profile?.department_id || "School Not Assigned";
 
   return (
     <motion.div
@@ -75,13 +76,21 @@ export function IdentityPanel({ profile, liveCourse }: IdentityPanelProps) {
             
             <div className="w-full h-px bg-black/5 dark:bg-white/5" />
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 w-full gap-4 sm:gap-8 text-center sm:text-left">
+            <div className="grid grid-cols-1 sm:grid-cols-3 w-full gap-4 sm:gap-6 text-center sm:text-left">
               <div>
                 <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1">
                   Application Number
                 </p>
                 <p className="text-lg font-mono font-bold text-foreground">
                   {enrollmentNo}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1">
+                  School
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {school}
                 </p>
               </div>
               <div>

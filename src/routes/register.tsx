@@ -215,6 +215,7 @@ function RegisterPage() {
             semester:      s.year ? `Session 2026–2027 · ${s.course ?? ""}` : (fallbackProfileData.semester || ""),
             created_at:    s.created_at || new Date().toISOString(),
             department_id: s.department_id || fallbackProfileData.department_id || "",
+            course:        s.course || fallbackProfileData.course || "",
           });
           return true;
         }
@@ -338,8 +339,9 @@ function RegisterPage() {
       const found = await pollProfileAndSave(inductionRecord.application_number, {
         full_name: inductionRecord.student_name,
         branch: inductionRecord.program || "",
-        semester: `Session 2026–2027 · ${inductionRecord.course || ""}`,
+        semester: `Session 2026–2027`,
         department_id: inductionRecord.school || "",
+        course: inductionRecord.course || "",
       });
 
       if (found) {
@@ -378,6 +380,7 @@ function RegisterPage() {
       branch: form.branch || inductionRecord?.program || "",
       semester: `Session 2026–2027`,
       department_id: form.department_id || inductionRecord?.school || "",
+      course: form.course || inductionRecord?.course || "",
     });
 
     if (found) {
@@ -545,7 +548,8 @@ function RegisterPage() {
         full_name: profile.full_name,
         branch: `${profile.branch_id} · ${profile.deptName}`,
         semester: `Session 2026–2027 · ${profile.course}`,
-        department_id: profile.department_id
+        department_id: profile.department_id,
+        course: profile.course,
       });
       
       if (found) {
