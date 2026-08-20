@@ -5,33 +5,15 @@ import { motion } from "framer-motion";
 
 interface IdentityPanelProps {
   profile: LocalStudent | null;
+  liveCourse?: string;
 }
 
-const SCHOOL_MAP: Record<string, string> = {
-  soet: "School of Engineering & Technology",
-  soad: "School of Architecture & Design",
-  smas: "School of Management & Commerce",
-  semce: "School of Engineering, Media & Creative Education",
-  sbas: "School of Basic & Applied Sciences",
-  sola: "School of Liberal Arts",
-  sols: "School of Legal Studies",
-  somc: "School of Mass Communication",
-  soed: "School of Education",
-  sprs: "School of Pharmaceutical Sciences"
-};
 
-function getSchoolName(code: string | undefined): string {
-  if (!code) return "";
-  const normalized = code.toLowerCase().trim();
-  return SCHOOL_MAP[normalized] || code;
-}
-
-export function IdentityPanel({ profile }: IdentityPanelProps) {
+export function IdentityPanel({ profile, liveCourse }: IdentityPanelProps) {
   const userInitial = profile?.full_name?.[0]?.toUpperCase() || "?";
   const fullName = profile?.full_name?.toUpperCase() || "STUDENT";
   const enrollmentNo = profile?.enrollment_no || "AWAITING ID";
-  const course = profile?.course || "Undergraduate Programme";
-  const school = getSchoolName(profile?.department_id || profile?.branch) || "K.R. Mangalam University";
+  const course = liveCourse || profile?.course;
 
   return (
     <motion.div
@@ -104,7 +86,7 @@ export function IdentityPanel({ profile }: IdentityPanelProps) {
               </div>
               <div>
                 <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1">
-                  Programme
+                  Course
                 </p>
                 <p className="text-sm font-semibold text-foreground">
                   {course}
@@ -112,14 +94,6 @@ export function IdentityPanel({ profile }: IdentityPanelProps) {
               </div>
             </div>
 
-            <div className="w-full text-center sm:text-left">
-              <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground mb-1">
-                School
-              </p>
-              <p className="text-sm font-semibold text-foreground">
-                {school}
-              </p>
-            </div>
 
           </div>
         </div>

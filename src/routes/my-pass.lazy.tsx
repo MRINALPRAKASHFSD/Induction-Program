@@ -213,13 +213,13 @@ export function DashboardContent({
 }: DashboardContentProps) {
   return (
     <DashboardShell>
-      <DashboardHero profile={profile} plannerReady={!!planner?.plannerActive} />
+      <DashboardHero profile={profile} liveCourse={liveStudent?.course} plannerReady={!!planner?.plannerActive} />
       <AnnouncementBanner />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--dashboard-gap)]">
         {/* Main Content Column (Left - 2/3) */}
         <div className="lg:col-span-2 flex flex-col gap-[var(--dashboard-gap)]">
-          <IdentityPanel profile={profile} />
+          <IdentityPanel profile={profile} liveCourse={liveStudent?.course} />
           
           <div className="w-full h-px bg-gradient-to-r from-transparent via-amber-900/10 dark:via-amber-500/10 to-transparent my-2" />
 

@@ -5,10 +5,11 @@ import { motion } from "framer-motion";
 
 interface DashboardHeroProps {
   profile: LocalStudent | null;
+  liveCourse?: string;
   plannerReady: boolean;
 }
 
-export function DashboardHero({ profile, plannerReady }: DashboardHeroProps) {
+export function DashboardHero({ profile, liveCourse, plannerReady }: DashboardHeroProps) {
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
   const fullName = profile?.full_name || "Student";
 
@@ -78,10 +79,9 @@ export function DashboardHero({ profile, plannerReady }: DashboardHeroProps) {
 
         {/* Student Snapshot Chips */}
         <div className="flex flex-wrap gap-2.5 mt-2">
-          <SnapshotChip icon={<BookOpen size={14} />} label={profile?.course || "B.Tech CSE"} />
+          <SnapshotChip icon={<BookOpen size={14} />} label={liveCourse || profile?.course || "B.Tech CSE"} />
           <SnapshotChip icon={<Clock size={14} />} label={`Semester ${profile?.semester || "I"}`} />
           <SnapshotChip icon={<Users size={14} />} label="Section A" />
-          <SnapshotChip icon={<Building size={14} />} label="School of Engineering" />
           <SnapshotChip icon={<ShieldCheck size={14} />} label="Group 14" />
           <SnapshotChip icon={<CheckCircle2 size={14} />} label="Verified Student" highlight />
         </div>
