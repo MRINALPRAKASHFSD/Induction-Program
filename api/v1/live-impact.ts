@@ -75,19 +75,14 @@ export default async function handler(req: any, res: any) {
     const activeDatasetIds = activeDatasetsDocs.docs.map(doc => doc.id);
     
     if (activeDatasetIds.length > 0) {
-      const uniqueStudents = new Set();
       for (let i = 0; i < activeDatasetIds.length; i += 10) {
         const batch = activeDatasetIds.slice(i, i + 10);
-        const parts = await db.collection('event_participants')
+        const partsCountSnap = await db.collection('event_participants')
           .where('dataset_id', 'in', batch)
-          .select('application_number')
+          .count()
           .get();
-        parts.forEach(doc => {
-          const appNo = doc.data().application_number;
-          if (appNo) uniqueStudents.add(appNo);
-        });
+        participants += partsCountSnap.data().count;
       }
-      participants = uniqueStudents.size;
     }
 
     const stats = {
