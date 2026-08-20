@@ -6,7 +6,6 @@ export interface PlatformStats {
   clubRegistrations: number;
   liveEvents: number;
   datasets: number;
-  participants: number;
   announcements: number;
   campusLocations: number;
   communities: number;

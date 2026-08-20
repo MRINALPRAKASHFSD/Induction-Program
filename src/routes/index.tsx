@@ -411,7 +411,6 @@ function Landing() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[
-                { id: 'participants', value: data?.stats.participants,        label: "Total Students",          icon: Users },
                 { id: 'students',     value: data?.stats.students,            label: "Validated Students",      icon: ShieldCheck },
                 { id: 'scans',        value: data?.stats.attendance,          label: "Attendance Marked",       icon: ScanLine },
                 { id: 'events',       value: data?.stats.liveEvents,          label: "Live Events",             icon: Calendar },

@@ -55,7 +55,6 @@ export default async function handler(req: any, res: any) {
       clubsJoinedSnap, 
       eventsSnap, 
       datasetsSnap, 
-      activeDatasetsDocs, 
       announcementsSnap, 
       locationsSnap, 
       communitiesSnap
@@ -65,25 +64,10 @@ export default async function handler(req: any, res: any) {
       db.collection('club_registrations').count().get(),
       db.collection('events').where('is_active', '==', true).count().get(),
       db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).count().get(),
-      db.collection('event_datasets').where('status', 'in', ['ACTIVE', 'READY']).get(), // Need docs to find active dataset IDs
       db.collection('announcements').where('status', '==', 'active').count().get(),
       db.collection('departments').count().get(),
       db.collection('clubs').count().get()
     ]);
-
-    let participants = 0;
-    const activeDatasetIds = activeDatasetsDocs.docs.map(doc => doc.id);
-    
-    if (activeDatasetIds.length > 0) {
-      for (let i = 0; i < activeDatasetIds.length; i += 10) {
-        const batch = activeDatasetIds.slice(i, i + 10);
-        const partsCountSnap = await db.collection('event_participants')
-          .where('dataset_id', 'in', batch)
-          .count()
-          .get();
-        participants += partsCountSnap.data().count;
-      }
-    }
 
     const stats = {
       students: studentsSnap.data().count,
@@ -91,7 +75,6 @@ export default async function handler(req: any, res: any) {
       clubRegistrations: clubsJoinedSnap.data().count,
       liveEvents: eventsSnap.data().count,
       datasets: datasetsSnap.data().count,
-      participants: participants,
       announcements: announcementsSnap.data().count,
       campusLocations: locationsSnap.data().count,
       communities: communitiesSnap.data().count
