@@ -65,9 +65,22 @@ function buildMappingKey(schoolCode: string, course: string, programme: string):
 function nowIST(): { date: string; timeMinutes: number; isoNow: string } {
   const now = new Date();
   const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  const date = ist.toISOString().slice(0, 10);
+  // Manually format YYYY-MM-DD from IST parts to avoid toISOString() converting back to UTC
+  const year = ist.getFullYear();
+  const month = String(ist.getMonth() + 1).padStart(2, '0');
+  const day = String(ist.getDate()).padStart(2, '0');
+  const date = `${year}-${month}-${day}`;
   const timeMinutes = ist.getHours() * 60 + ist.getMinutes();
   return { date, timeMinutes, isoNow: now.toISOString() };
+}
+
+/** Strip dots, parens, dashes, slashes etc. and collapse whitespace for fuzzy matching */
+function normalizeForMatch(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[.\-—–()\[\]{},;:'"\/\\|&]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function timeToMin(t: string): number {
@@ -148,20 +161,29 @@ export default async function handler(req: any, res: any) {
     const { sessions, rooms } = await getCachedPlannerData(db, plannerId);
 
     // ── Step 5: Find induction room (with fallback to school-wide room) ────
+    const normCourse    = normalizeForMatch(course);
+    const normProgramme = normalizeForMatch(programme);
+
     let roomAllocation = rooms.find((r: any) => r.mappingKey === mappingKey);
 
     if (!roomAllocation && schoolCode) {
       const schoolRooms = rooms.filter((r: any) => r.schoolCode === schoolCode);
       if (schoolRooms.length > 0) {
         // Try exact programme or course match first
-        roomAllocation = schoolRooms.find((r: any) => r.programme && (r.programme === programme || r.programme === course));
+        roomAllocation = schoolRooms.find((r: any) => r.programme && (
+          r.programme.toLowerCase() === programme || r.programme.toLowerCase() === course
+        ));
         
-        // Try partial programme match
+        // Try normalized fuzzy match (strips dots, parens, dashes, etc.)
         if (!roomAllocation) {
-          roomAllocation = schoolRooms.find((r: any) => r.programme && (
-            (programme && (r.programme.toLowerCase().includes(programme) || programme.includes(r.programme.toLowerCase()))) ||
-            (course && (r.programme.toLowerCase().includes(course) || course.includes(r.programme.toLowerCase())))
-          ));
+          roomAllocation = schoolRooms.find((r: any) => {
+            if (!r.programme) return false;
+            const normRoom = normalizeForMatch(r.programme);
+            return (
+              (normCourse && normCourse.length >= 3 && (normRoom.includes(normCourse) || normCourse.includes(normRoom))) ||
+              (normProgramme && normProgramme.length >= 3 && (normRoom.includes(normProgramme) || normProgramme.includes(normRoom)))
+            );
+          });
         }
         
         // Fallback to school-wide room (empty programme)
