@@ -133,31 +133,22 @@ export default async function handler(req: any, res: any) {
             return true;
           }
 
-          // 2. Tokenize comma/slash-separated scopeKeys e.g. "SOET, SOLS" or "B.Tech CSE / BCA"
+          // 2. Exact match or Token-based robust word-boundary matching
+          const targetText = ` ${schoolCode} ${course} ${programme} `;
+          if (sKey.length >= 2 && targetText.includes(sKey)) return true;
+
           const tokens = sKey.split(/[,/|;&]/).map((t: string) => t.trim()).filter(Boolean);
 
-          // 3. Match against schoolCode, programme, or course (direct, tokens, or prefix/suffix/word matching)
-          const isMatch = (target: string) => {
-            if (!target) return false;
-            if (sKey === target || target === sKey) return true;
-            for (const token of tokens) {
-              if (token === target) return true;
-              if (token.length >= 3 && (
-                target.startsWith(token) ||
-                target.endsWith(token) ||
-                target.includes(`-${token}`) ||
-                target.includes(` ${token}`) ||
-                target.includes(`${token} `) ||
-                token.startsWith(target) ||
-                token.endsWith(target)
-              )) {
-                return true;
-              }
-            }
-            return false;
-          };
-
-          if (isMatch(schoolCode) || isMatch(programme) || isMatch(course)) return true;
+          for (const token of tokens) {
+            if (token.length < 2) continue;
+            // Exact part match
+            if (token === schoolCode || token === course || token === programme) return true;
+            
+            // Bounded match in target string (handles spaces, parentheses, slashes securely)
+            const escapedToken = token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`(^|\\s|\\W)${escapedToken}(\\s|\\W|$)`, 'i');
+            if (regex.test(targetText)) return true;
+          }
 
           return false;
         });

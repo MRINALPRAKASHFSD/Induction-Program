@@ -148,10 +148,33 @@ export default async function handler(req: any, res: any) {
     const { sessions, rooms } = await getCachedPlannerData(db, plannerId);
 
     // ── Step 5: Find induction room (with fallback to school-wide room) ────
-    const roomAllocation = rooms.find((r: any) => r.mappingKey === mappingKey)
-      || rooms.find((r: any) => r.schoolCode === schoolCode && (!r.programme || r.programme === ''))
-      || rooms.find((r: any) => r.schoolCode === schoolCode)
-      || null;
+    let roomAllocation = rooms.find((r: any) => r.mappingKey === mappingKey);
+
+    if (!roomAllocation && schoolCode) {
+      const schoolRooms = rooms.filter((r: any) => r.schoolCode === schoolCode);
+      if (schoolRooms.length > 0) {
+        // Try exact programme or course match first
+        roomAllocation = schoolRooms.find((r: any) => r.programme && (r.programme === programme || r.programme === course));
+        
+        // Try partial programme match
+        if (!roomAllocation) {
+          roomAllocation = schoolRooms.find((r: any) => r.programme && (
+            r.programme.includes(programme) || programme.includes(r.programme) ||
+            r.programme.includes(course) || course.includes(r.programme)
+          ));
+        }
+        
+        // Fallback to school-wide room (empty programme)
+        if (!roomAllocation) {
+          roomAllocation = schoolRooms.find((r: any) => !r.programme || r.programme === '');
+        }
+        
+        // Ultimate fallback: First room in that school
+        if (!roomAllocation) {
+          roomAllocation = schoolRooms[0];
+        }
+      }
+    }
 
     // ── Step 6: Filter sessions relevant to this student (or all if admin) ─
     const relevantSessions = (!schoolCode && !course && !programme)
@@ -166,13 +189,22 @@ export default async function handler(req: any, res: any) {
             return true;
           }
 
-          // 2. Tokenize comma/slash-separated scopeKeys e.g. "SOET, SOLS" or "B.Tech CSE / BCA"
+          // 2. Exact match or Token-based robust word-boundary matching
+          const targetText = ` ${schoolCode} ${course} ${programme} `;
+          if (sKey.length >= 2 && targetText.includes(sKey)) return true;
+
           const tokens = sKey.split(/[,/|;&]/).map((t: string) => t.trim()).filter(Boolean);
 
-          // 3. Match against schoolCode, programme, or course (direct, tokens, or substring)
-          if (schoolCode && (tokens.includes(schoolCode) || sKey === schoolCode || schoolCode.includes(sKey) || sKey.includes(schoolCode))) return true;
-          if (programme  && (tokens.includes(programme)  || sKey === programme  || programme.includes(sKey)  || sKey.includes(programme)))  return true;
-          if (course     && (tokens.includes(course)     || sKey === course     || course.includes(sKey)     || sKey.includes(course)))     return true;
+          for (const token of tokens) {
+            if (token.length < 2) continue;
+            // Exact part match
+            if (token === schoolCode || token === course || token === programme) return true;
+            
+            // Bounded match in target string (handles spaces, parentheses, slashes securely)
+            const escapedToken = token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(`(^|\\s|\\W)${escapedToken}(\\s|\\W|$)`, 'i');
+            if (regex.test(targetText)) return true;
+          }
 
           return false;
         });
