@@ -29,7 +29,7 @@ try {
 // ── Per-day cache ──────────────────────────────────────────────────────────────
 // Key: `{plannerId}:{dayNumber}` → all sessions for that day
 const DAY_CACHE = new Map<string, { sessions: any[]; ts: number }>();
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL_MS = 10 * 1000; // 10 seconds (reduced for faster updates)
 
 function buildMappingKey(schoolCode: string, course: string, programme: string): string {
   return `${schoolCode.toLowerCase().trim()}|${course.toLowerCase().trim()}|${programme.toLowerCase().trim()}`;

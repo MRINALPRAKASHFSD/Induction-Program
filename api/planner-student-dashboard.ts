@@ -36,7 +36,7 @@ try {
 // ── Cache ─────────────────────────────────────────────────────────────────────
 // In-process cache keyed by plannerId — resets on cold start
 const PLANNER_CACHE = new Map<string, { sessions: any[]; rooms: any[]; ts: number }>();
-const CACHE_TTL_MS  = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS  = 10 * 1000; // 10 seconds (reduced for faster updates)
 
 async function getCachedPlannerData(db: any, plannerId: string) {
   const cached = PLANNER_CACHE.get(plannerId);
@@ -159,8 +159,8 @@ export default async function handler(req: any, res: any) {
         // Try partial programme match
         if (!roomAllocation) {
           roomAllocation = schoolRooms.find((r: any) => r.programme && (
-            (programme && (r.programme.includes(programme) || programme.includes(r.programme))) ||
-            (course && (r.programme.includes(course) || course.includes(r.programme)))
+            (programme && (r.programme.toLowerCase().includes(programme) || programme.includes(r.programme.toLowerCase()))) ||
+            (course && (r.programme.toLowerCase().includes(course) || course.includes(r.programme.toLowerCase())))
           ));
         }
         
