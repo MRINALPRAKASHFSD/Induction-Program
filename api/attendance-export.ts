@@ -115,7 +115,7 @@ export default async function handler(req: any, res: any) {
         index + 1,
         escapeCsv(data.student_id || ''),
         escapeCsv(data.student_name || ''),
-        escapeCsv(data.department || session.programme_name || ''),
+        escapeCsv(data.programme || data.department || session.programme_name || ''),
         escapeCsv(session.event_id || ''),
         escapeCsv(session.venue || ''),
         scannedAt,
