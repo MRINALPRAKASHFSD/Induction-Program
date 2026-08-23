@@ -129,7 +129,13 @@ export default async function handler(req: any, res: any) {
           const sKey   = (s.scopeKey || '').toLowerCase().trim();
 
           // 1. Universal or ALL
-          if (sScope === 'universal' || !sKey || /^(all|universal|all\s*schools?|general|mandatory|any|-|na|n\/a)$/i.test(sKey)) {
+          if (
+            sScope === 'universal' || 
+            !sKey || 
+            sKey.includes('all schools') ||
+            sKey.includes('general session') ||
+            /^(all|universal|all\s*schools?|general|mandatory|any|-|na|n\/a)$/i.test(sKey)
+          ) {
             return true;
           }
 
