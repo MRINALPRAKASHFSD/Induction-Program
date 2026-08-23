@@ -37,7 +37,7 @@ export async function processAttendanceFirestoreTransaction(payload: AttendanceJ
         semester: payload.semester,
         section: payload.section,
         email: payload.email,
-        scan_time: FieldValue.serverTimestamp(),
+        scanned_at: FieldValue.serverTimestamp(),
         qr_version: payload.qrVersion,
         scanner_device_id: payload.scannerDeviceId,
         ip_address: payload.ipAddress,

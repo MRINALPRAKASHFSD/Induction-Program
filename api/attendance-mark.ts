@@ -300,13 +300,19 @@ export default async function handler(req: any, res: any) {
     const sessionProgrammeName = (session.programme_name || '').toLowerCase();
 
     if (sessionProgrammeId) {
-      const normalize = (s: string) => s.replace(/&/g, 'and').replace(/\s+/g, ' ').trim();
+      const normalize = (s: string) => s.replace(/&/g, 'and').replace(/[^a-z0-9 ]/gi, ' ').replace(/\s+/g, ' ').trim();
       
       const normDeptId = normalize(studentDeptId);
       const normBranchId = normalize(studentBranchId);
       const normStudentProgram = normalize(studentProgram);
       const normSessionId = normalize(sessionProgrammeId);
       const normSessionName = normalize(sessionProgrammeName);
+
+      console.log(JSON.stringify({
+        requestId, layer: 'validation8_programme',
+        normDeptId, normBranchId, normStudentProgram,
+        normSessionId, normSessionName,
+      }));
 
       const isMatch = 
         normDeptId === normSessionId ||
@@ -319,6 +325,11 @@ export default async function handler(req: any, res: any) {
         (normSessionName && normStudentProgram && normStudentProgram.includes(normSessionName));
 
       if (!isMatch) {
+        console.warn(JSON.stringify({
+          requestId, layer: 'validation8_programme', status: 'mismatch',
+          student: enrollmentClean, normDeptId, normBranchId, normStudentProgram,
+          normSessionId, normSessionName,
+        }));
         return res.status(403).json({
           ok: false,
           error: `This attendance session is for ${session.programme_name || 'a different programme'}. You are registered under a different school/programme.`,
