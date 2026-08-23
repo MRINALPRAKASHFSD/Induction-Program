@@ -3,6 +3,13 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getRedis } from '../server/redis.js';
 import { allocateRoom } from '../server/room-allocation.js';
 import crypto from 'crypto';
+import {
+  PLANNER_ID,
+  getParsedRooms,
+  getSessionsByRoom,
+  createInMemoryOccupancy,
+  allocateStudent as runAllocationEngine,
+} from '../services/deeksharambh-allocation-engine.js';
 
 let firebaseInitialized = false;
 let firebaseInitError = '';
@@ -342,6 +349,75 @@ export default async function handler(req: any, res: any) {
       email: emailKey,
       status: result.duplicate ? 'Duplicate(Idempotent)' : 'Success',
     }));
+
+    // ── Auto-allocate room & schedule (non-blocking) ────────────────────────
+    // Fires asynchronously so it NEVER delays or blocks the registration response.
+    // If it fails, allocationStatus is updated to PENDING_REVIEW for admin review.
+    if (!result.duplicate) {
+      (async () => {
+        try {
+          const rooms          = getParsedRooms();
+          const sessionsByRoom = getSessionsByRoom();
+          // Per-registration occupancy: read current counts from Firestore
+          // so we don't over-allocate relative to batch-migrated students.
+          const countsSnap = await db
+            .collection('induction_student_room_allocations')
+            .where('plannerId', '==', PLANNER_ID)
+            .get();
+          const occupancy = createInMemoryOccupancy(rooms);
+          for (const doc of countsSnap.docs) {
+            const roomNum = doc.data().roomNumber;
+            if (roomNum) occupancy.increment(roomNum);
+          }
+
+          // Build a minimal student object matching what the engine expects
+          const studentObj = {
+            id:            normalizedAppNo,
+            email:         emailKey,
+            department_id: participant.school   || '',
+            course:        participant.course    || '',
+            branch_id:     participant.program  || '',
+          };
+
+          const allocationResult = runAllocationEngine(studentObj, occupancy, rooms, sessionsByRoom);
+
+          const allocDb = getFirestore();
+          if (allocationResult.allocDoc) {
+            // Write room allocation
+            await allocDb
+              .collection('induction_student_room_allocations')
+              .doc(`${PLANNER_ID}_${normalizedAppNo}`)
+              .set(allocationResult.allocDoc, { merge: true });
+
+            // Write schedule (single doc per student)
+            if (allocationResult.scheduleDoc && allocationResult.scheduleDoc.days.length > 0) {
+              await allocDb
+                .collection('induction_student_schedule')
+                .doc(`${PLANNER_ID}_${normalizedAppNo}`)
+                .set(allocationResult.scheduleDoc, { merge: true });
+            }
+
+            console.log(`[auto-alloc] ${normalizedAppNo} → ${allocationResult.allocDoc.roomNumber} (${allocationResult.allocDoc.allocationMethod})`);
+          } else {
+            // No room found — mark for admin review (do not block registration)
+            await allocDb
+              .collection('induction_student_room_allocations')
+              .doc(`${PLANNER_ID}_${normalizedAppNo}`)
+              .set({
+                studentId:        normalizedAppNo,
+                email:            emailKey,
+                plannerId:        PLANNER_ID,
+                allocationStatus: 'PENDING_REVIEW',
+                reason:           allocationResult.reason || 'No matching room',
+                updatedAt:        new Date().toISOString(),
+              }, { merge: true });
+            console.warn(`[auto-alloc] ${normalizedAppNo} could not be allocated: ${allocationResult.reason}`);
+          }
+        } catch (allocErr: any) {
+          console.error('[auto-alloc] allocation failed for', normalizedAppNo, ':', allocErr.message);
+        }
+      })();
+    }
 
     return res.status(200).json(result);
   } catch (error: any) {

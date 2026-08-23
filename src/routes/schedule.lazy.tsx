@@ -5,11 +5,10 @@ import {
   CalendarDays, Clock, MapPin, Mic2, Calendar, 
   Flag, Users, BookOpen, FileText, CheckCircle2,
   Map as MapIcon, GraduationCap, School, User, Mic,
-  Download, RefreshCw
+  Download, RefreshCw, AlertCircle
 } from "lucide-react";
 import { SiteHeader, NavSpacer } from "@/components/site-header";
 import { localDb } from "@/lib/local-db";
-import { getSchoolDays, getSchoolSessions, getAllSchoolDays, getAllSchoolSessions } from "@/lib/students.functions";
 import { auth } from "@/lib/firebase/config";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -115,7 +114,7 @@ function getSessionStatus(session: any, dayDateStr: string, now: Date): "live" |
   const sessionDate = session.date || dayDateStr;
   if (!sessionDate) return "upcoming";
 
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
   if (sessionDate !== todayStr) {
     return sessionDate < todayStr ? "completed" : "upcoming";
   }
@@ -179,29 +178,45 @@ function UnifiedSchedulePage() {
 
   const [scheduleType, setScheduleType] = useState<ScheduleType>("orientation");
   
-  // Data State
+  // ── Data State ────────────────────────────────────────────────────────────
   const [orientationSessions, setOrientationSessions] = useState<any[]>([]);
-  const [inductionSessions, setInductionSessions] = useState<any[]>([]);
-  const [inductionDays, setInductionDays] = useState<number[]>([]);
-  const [activeDay, setActiveDay] = useState<number | null>(null);
-  
-  const [loading, setLoading] = useState(true);
-  const [lastFetched, setLastFetched] = useState<Date | null>(null);
-  const [now, setNow] = useState(new Date());
 
-  const [isMasterView, setIsMasterView] = useState(false);
-  const [inductionPlannerActive, setInductionPlannerActive] = useState(false);
+  // Induction: precomputed from /api/student-full-schedule
+  interface DayData { date: string; dayNumber: number; sessions: any[]; }
+  const [inductionDays,     setInductionDays]     = useState<DayData[]>([]);
+  const [activeDayDate,     setActiveDayDate]     = useState<string>('');
+  const [inductionRoom,     setInductionRoom]     = useState<string | null>(null);
+  const [plannerActive,     setPlannerActive]     = useState(false);
+
+  const [loading,     setLoading]     = useState(true);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
+  const [now,         setNow]         = useState(new Date());
+
+  const INDUCTION_START = '2026-08-24';
 
   // Auto Refresh Time
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 60_000); // 1 minute
+    const interval = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch Logic
+  // ── Auth helper (defined inside component to avoid re-imports) ────────────
+  const getToken = async (): Promise<string | null> => {
+    if (auth.currentUser) return auth.currentUser.getIdToken();
+    return new Promise((resolve) => {
+      const unsub = auth.onAuthStateChanged(async (u) => {
+        unsub();
+        if (u) resolve(await u.getIdToken());
+        else resolve(null);
+      });
+      setTimeout(() => { unsub(); resolve(null); }, 2000);
+    });
+  };
+
+  // ── Orientation fetch (unchanged) ─────────────────────────────────────────
   const fetchOrientation = async () => {
     try {
-      const token = await getAuthToken();
+      const token = await getToken();
       const headers: any = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch("/api/event-schedule?type=orientation", { headers });
@@ -210,125 +225,79 @@ function UnifiedSchedulePage() {
         setOrientationSessions(data.sessions || []);
       }
     } catch (e) {
-      console.error(e);
+      console.error('[schedule] orientation fetch error:', e);
     }
   };
 
-  const fetchInductionDayPlanner = async (day: number, master: boolean = false) => {
+  // ── Induction fetch: single call to precomputed API ───────────────────────
+  const fetchMySchedule = async () => {
     try {
-      const token = await getAuthToken();
-      if (!token) return null;
-      const p = profile as any;
-      const dept = encodeURIComponent(p?.department_id || p?.school_code || '');
-      const course = encodeURIComponent(p?.course || '');
-      const prog = encodeURIComponent(p?.branch || p?.programme || '');
-      const res = await fetch(
-        `/api/planner-day-schedule?day=${day}&master=${master ? '1' : '0'}&dept=${dept}&course=${course}&prog=${prog}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) return null;
-      return res.json();
-    } catch {
-      return null;
-    }
-  };
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch('/api/student-full-schedule', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.ok) return;
 
-  const loadInductionDays = async (master: boolean) => {
-    try {
-      const res: any = master
-        ? await getAllSchoolDays()
-        : await getSchoolDays({ data: { department_id: profile?.department_id } });
-      if (res.days) {
-        setInductionDays(res.days);
-        if (res.days.length > 0) {
-          setActiveDay(res.days[0]);
-          loadInductionSessions(res.days[0], master);
-        }
+      setPlannerActive(data.plannerActive ?? false);
+      setInductionRoom(data.roomNumber || null);
+
+      const days: DayData[] = (data.days || []).filter((d: DayData) => d.date >= INDUCTION_START);
+      setInductionDays(days);
+
+      // Auto-select today or first day
+      if (days.length > 0) {
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+        const todayDay = days.find((d: DayData) => d.date === todayStr);
+        const futureDay = days.find((d: DayData) => d.date >= todayStr);
+        setActiveDayDate((todayDay || futureDay || days[0]).date);
       }
     } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const loadInductionSessions = async (day: number, master: boolean) => {
-    try {
-      if (inductionPlannerActive) {
-        const data = await fetchInductionDayPlanner(day, master);
-        if (data && data.sessions) setInductionSessions(data.sessions);
-        return;
-      }
-      const res: any = master
-        ? await getAllSchoolSessions({ data: { day_number: day } })
-        : await getSchoolSessions({ data: { department_id: profile?.department_id, day_number: day } });
-      if (res.sessions) setInductionSessions(res.sessions);
-    } catch (e) {
-      console.error(e);
+      console.error('[schedule] induction fetch error:', e);
     }
   };
 
   const fetchAllData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    await fetchOrientation();
-    
-    if (profile) {
-      const data = await fetchInductionDayPlanner(1, isMasterView);
-      if (data && data.plannerActive) {
-        setInductionPlannerActive(true);
-        setInductionDays([1, 2, 3, 4, 5]);
-        setActiveDay(1);
-        setInductionSessions(data.sessions || []);
-      } else {
-        await loadInductionDays(isMasterView);
-      }
-    }
-    
+    await Promise.all([fetchOrientation(), profile ? fetchMySchedule() : Promise.resolve()]);
     setLastFetched(new Date());
     if (!silent) setLoading(false);
-  }, [profile, isMasterView]);
+  }, [profile]);
 
   useEffect(() => {
     fetchAllData(false);
-    // Silent auto-refresh every 60 seconds
     const interval = setInterval(() => fetchAllData(true), 60_000);
     return () => clearInterval(interval);
   }, [fetchAllData]);
 
-  const toggleMasterView = (checked: boolean) => {
-    setIsMasterView(checked);
-  };
+  const handleDaySelect = (date: string) => setActiveDayDate(date);
 
-  const handleDaySelect = (d: number) => {
-    setActiveDay(d);
-    loadInductionSessions(d, isMasterView);
-  };
 
-  // ── Current View Data ──────────────────────────────────────────────────────
+  // ── Current View Data ─────────────────────────────────────────────────────
   const isOrientation = !profile ? true : scheduleType === "orientation";
-  let currentSessions = isOrientation ? orientationSessions : inductionSessions;
-  
-  // Sort sessions
-  currentSessions = [...currentSessions].sort((a, b) => timeToMinutes(a.startTime || a.starts_at) - timeToMinutes(b.startTime || b.starts_at));
 
-  // Determine active date context
-  const getInductionDate = (dayNum: number) => {
-    const base = new Date('2026-08-24T00:00:00');
-    base.setDate(base.getDate() + (dayNum - 1));
-    return base.toISOString().slice(0, 10);
-  };
-  
-  let activeDateStr = now.toISOString().slice(0, 10);
-  if (isOrientation && currentSessions.length > 0) {
-    const todayStr = activeDateStr;
-    const hasToday = currentSessions.some(s => s.date === todayStr);
-    if (hasToday) {
-      activeDateStr = todayStr;
-    } else {
-      const nextSession = currentSessions.find(s => s.date && s.date >= todayStr);
-      activeDateStr = nextSession ? nextSession.date : (currentSessions[currentSessions.length - 1].date || todayStr);
-    }
-  } else if (!isOrientation) {
-    activeDateStr = getInductionDate(activeDay || 1);
-  }
+  // For induction: look up the active day's sessions from precomputed days
+  const activeDayData = inductionDays.find(d => d.date === activeDayDate);
+  let currentSessions = isOrientation
+    ? orientationSessions
+    : (activeDayData?.sessions || []);
+
+  // Sort sessions by startTime
+  currentSessions = [...currentSessions].sort(
+    (a, b) => timeToMinutes(a.startTime || a.starts_at) - timeToMinutes(b.startTime || b.starts_at)
+  );
+
+  // Date string for display and status calculation
+  const activeDateStr = isOrientation
+    ? (() => {
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+        const nextSession = orientationSessions.find(s => s.date && s.date >= todayStr);
+        return nextSession?.date || orientationSessions[0]?.date || todayStr;
+      })()
+    : (activeDayDate || INDUCTION_START);
+
 
   const displayDateStr = new Date(activeDateStr).toLocaleDateString("en-IN", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -443,7 +412,7 @@ function UnifiedSchedulePage() {
             </Button>
           </div>
 
-          {/* ── Induction Day Selector (Only for Induction) ──────────────── */}
+          {/* ── Induction Day Selector (date-driven from precomputed schedule) ── */}
           <AnimatePresence mode="wait">
             {!isOrientation && inductionDays.length > 0 && (
               <m.div 
@@ -452,12 +421,13 @@ function UnifiedSchedulePage() {
                 exit={{ opacity: 0, height: 0 }}
                 className="flex gap-2.5 overflow-x-auto pb-2 pt-1 snap-x hide-scrollbar px-0.5"
               >
-                {inductionDays.map(d => {
-                  const isSel = activeDay === d;
+                {inductionDays.map((day, idx) => {
+                  const isSel = activeDayDate === day.date;
+                  const label = new Date(day.date + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                   return (
                     <button
-                      key={d}
-                      onClick={() => handleDaySelect(d)}
+                      key={day.date}
+                      onClick={() => handleDaySelect(day.date)}
                       className={[
                         'snap-start shrink-0 flex flex-col items-center justify-center px-4 py-3 min-w-[6rem] rounded-2xl',
                         'transition-all duration-150 relative focus-visible:outline-none focus-visible:ring-2',
@@ -467,7 +437,8 @@ function UnifiedSchedulePage() {
                       ].join(' ')}
                       style={{ backgroundColor: isSel ? accentColor : undefined }}
                     >
-                      <span className="text-lg font-bold tracking-tight">Day {d}</span>
+                      <span className="text-xs font-semibold opacity-80">Day {day.dayNumber || idx + 1}</span>
+                      <span className="text-base font-bold tracking-tight">{label}</span>
                     </button>
                   );
                 })}
@@ -523,11 +494,23 @@ function UnifiedSchedulePage() {
               </div>
             ) : totalSessions === 0 ? (
               <div className="empty-state">
-                <div className="empty-state-icon"><CalendarDays className="h-7 w-7" /></div>
-                <div className="empty-state-title">Not Published Yet</div>
-                <div className="empty-state-text">
-                  The {isOrientation ? "Orientation" : "Dikshaarambh"} schedule will be published soon.
-                </div>
+                {!isOrientation && plannerActive && inductionDays.length === 0 ? (
+                  <>
+                    <div className="empty-state-icon"><AlertCircle className="h-7 w-7 text-amber-500" /></div>
+                    <div className="empty-state-title text-amber-500">Schedule unavailable</div>
+                    <div className="empty-state-text">
+                      Your room has been allocated but no sessions were found. Please contact administration.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="empty-state-icon"><CalendarDays className="h-7 w-7" /></div>
+                    <div className="empty-state-title">Not Published Yet</div>
+                    <div className="empty-state-text">
+                      The {isOrientation ? "Orientation" : "Dikshaarambh"} schedule will be published soon.
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="relative z-10 w-full sm:w-[100%] md:w-full md:pl-0 sm:pl-[18px]">
@@ -542,9 +525,11 @@ function UnifiedSchedulePage() {
                   const isBreak = /lunch|break|dinner|snack/.test(tLabel.toLowerCase());
                   const emojiIcon = getSessionIcon(tLabel);
                   const FallbackIcon = getSessionFallbackIcon(tLabel);
+                  
+                  const reactKey = s.id || `${s.date}-${s.startTime}-${s.endTime}-${s.sessionName}-${s.school || s.schoolCode || ''}-${s.program || s.programme || ''}-${s.venueName}`;
 
                   return (
-                    <div key={s.id || idx} className="relative w-full">
+                    <div key={reactKey} className="relative w-full">
                       
                       {/* Current Time Line Indicator */}
                       {showNowLine && (

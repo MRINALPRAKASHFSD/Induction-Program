@@ -1,18 +1,14 @@
 /**
  * GET /api/planner-student-dashboard
  *
- * Authenticated student endpoint. Returns the LIGHTWEIGHT planner dashboard:
- *   - plannerActive flag
- *   - Induction room
- *   - Today's sessions (full detail — 1 day only)
- *   - Next upcoming session (today or next day)
- *   - Documentation day info
- *   - scheduleSummary[] — day + sessionCount only (not full sessions)
+ * Authenticated student endpoint.
+ * Returns ONLY precomputed data from:
+ *   - induction_student_room_allocations  (room)
+ *   - induction_student_schedule          (sessions by date)
+ *   - induction_planners                  (active planner metadata)
  *
- * mappingKey is computed HERE on demand: "{schoolCode}|{course}|{programme}"
- * It is NEVER stored on the student document.
- *
- * Full five-day schedule is served on-demand by /api/planner-day-schedule
+ * NO fuzzy matching. NO runtime inference. NO token matching.
+ * All data was precomputed by generate-final-room-allocation.ts migration.
  */
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
@@ -33,54 +29,18 @@ try {
   console.error('[planner-student-dashboard] Firebase init error:', e);
 }
 
-// ── Cache ─────────────────────────────────────────────────────────────────────
-// In-process cache keyed by plannerId — resets on cold start
-const PLANNER_CACHE = new Map<string, { sessions: any[]; rooms: any[]; ts: number }>();
-const CACHE_TTL_MS  = 10 * 1000; // 10 seconds (reduced for faster updates)
-
-async function getCachedPlannerData(db: any, plannerId: string) {
-  const cached = PLANNER_CACHE.get(plannerId);
-  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached;
-
-  const [sessionSnap, roomSnap] = await Promise.all([
-    db.collection('induction_sessions').where('plannerId', '==', plannerId).get(),
-    db.collection('induction_room_allocations').where('plannerId', '==', plannerId).get(),
-  ]);
-
-  const data = {
-    sessions: sessionSnap.docs.map((d: any) => d.data()),
-    rooms:    roomSnap.docs.map((d: any) => d.data()),
-    ts:       Date.now(),
-  };
-  PLANNER_CACHE.set(plannerId, data);
-  return data;
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function buildMappingKey(schoolCode: string, course: string, programme: string): string {
-  return `${schoolCode.toLowerCase().trim()}|${course.toLowerCase().trim()}|${programme.toLowerCase().trim()}`;
-}
-
 function nowIST(): { date: string; timeMinutes: number; isoNow: string } {
   const now = new Date();
   const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
-  // Manually format YYYY-MM-DD from IST parts to avoid toISOString() converting back to UTC
-  const year = ist.getFullYear();
+  const year  = ist.getFullYear();
   const month = String(ist.getMonth() + 1).padStart(2, '0');
-  const day = String(ist.getDate()).padStart(2, '0');
-  const date = `${year}-${month}-${day}`;
-  const timeMinutes = ist.getHours() * 60 + ist.getMinutes();
-  return { date, timeMinutes, isoNow: now.toISOString() };
-}
-
-/** Strip dots, parens, dashes, slashes etc. and collapse whitespace for fuzzy matching */
-function normalizeForMatch(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[.\-—–()\[\]{},;:'"\/\\|&]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const day   = String(ist.getDate()).padStart(2, '0');
+  return {
+    date:        `${year}-${month}-${day}`,
+    timeMinutes: ist.getHours() * 60 + ist.getMinutes(),
+    isoNow:      now.toISOString(),
+  };
 }
 
 function timeToMin(t: string): number {
@@ -90,14 +50,14 @@ function timeToMin(t: string): number {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
+  if (req.method !== 'GET')    return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
 
   const token = extractBearerToken(req.headers.authorization);
-  if (!token) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  if (!token)  return res.status(401).json({ ok: false, error: 'Unauthorized' });
 
   let studentUid: string;
   try {
@@ -111,24 +71,26 @@ export default async function handler(req: any, res: any) {
     const db = getFirestore();
 
     // ── Step 1: Get active planner ─────────────────────────────────────────
-    const activePlannerSnap = await db.collection('induction_planners')
+    const activePlannerSnap = await db
+      .collection('induction_planners')
       .where('status', 'in', ['PUBLISHED', 'ROLLED_BACK'])
       .limit(1)
       .get();
 
     if (activePlannerSnap.empty) {
       return res.status(200).json({
-        ok: true,
+        ok:           true,
         plannerActive: false,
-        message: 'Induction planner has not been published yet.',
+        message:      'Induction planner has not been published yet.',
       });
     }
 
     const activePlanner = activePlannerSnap.docs[0].data();
     const plannerId     = activePlanner.plannerId;
+    const { date: today, timeMinutes, isoNow } = nowIST();
 
-    // ── Step 2: Get student record (enrollment + course + branch) ──────────
-    // Student is identified by auth_uid, which might be 'email:xxx' or just 'xxx' due to a bug in registration
+    // ── Step 2: Look up student ────────────────────────────────────────────
+    // Auth UID can have 'email:' prefix from registration quirk — try both
     const uidsToTry = [studentUid];
     if (studentUid.startsWith('email:')) {
       uidsToTry.push(studentUid.replace('email:', ''));
@@ -136,165 +98,136 @@ export default async function handler(req: any, res: any) {
       uidsToTry.push(`email:${studentUid}`);
     }
 
-    const studentSnap = await db.collection('students')
+    const studentSnap = await db
+      .collection('students')
       .where('auth_uid', 'in', uidsToTry)
       .limit(1)
       .get();
 
-    let enrollmentNo = 'ADMIN';
-    let schoolCode   = '';
-    let course       = '';
-    let programme    = '';
-
-    if (!studentSnap.empty) {
-      const student  = studentSnap.docs[0].data();
-      enrollmentNo   = student.enrollment_no || student.enrollmentNo || studentSnap.docs[0].id;
-      schoolCode     = (student.department_id || '').toLowerCase().trim();
-      course         = (student.course || '').toLowerCase().trim();
-      programme      = (student.branch || student.programme || '').toLowerCase().trim();
+    if (studentSnap.empty) {
+      // Return planner-active but no student data yet
+      return res.status(200).json({
+        ok:            true,
+        plannerActive: true,
+        plannerId,
+        plannerYear:   activePlanner.plannerYear,
+        generatedAt:   isoNow,
+        roomStatus:    'NOT_ALLOCATED',
+        message:       'Student record not found. Please contact administration.',
+        room:          null,
+        today:         { date: today, sessions: [] },
+        nextSession:   null,
+        scheduleSummary: [],
+      });
     }
 
-    // ── Step 3: Compute mappingKey on-demand — NEVER stored ────────────────
-    const mappingKey = buildMappingKey(schoolCode, course, programme);
+    const student   = studentSnap.docs[0].data();
+    const studentId = studentSnap.docs[0].id;
 
-    // ── Step 4: Load cached planner data ──────────────────────────────────
-    const { sessions, rooms } = await getCachedPlannerData(db, plannerId);
+    // ── Step 3: Fetch precomputed room allocation ──────────────────────────
+    const allocDoc = await db
+      .collection('induction_student_room_allocations')
+      .doc(`${plannerId}_${studentId}`)
+      .get();
 
-    // ── Step 5: Find induction room (with fallback to school-wide room) ────
-    const normCourse    = normalizeForMatch(course);
-    const normProgramme = normalizeForMatch(programme);
+    let roomAllocation: any  = null;
+    let roomStatus           = 'NOT_ALLOCATED';
 
-    let roomAllocation = rooms.find((r: any) => r.mappingKey === mappingKey);
+    if (allocDoc.exists) {
+      roomAllocation = allocDoc.data();
+      roomStatus     = 'ALLOCATED';
+    } else {
+      // Fallback query in case doc ID format differs
+      const allocQuery = await db
+        .collection('induction_student_room_allocations')
+        .where('studentId', '==', studentId)
+        .where('plannerId', '==', plannerId)
+        .limit(1)
+        .get();
 
-    if (!roomAllocation && schoolCode) {
-      const schoolRooms = rooms.filter((r: any) => r.schoolCode === schoolCode);
-      if (schoolRooms.length > 0) {
-        // Try exact programme or course match first
-        roomAllocation = schoolRooms.find((r: any) => r.programme && (
-          r.programme.toLowerCase() === programme || r.programme.toLowerCase() === course
-        ));
-        
-        // Try normalized fuzzy match (strips dots, parens, dashes, etc.)
-        if (!roomAllocation) {
-          roomAllocation = schoolRooms.find((r: any) => {
-            if (!r.programme) return false;
-            const normRoom = normalizeForMatch(r.programme);
-            return (
-              (normCourse && normCourse.length >= 3 && (normRoom.includes(normCourse) || normCourse.includes(normRoom))) ||
-              (normProgramme && normProgramme.length >= 3 && (normRoom.includes(normProgramme) || normProgramme.includes(normRoom)))
-            );
-          });
-        }
-        
-        // Fallback to school-wide room (empty programme)
-        if (!roomAllocation) {
-          roomAllocation = schoolRooms.find((r: any) => !r.programme || r.programme === '');
-        }
-        
-        // Ultimate fallback: First room in that school
-        if (!roomAllocation) {
-          roomAllocation = schoolRooms[0];
-        }
+      if (!allocQuery.empty) {
+        roomAllocation = allocQuery.docs[0].data();
+        roomStatus     = 'ALLOCATED';
       }
     }
 
-    // ── Step 6: Filter sessions relevant to this student (or all if admin) ─
-    const relevantSessions = (!schoolCode && !course && !programme)
-      ? sessions
-      : sessions.filter((s: any) => {
-          if (!s) return false;
-          const sScope = (s.scope || '').toLowerCase().trim();
-          const sKey   = (s.scopeKey || '').toLowerCase().trim();
+    // ── Step 4: Fetch precomputed schedule ─────────────────────────────────
+    // Fetch all date documents for this student
+    const scheduleSnap = await db
+      .collection('induction_student_schedule')
+      .where('studentId', '==', studentId)
+      .where('plannerId', '==', plannerId)
+      .get();
 
-          // 1. Universal or ALL
-          if (
-            sScope === 'universal' || 
-            !sKey || 
-            sKey.includes('all schools') ||
-            sKey.includes('general session') ||
-            /^(all|universal|all\s*schools?|general|mandatory|any|-|na|n\/a)$/i.test(sKey)
-          ) {
-            return true;
-          }
-
-          // 2. Exact match or Token-based robust word-boundary matching
-          const targetText = ` ${schoolCode} ${course} ${programme} `;
-          if (sKey.length >= 2 && targetText.includes(sKey)) return true;
-
-          const tokens = sKey.split(/[,/|;&]/).map((t: string) => t.trim()).filter(Boolean);
-
-          for (const token of tokens) {
-            if (token.length < 2) continue;
-            // Exact part match
-            if (token === schoolCode || token === course || token === programme) return true;
-            
-            // Bounded match in target string (handles spaces, parentheses, slashes securely)
-            const escapedToken = token.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(`(^|\\s|\\W)${escapedToken}(\\s|\\W|$)`, 'i');
-            if (regex.test(targetText)) return true;
-          }
-
-          return false;
-        });
+    // Flatten all sessions across all dates
+    interface FlatSession {
+      date:        string;
+      day:         number;
+      startTime:   string;
+      endTime:     string;
+      sessionName: string;
+      venue:       string;
+      sessionType: string;
+    }
+    const allSessions: FlatSession[] = [];
+    for (const doc of scheduleSnap.docs) {
+      const d = doc.data();
+      for (const s of (d.sessions || [])) {
+        allSessions.push({ date: d.date, ...s });
+      }
+    }
 
     // Sort by date then startTime
-    relevantSessions.sort((a: any, b: any) => {
+    allSessions.sort((a, b) => {
       const dateCmp = a.date.localeCompare(b.date);
       if (dateCmp !== 0) return dateCmp;
       return timeToMin(a.startTime) - timeToMin(b.startTime);
     });
 
-    // ── Step 7: Today's sessions ───────────────────────────────────────────
-    const { date: today, timeMinutes, isoNow } = nowIST();
-    const todaySessions = relevantSessions.filter((s: any) => s.date === today);
+    // ── Step 5: Today's sessions ───────────────────────────────────────────
+    const todaySessions = allSessions.filter(s => s.date === today);
 
-    // ── Step 8: Next session ───────────────────────────────────────────────
+    // ── Step 6: Next upcoming session ─────────────────────────────────────
     let nextSession: any = null;
-    for (const s of relevantSessions) {
-      const sDate = s.date;
-      const sMin  = timeToMin(s.startTime);
-      if (sDate > today) { nextSession = s; break; }
-      if (sDate === today && sMin > timeMinutes) { nextSession = s; break; }
+    for (const s of allSessions) {
+      if (s.date > today)  { nextSession = s; break; }
+      if (s.date === today && timeToMin(s.startTime) > timeMinutes) { nextSession = s; break; }
     }
 
-    // ── Step 9: Documentation day ──────────────────────────────────────────
-    const documentationDay = relevantSessions.find((s: any) => s.isDocumentationDay) || null;
-
-    // ── Step 10: Schedule summary (just counts per day, no full session data)
-    const dayMap = new Map<number, { day: number; date: string; sessions: number }>();
-    for (const s of relevantSessions) {
-      const key = s.dayNumber;
-      if (!dayMap.has(key)) {
-        dayMap.set(key, { day: s.dayNumber, date: s.date, sessions: 0 });
+    // ── Step 7: Schedule summary (day-level counts) ────────────────────────
+    const dayMap = new Map<string, { day: number; date: string; sessions: number }>();
+    for (const s of allSessions) {
+      if (!dayMap.has(s.date)) {
+        dayMap.set(s.date, { day: s.day || 0, date: s.date, sessions: 0 });
       }
-      dayMap.get(key)!.sessions++;
+      dayMap.get(s.date)!.sessions++;
     }
-    const scheduleSummary = Array.from(dayMap.values()).sort((a, b) => a.day - b.day);
+    const scheduleSummary = Array.from(dayMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
     return res.status(200).json({
-      ok: true,
-      plannerActive:   true,
+      ok:            true,
+      plannerActive: true,
       plannerId,
-      plannerYear:     activePlanner.plannerYear,
-      generatedAt:     isoNow,
-      // Student context used (not returned to client in detail)
-      mappingKey:      undefined,  // intentionally omitted
-      room:            roomAllocation ? {
-        roomNumber:  roomAllocation.roomNumber,
-        block:       roomAllocation.block,
-        floor:       roomAllocation.floor,
-        building:    roomAllocation.building || '',
-        capacity:    roomAllocation.capacity,
-        school:      roomAllocation.school,
-        programme:   roomAllocation.programme,
-        course:      roomAllocation.course,
+      plannerYear:   activePlanner.plannerYear,
+      generatedAt:   isoNow,
+      roomStatus,
+      message:       roomStatus === 'NOT_ALLOCATED'
+        ? 'Your room is being allocated. Please contact administration if this persists.'
+        : '',
+      room: roomAllocation ? {
+        roomNumber:       roomAllocation.roomNumber,
+        block:            roomAllocation.block,
+        floor:            roomAllocation.floor,
+        capacity:         roomAllocation.capacity,
+        programme:        roomAllocation.programme,
+        section:          roomAllocation.section,
+        allocationMethod: roomAllocation.allocationMethod,
       } : null,
       today: {
         date:     today,
         sessions: todaySessions,
       },
       nextSession,
-      documentationDay,
       scheduleSummary,
     });
 

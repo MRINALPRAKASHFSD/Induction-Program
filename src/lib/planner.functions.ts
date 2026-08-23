@@ -55,9 +55,9 @@ export async function fetchPlannerDashboard() {
       else if (nowMin >= end) status = 'past';
       
       return {
-        id: s.id || (s.sessionTitle + s.startTime),
+        id: s.id || (s.sessionName || s.sessionTitle) + '-' + (s.startTime || '') + '-' + (s.venueName || s.venue || Math.random().toString(36).slice(2, 6)),
         startTime: s.startTime,
-        sessionName: s.sessionTitle,
+        sessionName: s.sessionName || s.sessionTitle,
         venueName: s.venue,
         status
       };

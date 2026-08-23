@@ -3,10 +3,12 @@ import { MapPin, CheckCircle2, DoorOpen, Users } from "lucide-react";
 interface RoomCardProps {
   roomAssignment: any | null;
   plannerRoom: any | null;
+  roomStatus?: string;
+  roomMessage?: string;
   isLoading: boolean;
 }
 
-export function RoomCard({ roomAssignment, plannerRoom, isLoading }: RoomCardProps) {
+export function RoomCard({ roomAssignment, plannerRoom, roomStatus, roomMessage, isLoading }: RoomCardProps) {
   const legacyRoom = (roomAssignment?.allocationStatus === 'allocated' || roomAssignment?.allocationStatus === 'ALLOCATED') && roomAssignment?.roomNumber;
   
   if (isLoading) {
@@ -18,9 +20,9 @@ export function RoomCard({ roomAssignment, plannerRoom, isLoading }: RoomCardPro
     );
   }
 
-  const roomData = plannerRoom || (legacyRoom ? roomAssignment : null);
+  const roomData = plannerRoom || roomAssignment;
 
-  if (!roomData && !isLoading && roomAssignment?.allocationStatus !== 'PENDING' && roomAssignment?.allocationStatus !== 'pending') {
+  if (!roomData && !isLoading) {
     return (
       <div className="rounded-[24px] p-6 bg-white/60 dark:bg-zinc-900/60 border border-black/5 dark:border-white/5 shadow-sm backdrop-blur-xl flex flex-col justify-between h-full relative overflow-hidden group">
         <div className="flex items-center justify-between mb-4 relative z-10">
@@ -33,7 +35,10 @@ export function RoomCard({ roomAssignment, plannerRoom, isLoading }: RoomCardPro
           </div>
         </div>
         <div className="flex flex-col items-center justify-center py-6 text-center">
-           <div className="text-lg font-serif font-bold text-muted-foreground">Not Allocated</div>
+           <div className="text-lg font-serif font-bold text-foreground">Room Allocation Pending</div>
+           <p className="text-xs font-medium text-muted-foreground mt-2 text-center px-4">
+             Please contact administration.
+           </p>
         </div>
       </div>
     );
@@ -101,15 +106,13 @@ export function RoomCard({ roomAssignment, plannerRoom, isLoading }: RoomCardPro
               </div>
             </div>
           </div>
-        ) : roomAssignment?.allocationStatus === 'PENDING' || roomAssignment?.allocationStatus === 'pending' ? (
-          <div className="flex flex-col items-center justify-center py-6">
-             <div className="w-12 h-12 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin mb-3" />
-             <div className="text-lg font-serif font-bold text-foreground">Pending Allocation</div>
-             <p className="text-xs font-medium text-muted-foreground mt-1 text-center">Your room will be assigned soon</p>
-          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 text-center">
-             <div className="text-lg font-serif font-bold text-muted-foreground">Not Allocated</div>
+             <div className="w-12 h-12 rounded-full border-4 border-amber-500/20 border-t-amber-500 animate-spin mb-3" />
+             <div className="text-lg font-serif font-bold text-foreground">Room Allocation Pending</div>
+             <p className="text-xs font-medium text-muted-foreground mt-1 text-center px-4">
+               Please contact administration.
+             </p>
           </div>
         )}
       </div>

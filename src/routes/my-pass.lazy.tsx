@@ -230,6 +230,8 @@ export function DashboardContent({
               <RoomCard 
                 roomAssignment={liveRoomAssignment} 
                 plannerRoom={planner?.plannerActive && planner?.room ? planner.room : null} 
+                roomStatus={planner?.roomStatus}
+                roomMessage={planner?.message}
                 isLoading={plannerLoading} 
               />
               <AttendanceCard 

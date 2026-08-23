@@ -9,7 +9,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "validate:deeksharambh": "npx tsx scripts/validate-deeksharambh-json.ts",
+    "migrate:deeksharambh": "npx tsx scripts/validate-deeksharambh-json.ts && npx tsx scripts/generate-final-room-allocation.ts",
+    "tag:test-students": "npx tsx scripts/tag-test-students.ts"
+
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

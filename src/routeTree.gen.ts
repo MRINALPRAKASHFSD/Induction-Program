@@ -16,6 +16,7 @@ import { Route as MyScheduleRouteImport } from './routes/my-schedule'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventAttendEventIdRouteImport } from './routes/event-attend.$eventId'
+import { Route as AdminVerificationRouteImport } from './routes/admin.verification'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminPlannersRouteImport } from './routes/admin.planners'
 import { Route as AdminPlannerRouteImport } from './routes/admin.planner'
@@ -189,6 +190,13 @@ const EventAttendEventIdRoute = EventAttendEventIdRouteImport.update({
   path: '/event-attend/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminVerificationRoute = AdminVerificationRouteImport.update({
+  id: '/admin/verification',
+  path: '/admin/verification',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/admin.verification.lazy').then((d) => d.Route),
+)
 const AdminStudentsRoute = AdminStudentsRouteImport.update({
   id: '/admin/students',
   path: '/admin/students',
@@ -266,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
@@ -302,6 +311,7 @@ export interface FileRoutesByTo {
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
@@ -339,6 +349,7 @@ export interface FileRoutesById {
   '/admin/planner': typeof AdminPlannerRoute
   '/admin/planners': typeof AdminPlannersRoute
   '/admin/students': typeof AdminStudentsRoute
+  '/admin/verification': typeof AdminVerificationRoute
   '/event-attend/$eventId': typeof EventAttendEventIdRoute
   '/admin/activity': typeof AdminActivityLazyRoute
   '/admin/announcements': typeof AdminAnnouncementsLazyRoute
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
+    | '/admin/verification'
     | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
@@ -413,6 +425,7 @@ export interface FileRouteTypes {
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
+    | '/admin/verification'
     | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
@@ -449,6 +462,7 @@ export interface FileRouteTypes {
     | '/admin/planner'
     | '/admin/planners'
     | '/admin/students'
+    | '/admin/verification'
     | '/event-attend/$eventId'
     | '/admin/activity'
     | '/admin/announcements'
@@ -486,6 +500,7 @@ export interface RootRouteChildren {
   AdminPlannerRoute: typeof AdminPlannerRoute
   AdminPlannersRoute: typeof AdminPlannersRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
+  AdminVerificationRoute: typeof AdminVerificationRoute
   EventAttendEventIdRoute: typeof EventAttendEventIdRoute
   AdminActivityLazyRoute: typeof AdminActivityLazyRoute
   AdminAnnouncementsLazyRoute: typeof AdminAnnouncementsLazyRoute
@@ -683,6 +698,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventAttendEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/verification': {
+      id: '/admin/verification'
+      path: '/admin/verification'
+      fullPath: '/admin/verification'
+      preLoaderRoute: typeof AdminVerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/students': {
       id: '/admin/students'
       path: '/admin/students'
@@ -766,6 +788,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminPlannerRoute: AdminPlannerRoute,
   AdminPlannersRoute: AdminPlannersRoute,
   AdminStudentsRoute: AdminStudentsRoute,
+  AdminVerificationRoute: AdminVerificationRoute,
   EventAttendEventIdRoute: EventAttendEventIdRoute,
   AdminActivityLazyRoute: AdminActivityLazyRoute,
   AdminAnnouncementsLazyRoute: AdminAnnouncementsLazyRoute,

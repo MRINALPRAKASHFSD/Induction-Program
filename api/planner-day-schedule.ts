@@ -40,6 +40,25 @@ function timeToMin(t: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
+function resolveCanonicalSchool(deptText: string): string | null {
+  const t = (deptText || '').toLowerCase().trim();
+  if (!t) return null;
+
+  if (t === 'soet' || t.includes('engineering') || t.includes('technology')) return 'soet';
+  if (t === 'sols' || t.includes('law') || t.includes('legal')) return 'sols';
+  if (t === 'somc' || t.includes('management') || t.includes('commerce') || t.includes('business')) return 'somc';
+  if (t === 'sbas' || t.includes('basic') || t.includes('applied')) return 'sbas';
+  if (t === 'soad' || t.includes('architecture') || t.includes('design')) return 'soad';
+  if (t === 'soas' || t.includes('agricultural') || t.includes('agriculture')) return 'soas';
+  if (t === 'smas' || t.includes('medical') || t.includes('allied') || t.includes('pharmacy')) return 'smas';
+  if (t === 'soed' || t.includes('education')) return 'soed';
+  if (t === 'sola' || t.includes('liberal') || t.includes('humanities')) return 'sola';
+  if (t === 'semce' || t.includes('media') || t.includes('creator') || t.includes('journalism')) return 'semce';
+  if (t === 'sprs' || t.includes('physiotherapy') || t.includes('rehabilitation')) return 'sprs';
+
+  return null;
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -104,6 +123,25 @@ export default async function handler(req: any, res: any) {
       if (!course)     course     = (student.course || '').toLowerCase().trim();
       if (!programme)  programme  = (student.branch || student.programme || '').toLowerCase().trim();
     }
+    
+    const isMaster = req.query?.master === '1' || req.query?.master === 'true';
+    let canonicalSchool: string | null = null;
+    
+    if (!isMaster && (schoolCode || course || programme)) {
+      canonicalSchool = resolveCanonicalSchool(schoolCode);
+      if (!canonicalSchool) {
+        // If we can't confidently resolve the school, we return unresolved state
+        // to prevent guessing incorrect schedules/rooms
+        return res.status(200).json({
+          ok: true,
+          plannerActive: true,
+          sessions: [],
+          schoolResolved: false,
+          reason: "STUDENT_SCHOOL_UNRESOLVED"
+        });
+      }
+      schoolCode = canonicalSchool;
+    }
 
     // Get all sessions for this day (cached)
     let daySessions: any[];
@@ -120,7 +158,6 @@ export default async function handler(req: any, res: any) {
     }
 
     // Filter to this student's scope (or all if master view, admin, or unassigned)
-    const isMaster = req.query?.master === '1' || req.query?.master === 'true';
     const relevantSessions = (isMaster || (!schoolCode && !course && !programme))
       ? daySessions
       : daySessions.filter((s: any) => {
