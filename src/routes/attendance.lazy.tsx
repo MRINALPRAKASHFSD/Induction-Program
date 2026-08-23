@@ -308,11 +308,12 @@ function AttendancePage() {
             },
             (decodedText) => {
               const now = Date.now();
-              if (lastScanRef.current.data === decodedText && now - lastScanRef.current.time < 2000) {
+              const cleanText = decodedText.trim();
+              if (lastScanRef.current.data === cleanText && now - lastScanRef.current.time < 2000) {
                 return;
               }
-              lastScanRef.current = { data: decodedText, time: now };
-              handleScan(decodedText);
+              lastScanRef.current = { data: cleanText, time: now };
+              handleScan(cleanText);
             },
             () => {},
           );

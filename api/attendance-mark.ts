@@ -150,11 +150,15 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { qr_data, enrollment_no, latitude, longitude, accuracy, gps_attempted } = req.body ?? {};
+  const { enrollment_no, latitude, longitude, accuracy, gps_attempted } = req.body ?? {};
+  let { qr_data } = req.body ?? {};
 
   if (!qr_data || typeof qr_data !== 'string') {
     return res.status(400).json({ ok: false, error: 'Invalid QR code data.' });
   }
+
+  qr_data = qr_data.trim();
+
   if (!enrollment_no || typeof enrollment_no !== 'string') {
     return res.status(400).json({ ok: false, error: 'Missing enrollment number.' });
   }

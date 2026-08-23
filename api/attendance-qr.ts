@@ -85,11 +85,11 @@ async function rotateQr(
   };
 
   // Store token in Redis with hard TTL — this is the authoritative expiry.
-  // Add +5s grace to tolerate network latency between generation and first poll.
+  // Add +15s grace to tolerate network latency and slow scans at the edge of rotation.
   await redis.set(
     qrTokenRedisKey(token),
     redisValue,
-    { ex: rotationIntervalSeconds + 5 },
+    { ex: rotationIntervalSeconds + 15 },
   );
 
   // Update session with current token reference (for admin "current" polls)
