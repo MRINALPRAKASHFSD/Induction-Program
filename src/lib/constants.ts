@@ -5,7 +5,7 @@ export function isClubRegistrationOpen(): boolean {
 }
 
 export const SCHOOLS = [
-  { id: "all",   code: "ALL",   name: "All Schools (General Session)" },
+  { id: "all",   code: "ALL",   name: "All Schools {All Session}" },
   { id: "soet",  code: "SOET",  name: "School of Engineering & Technology" },
   { id: "somc",  code: "SOMC",  name: "School of Management & Commerce" },
   { id: "sols",  code: "SOLS",  name: "School of Legal Studies" },

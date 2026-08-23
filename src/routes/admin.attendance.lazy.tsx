@@ -666,7 +666,7 @@ function AdminAttendance() {
                 <Select value={formProgramme} onValueChange={setFormProgramme}>
                   <SelectTrigger><SelectValue placeholder="Select programme" /></SelectTrigger>
                   <SelectContent>
-                    {SCHOOLS.map(p => (
+                    {SCHOOLS.filter(p => p.id === 'all').map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
