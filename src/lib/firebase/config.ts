@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getPerformance } from "firebase/performance";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDw2sjsdlKj3FhJMhuj2CF38qj_1almLZg",
@@ -19,4 +20,10 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { app, auth, db, storage };
+// Initialize Performance Monitoring
+let perf = null;
+if (typeof window !== "undefined") {
+  perf = getPerformance(app);
+}
+
+export { app, auth, db, storage, perf };
