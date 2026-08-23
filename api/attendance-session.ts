@@ -212,18 +212,29 @@ export default async function handler(req: any, res: any) {
         const { enrollment_no } = req.body;
         if (!enrollment_no) return res.status(400).json({ error: 'Missing enrollment_no' });
 
-        const studentDoc = await db.collection('students').doc(enrollment_no.toUpperCase()).get();
-        if (!studentDoc.exists) return res.status(404).json({ error: 'Student not found' });
+        const cleanId = enrollment_no.trim().toUpperCase();
+        let studentDoc = await db.collection('students').doc(cleanId).get();
+        let student = studentDoc.exists ? studentDoc.data() : null;
+        let isUnregistered = !studentDoc.exists;
+        
+        // If not in students, check induction_participants (the entire dataset)
+        if (!student) {
+          const participantDoc = await db.collection('induction_participants').doc(cleanId).get();
+          if (participantDoc.exists) {
+            student = participantDoc.data();
+            isUnregistered = false; // We found them in the dataset
+          }
+        }
 
-        const student = studentDoc.data();
         return res.status(200).json({
           ok: true,
           student: {
-            enrollment_no: studentDoc.id,
-            name: student?.name || 'Unknown',
-            course: student?.course || 'Unknown',
+            enrollment_no: cleanId,
+            name: student?.full_name || student?.name || student?.student_name || 'Unregistered Student',
+            course: student?.course ? (student?.program ? `${student.program} - ${student.course}` : student.course) : (student?.programme || 'Unknown'),
             section: student?.section || 'Unknown',
             photo: student?.photo || null,
+            is_unregistered: isUnregistered
           }
         });
       }
@@ -242,15 +253,26 @@ export default async function handler(req: any, res: any) {
         const sessionStatus = sessionDoc.data()!.status;
         if (sessionStatus !== 'active') return res.status(400).json({ error: 'Session is not active' });
 
-        const studentDoc = await db.collection('students').doc(enrollment_no.toUpperCase()).get();
-        if (!studentDoc.exists) return res.status(404).json({ error: 'Student not found' });
-
-        const student = studentDoc.data();
-        const logId = `${sessionId}_${enrollment_no.toUpperCase()}`;
+        const cleanId = enrollment_no.trim().toUpperCase();
+        let studentDoc = await db.collection('students').doc(cleanId).get();
+        let student = studentDoc.exists ? studentDoc.data() : null;
+        
+        if (!student) {
+          const participantDoc = await db.collection('induction_participants').doc(cleanId).get();
+          if (participantDoc.exists) {
+            student = participantDoc.data();
+          }
+        }
+        
+        const logId = `${sessionId}_${cleanId}`;
         const logRef = db.collection('attendance_logs').doc(logId);
 
         const logDoc = await logRef.get();
         if (logDoc.exists) return res.status(400).json({ error: 'Student already marked present' });
+
+        const studentName = student?.full_name || student?.name || student?.student_name || 'Unknown';
+        const studentCourse = student?.course ? (student?.program ? `${student.program} - ${student.course}` : student.course) : (student?.programme || 'Unknown');
+        const studentSection = student?.section || 'Unknown';
 
         await db.runTransaction(async (t) => {
           const sessionDocForTx = await t.get(sessionRef);
@@ -259,14 +281,14 @@ export default async function handler(req: any, res: any) {
           t.set(logRef, {
             schema_version: 1,
             session_id: sessionId,
-            student_id: enrollment_no.toUpperCase(),
-            enrollment_no: enrollment_no.toUpperCase(),
-            student_name: student?.name || 'Unknown',
+            student_id: cleanId,
+            enrollment_no: cleanId,
+            student_name: studentName,
             school: student?.school || '',
             department: student?.department_id || '',
-            programme: student?.programme || '',
+            programme: student?.programme || student?.program || '',
             semester: student?.semester || '',
-            section: student?.section || '',
+            section: studentSection,
             email: student?.email || '',
             scan_time: FieldValue.serverTimestamp(),
             qr_version: 0,

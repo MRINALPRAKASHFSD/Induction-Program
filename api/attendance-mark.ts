@@ -294,13 +294,36 @@ export default async function handler(req: any, res: any) {
     // VALIDATION 8: Programme match
     // ════════════════════════════════════════════════════════════════════════
     const studentDeptId = (studentData.department_id || '').toLowerCase();
+    const studentBranchId = (studentData.branch_id || '').toLowerCase();
+    const studentProgram = (studentData.program || studentData.programme || '').toLowerCase();
     const sessionProgrammeId = (session.programme_id || '').toLowerCase();
+    const sessionProgrammeName = (session.programme_name || '').toLowerCase();
 
-    if (sessionProgrammeId && studentDeptId !== sessionProgrammeId) {
-      return res.status(403).json({
-        ok: false,
-        error: `This attendance session is for ${session.programme_name || 'a different programme'}. You are registered under a different school/programme.`,
-      });
+    if (sessionProgrammeId) {
+      const normalize = (s: string) => s.replace(/&/g, 'and').replace(/\s+/g, ' ').trim();
+      
+      const normDeptId = normalize(studentDeptId);
+      const normBranchId = normalize(studentBranchId);
+      const normStudentProgram = normalize(studentProgram);
+      const normSessionId = normalize(sessionProgrammeId);
+      const normSessionName = normalize(sessionProgrammeName);
+
+      const isMatch = 
+        normDeptId === normSessionId ||
+        normBranchId === normSessionName ||
+        normStudentProgram === normSessionName ||
+        (normDeptId && normSessionId.includes(normDeptId)) ||
+        (normBranchId && normSessionName.includes(normBranchId)) ||
+        (normStudentProgram && normSessionName.includes(normStudentProgram)) ||
+        (normSessionName && normBranchId && normBranchId.includes(normSessionName)) ||
+        (normSessionName && normStudentProgram && normStudentProgram.includes(normSessionName));
+
+      if (!isMatch) {
+        return res.status(403).json({
+          ok: false,
+          error: `This attendance session is for ${session.programme_name || 'a different programme'}. You are registered under a different school/programme.`,
+        });
+      }
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -405,7 +428,7 @@ export default async function handler(req: any, res: any) {
         studentName: studentData.full_name,
         school: studentData.school || '',
         department: studentData.department_id || '',
-        programme: studentData.programme || '',
+        programme: studentData.program || studentData.branch_id || studentData.programme || '',
         semester: studentData.semester || '',
         section: studentData.section || '',
         email: studentData.email || '',

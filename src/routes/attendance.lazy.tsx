@@ -484,6 +484,13 @@ function AttendancePage() {
 
   const handleScan = async (qrData: string) => {
     if (isProcessingRef.current) return;
+    
+    // Explicit reset of stale state at the beginning of a new QR scan
+    setErrorObj(null);
+    setErrorMsg("");
+    setPendingQrData(null);
+    setResult(null);
+    
     isProcessingRef.current = true;
 
     if (!profile?.enrollment_no) {
