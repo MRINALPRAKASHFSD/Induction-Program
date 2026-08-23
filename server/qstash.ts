@@ -32,6 +32,13 @@ export interface AttendanceJobPayload {
   ipAddress: string;
   userAgent: string;
   verificationResult: string;
+  gpsMode: 'disabled' | 'log_only' | 'strict';
+  attendanceMode: 'verified' | 'manual';
+  locationLat: number | null;
+  locationLng: number | null;
+  locationAccuracy: number | null;
+  distanceFromCampus: number | null;
+  manualOverrideReason?: string;
 }
 
 let _client: Client | null = null;

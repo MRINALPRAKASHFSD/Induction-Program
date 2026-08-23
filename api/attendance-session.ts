@@ -95,7 +95,10 @@ export default async function handler(req: any, res: any) {
           ends_at,
           attendance_window_minutes = 60,
           qr_rotation_interval_seconds = 30,
-          geofence_radius_meters = 300,
+          geoFencingMode = 'disabled',
+          campusLatitude,
+          campusLongitude,
+          allowedRadius = 300,
         } = req.body;
 
         if (!event_id || !programme_id || !programme_name || !venue || !starts_at || !ends_at) {
@@ -113,8 +116,10 @@ export default async function handler(req: any, res: any) {
           ends_at,
           attendance_window_minutes: Number(attendance_window_minutes),
           qr_rotation_interval_seconds: Math.max(15, Math.min(120, Number(qr_rotation_interval_seconds))),
-          geofence_radius_meters: Math.max(100, Math.min(1000, Number(geofence_radius_meters))),
-          geofence_center: DEFAULT_CAMPUS,
+          geoFencingMode: ['disabled', 'log_only', 'strict'].includes(geoFencingMode) ? geoFencingMode : 'disabled',
+          campusLatitude: campusLatitude ? Number(campusLatitude) : DEFAULT_CAMPUS.lat,
+          campusLongitude: campusLongitude ? Number(campusLongitude) : DEFAULT_CAMPUS.lng,
+          allowedRadius: Math.max(25, Math.min(1000, Number(allowedRadius))),
           status: 'pending' as const,
           // v2 Token Architecture: QR token is stored in Redis (not Firestore).
           // current_qr_token tracks the most recently issued token reference for admin display.
@@ -199,6 +204,156 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({
           ok: true,
           session: { id: sessionDoc.id, ...sessionDoc.data() },
+        });
+      }
+
+      // ── VERIFY STUDENT (MANUAL ATTENDANCE) ──────────────────────────────────
+      case 'verify_student': {
+        const { enrollment_no } = req.body;
+        if (!enrollment_no) return res.status(400).json({ error: 'Missing enrollment_no' });
+
+        const studentDoc = await db.collection('students').doc(enrollment_no.toUpperCase()).get();
+        if (!studentDoc.exists) return res.status(404).json({ error: 'Student not found' });
+
+        const student = studentDoc.data();
+        return res.status(200).json({
+          ok: true,
+          student: {
+            enrollment_no: studentDoc.id,
+            name: student?.name || 'Unknown',
+            course: student?.course || 'Unknown',
+            section: student?.section || 'Unknown',
+            photo: student?.photo || null,
+          }
+        });
+      }
+
+      // ── FORCE MARK (MANUAL ATTENDANCE) ──────────────────────────────────────
+      case 'force_mark': {
+        const { sessionId, enrollment_no, reason } = req.body;
+        if (!sessionId || !enrollment_no || !reason) {
+          return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const sessionRef = db.collection('attendance_sessions').doc(sessionId);
+        const sessionDoc = await sessionRef.get();
+        if (!sessionDoc.exists) return res.status(404).json({ error: 'Session not found' });
+        
+        const sessionStatus = sessionDoc.data()!.status;
+        if (sessionStatus !== 'active') return res.status(400).json({ error: 'Session is not active' });
+
+        const studentDoc = await db.collection('students').doc(enrollment_no.toUpperCase()).get();
+        if (!studentDoc.exists) return res.status(404).json({ error: 'Student not found' });
+
+        const student = studentDoc.data();
+        const logId = `${sessionId}_${enrollment_no.toUpperCase()}`;
+        const logRef = db.collection('attendance_logs').doc(logId);
+
+        const logDoc = await logRef.get();
+        if (logDoc.exists) return res.status(400).json({ error: 'Student already marked present' });
+
+        await db.runTransaction(async (t) => {
+          const sessionDocForTx = await t.get(sessionRef);
+          const numShards = sessionDocForTx.exists ? (sessionDocForTx.data()?.num_shards || 64) : 64;
+
+          t.set(logRef, {
+            schema_version: 1,
+            session_id: sessionId,
+            student_id: enrollment_no.toUpperCase(),
+            enrollment_no: enrollment_no.toUpperCase(),
+            student_name: student?.name || 'Unknown',
+            school: student?.school || '',
+            department: student?.department_id || '',
+            programme: student?.programme || '',
+            semester: student?.semester || '',
+            section: student?.section || '',
+            email: student?.email || '',
+            scan_time: FieldValue.serverTimestamp(),
+            qr_version: 0,
+            scanner_device_id: decodedToken.uid,
+            ip_address: 'admin_manual',
+            user_agent: 'admin_panel',
+            verification_result: 'admin_override',
+            gps_mode: 'disabled',
+            attendance_mode: 'manual',
+            location_lat: null,
+            location_lng: null,
+            location_accuracy: null,
+            distance_from_campus: null,
+            manual_override_reason: reason,
+            created_at: FieldValue.serverTimestamp(),
+            marked_by_admin: decodedToken.uid
+          });
+
+          const shardId = Math.floor(Math.random() * numShards).toString();
+          const shardRef = db.collection('attendance_stats').doc(sessionId).collection('shards').doc(shardId);
+          
+          t.set(shardRef, {
+            total_present: FieldValue.increment(1)
+          }, { merge: true });
+        });
+
+        return res.status(200).json({ ok: true });
+      }
+
+      // ── DELETE SESSION ────────────────────────────────────────────────────────
+      case 'delete': {
+        const { sessionId } = req.body;
+        if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
+
+        const sessionRef = db.collection('attendance_sessions').doc(sessionId);
+        const sessionDoc = await sessionRef.get();
+
+        if (!sessionDoc.exists) {
+          return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // Delete associated attendance_logs in batches (Firestore batch limit = 500)
+        const BATCH_SIZE = 400;
+        let totalDeleted = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const logsSnap = await db.collection('attendance_logs')
+            .where('session_id', '==', sessionId)
+            .limit(BATCH_SIZE)
+            .get();
+
+          if (logsSnap.empty) {
+            hasMore = false;
+            break;
+          }
+
+          const batch = db.batch();
+          logsSnap.docs.forEach(doc => batch.delete(doc.ref));
+          await batch.commit();
+          totalDeleted += logsSnap.size;
+
+          if (logsSnap.size < BATCH_SIZE) {
+            hasMore = false;
+          }
+        }
+
+        // Delete associated attendance_stats shards if they exist
+        try {
+          const statsRef = db.collection('attendance_stats').doc(sessionId);
+          const shardsSnap = await statsRef.collection('shards').get();
+          if (!shardsSnap.empty) {
+            const shardBatch = db.batch();
+            shardsSnap.docs.forEach(doc => shardBatch.delete(doc.ref));
+            await shardBatch.commit();
+          }
+          await statsRef.delete();
+        } catch { /* stats may not exist for all sessions */ }
+
+        // Delete the session document itself
+        await sessionRef.delete();
+
+        console.log(`[attendance-session] Deleted session ${sessionId} and ${totalDeleted} attendance logs.`);
+
+        return res.status(200).json({
+          ok: true,
+          deleted: { sessionId, attendanceLogs: totalDeleted },
         });
       }
 

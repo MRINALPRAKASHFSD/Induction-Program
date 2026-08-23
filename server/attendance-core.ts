@@ -43,6 +43,13 @@ export async function processAttendanceFirestoreTransaction(payload: AttendanceJ
         ip_address: payload.ipAddress,
         user_agent: payload.userAgent,
         verification_result: payload.verificationResult,
+        gps_mode: payload.gpsMode,
+        attendance_mode: payload.attendanceMode,
+        location_lat: payload.locationLat,
+        location_lng: payload.locationLng,
+        location_accuracy: payload.locationAccuracy,
+        distance_from_campus: payload.distanceFromCampus,
+        manual_override_reason: payload.manualOverrideReason || null,
         created_at: FieldValue.serverTimestamp(),
       });
 

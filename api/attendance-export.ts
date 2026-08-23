@@ -93,6 +93,12 @@ export default async function handler(req: any, res: any) {
       'Venue',
       'Scanned At',
       'IP Address',
+      'GPS Mode',
+      'Attendance Mode',
+      'Manual Reason',
+      'Lat/Lng',
+      'Accuracy (m)',
+      'Distance (m)'
     ];
 
     const rows = sortedDocs.map((doc, index) => {
@@ -100,6 +106,10 @@ export default async function handler(req: any, res: any) {
       const scannedAt = data.scanned_at?.toDate?.()
         ? data.scanned_at.toDate().toISOString()
         : data.scanned_at || '';
+        
+      const latlng = (data.location_lat && data.location_lng) 
+        ? `${data.location_lat}, ${data.location_lng}` 
+        : '';
 
       return [
         index + 1,
@@ -110,6 +120,12 @@ export default async function handler(req: any, res: any) {
         escapeCsv(session.venue || ''),
         scannedAt,
         escapeCsv(data.ip_address || ''),
+        escapeCsv(data.gps_mode || 'disabled'),
+        escapeCsv(data.attendance_mode || 'qr'),
+        escapeCsv(data.manual_override_reason || ''),
+        escapeCsv(latlng),
+        data.location_accuracy ? data.location_accuracy.toFixed(1) : '',
+        data.distance_from_campus ? data.distance_from_campus.toFixed(1) : ''
       ].join(',');
     });
 

@@ -75,7 +75,7 @@ const CAMPUS_CENTER = {
   lng: parseFloat(process.env.CAMPUS_LNG || '77.0675693'),
 };
 const CAMPUS_RADIUS_METERS = 300;  // Full campus footprint (~300m radius from centroid)
-const GPS_TOLERANCE_METERS = 40;   // ±40m for indoor/cloudy/Android GPS drift
+const GPS_TOLERANCE_METERS = 15;   // ±15m for indoor/cloudy/Android GPS drift
 
 // ── Haversine formula ────────────────────────────────────────────────────────
 function haversineDistance(
@@ -150,7 +150,7 @@ export default async function handler(req: any, res: any) {
   }
 
   // ── Input validation ──────────────────────────────────────────────────────
-  const { qr_data, enrollment_no, latitude, longitude } = req.body ?? {};
+  const { qr_data, enrollment_no, latitude, longitude, accuracy, gps_attempted } = req.body ?? {};
 
   if (!qr_data || typeof qr_data !== 'string') {
     return res.status(400).json({ ok: false, error: 'Invalid QR code data.' });
@@ -323,35 +323,74 @@ export default async function handler(req: any, res: any) {
     } catch { /* Redis pre-flight dedup failed — Firestore transaction is the source of truth */ }
 
     // ════════════════════════════════════════════════════════════════════════
-    // VALIDATION 10: Geofence — campus radius + GPS tolerance
-    // Always uses configured CAMPUS_CENTER (authoritative) — never trusts
-    // session.geofence_center because session documents may have stale coords.
+    // VALIDATION 10: Geofence — Configurable per-session (three modes)
+    //
+    //   disabled  → skip all location logic
+    //   log_only  → attempt GPS (best-effort), log distance, NEVER block
+    //   strict    → require GPS, reject if outside radius
     // ════════════════════════════════════════════════════════════════════════
-    let distanceFromCampus = 0;
-    const maxAllowedRadius = CAMPUS_RADIUS_METERS + GPS_TOLERANCE_METERS;
+    let distanceFromCampus: number | null = null;
+    const gpsMode = session.geoFencingMode || 'disabled';
 
-    if (typeof latitude === 'number' && typeof longitude === 'number') {
-      distanceFromCampus = Math.round(haversineDistance(latitude, longitude, CAMPUS_CENTER.lat, CAMPUS_CENTER.lng));
-
-      if (distanceFromCampus > maxAllowedRadius) {
-        console.warn(JSON.stringify({
-          requestId, status: 'geofence_rejected', enrollmentId: enrollmentClean,
-          distance: distanceFromCampus, maxRadius: maxAllowedRadius, ip: clientIp,
-        }));
-        return res.status(403).json({
+    if (gpsMode === 'strict') {
+      // Strict: location is mandatory — 428 if missing
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(428).json({
           ok: false,
-          error: 'You must be inside the K.R. Mangalam University campus to mark attendance.',
-          distance: distanceFromCampus,
-          maxRadius: maxAllowedRadius,
+          requireLocation: true,
+          geoFencingMode: 'strict',
+          error: 'Location access is required to mark attendance. Please enable GPS.',
         });
       }
-    } else {
-      return res.status(400).json({
-        ok: false,
-        error: 'Location access is required to mark attendance. Please enable GPS.',
-      });
+    } else if (gpsMode === 'log_only') {
+      // Log Only: attempt GPS best-effort — 428 on first call to signal
+      // frontend to try GPS, but accept resubmission with gps_attempted flag
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        if (!gps_attempted) {
+          return res.status(428).json({
+            ok: false,
+            requireLocation: true,
+            geoFencingMode: 'log_only',
+            error: 'Location data is being collected for this session.',
+          });
+        }
+        // gps_attempted=true → GPS was tried but failed, proceed without coords
+      }
     }
+    // disabled: no location logic at all
 
+    // Calculate distance only when coordinates are available and mode is not disabled
+    if (gpsMode !== 'disabled' && typeof latitude === 'number' && typeof longitude === 'number') {
+      const campusLat = session.campusLatitude ?? CAMPUS_CENTER.lat;
+      const campusLng = session.campusLongitude ?? CAMPUS_CENTER.lng;
+      const allowedRadius = session.allowedRadius ?? CAMPUS_RADIUS_METERS;
+      const maxAllowedRadius = allowedRadius + GPS_TOLERANCE_METERS;
+
+      distanceFromCampus = Math.round(haversineDistance(latitude, longitude, campusLat, campusLng));
+
+      if (gpsMode === 'strict') {
+        if (typeof accuracy === 'number' && accuracy > 100) {
+          return res.status(403).json({
+            ok: false,
+            error: 'Unable to verify your precise location. Please move outdoors or enable High Accuracy Location and try again.',
+          });
+        }
+
+        if (distanceFromCampus > maxAllowedRadius) {
+          console.warn(JSON.stringify({
+            requestId, status: 'geofence_rejected', enrollmentId: enrollmentClean,
+            distance: distanceFromCampus, maxRadius: maxAllowedRadius, ip: clientIp,
+          }));
+          return res.status(403).json({
+            ok: false,
+            error: 'You appear to be outside the permitted attendance location. Please move closer and try again.',
+            distance: distanceFromCampus,
+            maxRadius: maxAllowedRadius,
+          });
+        }
+      }
+      // log_only: distance is calculated and stored but never causes rejection
+    }
     // ══════════════════════════════════════════════════════════════════════════
     // ALL VALIDATIONS PASSED — Enqueue to QStash
     // ══════════════════════════════════════════════════════════════════════════
@@ -376,6 +415,12 @@ export default async function handler(req: any, res: any) {
         ipAddress: clientIp,
         userAgent: uaTruncated,
         verificationResult: `token_verified:rotation_${rotationId}`,
+        gpsMode,
+        attendanceMode: 'verified',
+        locationLat: typeof latitude === 'number' ? latitude : null,
+        locationLng: typeof longitude === 'number' ? longitude : null,
+        locationAccuracy: typeof accuracy === 'number' ? accuracy : null,
+        distanceFromCampus,
       });
     } catch (e: any) {
       console.warn(JSON.stringify({ requestId, layer: 'qstash', error: e.message, status: 'fallback_to_sync' }));
@@ -399,6 +444,12 @@ export default async function handler(req: any, res: any) {
           ipAddress: clientIp,
           userAgent: uaTruncated,
           verificationResult: `token_verified:rotation_${rotationId}`,
+          gpsMode,
+          attendanceMode: 'verified',
+          locationLat: typeof latitude === 'number' ? latitude : null,
+          locationLng: typeof longitude === 'number' ? longitude : null,
+          locationAccuracy: typeof accuracy === 'number' ? accuracy : null,
+          distanceFromCampus,
         });
       } catch (syncError: any) {
         console.error(JSON.stringify({ requestId, layer: 'sync_fallback', error: syncError.message }));

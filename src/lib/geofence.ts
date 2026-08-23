@@ -110,26 +110,25 @@ export function getCurrentPosition(
       {
         enableHighAccuracy: highAccuracy,
         timeout: timeoutMs,
-        maximumAge: 30000, // Accept cached position up to 30s old
+        maximumAge: 0, // Force a fresh GPS reading
       },
     );
   });
 }
 
 /**
- * Pre-check: get location and verify student is inside campus.
- * Returns coordinates if inside, throws with friendly message if outside.
+ * Pre-check: get location and verify GPS accuracy is acceptable.
+ * Returns coordinates, throws with friendly message if unable to get good accuracy.
  */
-export async function verifyInsideCampus(): Promise<GeolocationResult> {
+export async function acquireLocation(): Promise<GeolocationResult> {
   const position = await getCurrentPosition();
-  const { inside, distance } = isInsideCampus(position.lat, position.lng);
-
-  if (!inside) {
+  
+  if (position.accuracy > 100) {
     throw new GeofenceError(
-      `You must be inside the K.R. Mangalam University campus to mark attendance. ` +
-      `You appear to be approximately ${distance}m from campus.`,
-      'GEOFENCE_OUTSIDE_RADIUS',
-      distance,
+      `Your GPS accuracy is too low (${Math.round(position.accuracy)}m). ` +
+      `Please move to an open area or connect to Wi-Fi for better location accuracy.`,
+      'GEOFENCE_POOR_ACCURACY',
+      0,
       position.accuracy
     );
   }

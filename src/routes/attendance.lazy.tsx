@@ -38,7 +38,7 @@ import { SiteHeader } from "@/components/site-header";
 import { localDb, type LocalStudent } from "@/lib/local-db";
 import { auth, db } from "@/lib/firebase/config";
 import { collection, query, where, orderBy, getDocs, limit } from "firebase/firestore";
-import { verifyInsideCampus, isInsideCampus, CAMPUS_CENTER, CAMPUS_RADIUS_METERS, type GeolocationResult, GeofenceError } from "@/lib/geofence";
+import { GeolocationResult, acquireLocation, GeofenceError, CAMPUS_RADIUS_METERS } from "@/lib/geofence";
 import { toast } from "sonner";
 
 const DEPARTMENTS = {
@@ -91,7 +91,7 @@ export const Route = createLazyFileRoute("/attendance")({
   component: AttendancePage,
 });
 
-type Phase = "dashboard" | "locating" | "scanner" | "submitting" | "success" | "duplicate" | "error";
+type Phase = "dashboard" | "transparency" | "locating" | "scanner" | "submitting" | "success" | "duplicate" | "error";
 
 interface AttendanceRecord {
   id: string;
@@ -177,37 +177,51 @@ function AttendancePage() {
     }
   }, []);
 
-  // ── Start scanning flow: Camera first, then GPS in background ───────────────
+  // Pending scan data for when location is requested by backend
+  const [pendingQrData, setPendingQrData] = useState<string | null>(null);
+
+  // ── Start scanning flow ───────────────
   const startAttendanceFlow = async () => {
     // Show scanner immediately so iOS Safari doesn't pause the hidden <video> element
     setPhase("scanner");
     setErrorMsg("");
     locationRef.current = null;
     setLocation(null);
-
+    setPendingQrData(null);
+    
     try {
-      const scannerStarted = await startScanner();
-      if (!scannerStarted) return;
-
-      // Start GPS in background
-      verifyInsideCampus().then(position => {
-        locationRef.current = position;
-        setLocation(position);
-      }).catch(e => {
-        // If GPS fails and they haven't scanned yet, stop and show error
-        if (!isProcessingRef.current) {
-          stopScanner();
-          setErrorObj(e as Error);
-          setErrorMsg(e.message || "Failed to get your location");
-          setPhase("error");
-        }
-      });
+      await startScanner();
     } catch (e: any) {
       stopScanner();
       setErrorMsg(e.message || "Failed to start camera");
       setPhase("error");
     }
   };
+
+  const acquireGPSAndSubmit = async (mode: "strict" | "log_only" = "strict") => {
+    if (!pendingQrData) return;
+    setPhase("locating");
+    try {
+      const position = await acquireLocation();
+      locationRef.current = position;
+      setLocation(position);
+      // Immediately submit with location
+      await submitAttendance(pendingQrData, position);
+    } catch (e: any) {
+      if (mode === "log_only") {
+        // Log Only: GPS failure must NEVER block attendance
+        // Resubmit without coordinates, with gps_attempted flag
+        await submitAttendance(pendingQrData, null, true);
+      } else {
+        // Strict: GPS failure IS fatal
+        setErrorObj(e as Error);
+        setErrorMsg(e.message || "Failed to acquire location.");
+        setPhase("error");
+      }
+    }
+  };
+
+
 
   // ── Camera scanner ────────────────────────────────────────────────────────
   const startScanner = async (cameraId?: string): Promise<boolean> => {
@@ -468,7 +482,6 @@ function AttendancePage() {
     } catch(err) {}
   };
 
-  // ── Handle scanned QR ─────────────────────────────────────────────────────
   const handleScan = async (qrData: string) => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
@@ -481,27 +494,30 @@ function AttendancePage() {
     }
 
     setPhase("submitting");
+    await submitAttendance(qrData, locationRef.current);
+  };
 
-    let currentLocation = locationRef.current;
-    if (!currentLocation) {
-      // If GPS is still acquiring, wait for it now
-      try {
-        currentLocation = await verifyInsideCampus();
-        locationRef.current = currentLocation;
-        setLocation(currentLocation);
-      } catch (e: any) {
-        setErrorObj(e as Error);
-        setErrorMsg(e.message || "Failed to verify campus location.");
-        setPhase("error");
-        return;
-      }
-    }
-
+  const submitAttendance = async (qrData: string, currentLocation: GeolocationResult | null, gpsAttempted: boolean = false) => {
     try {
       const user = auth.currentUser;
       if (!user) throw new Error("You must be logged in to mark attendance.");
 
       const idToken = await user.getIdToken();
+
+      const payload: any = {
+        qr_data: qrData,
+        enrollment_no: profile!.enrollment_no,
+      };
+
+      if (currentLocation) {
+        payload.latitude = currentLocation.lat;
+        payload.longitude = currentLocation.lng;
+        payload.accuracy = currentLocation.accuracy;
+      }
+
+      if (gpsAttempted) {
+        payload.gps_attempted = true;
+      }
 
       const res = await fetch("/api/attendance-mark", {
         method: "POST",
@@ -509,18 +525,43 @@ function AttendancePage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({
-          qr_data: qrData,
-          enrollment_no: profile.enrollment_no,
-          latitude: currentLocation.lat,
-          longitude: currentLocation.lng,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorObj(new Error(data.error || "Failed to mark attendance."));
+        if (data.requireLocation) {
+          const sessionGeoMode = data.geoFencingMode || "strict";
+          stopScanner();
+          isProcessingRef.current = false;
+          setPendingQrData(qrData);
+
+          if (sessionGeoMode === "log_only") {
+            // Log Only: silently attempt GPS, never show transparency modal
+            // Go straight to GPS acquisition (best-effort)
+            setPhase("locating");
+            try {
+              const position = await acquireLocation();
+              locationRef.current = position;
+              setLocation(position);
+              await submitAttendance(qrData, position);
+            } catch {
+              // GPS failed — resubmit without coords (backend accepts for log_only)
+              await submitAttendance(qrData, null, true);
+            }
+          } else {
+            // Strict: show existing transparency modal requiring user consent
+            setPhase("transparency");
+          }
+          return;
+        }
+
+        if (data.distance !== undefined && data.maxRadius !== undefined) {
+          setErrorObj(new GeofenceError(data.error, 'ERR_RADIUS', data.distance, data.accuracy));
+        } else {
+          setErrorObj(new Error(data.error || "Failed to mark attendance."));
+        }
         setErrorMsg(data.error || "Failed to mark attendance.");
         setPhase("error");
         return;
@@ -536,7 +577,7 @@ function AttendancePage() {
         toast.success("Attendance marked!");
         playSuccessSound();
         if ('vibrate' in navigator) navigator.vibrate([200]);
-        loadAttendanceHistory(profile.enrollment_no);
+        loadAttendanceHistory(profile!.enrollment_no);
       }
     } catch (e: any) {
       const isOffline = !navigator.onLine
@@ -989,6 +1030,52 @@ function AttendancePage() {
   {/* ══════════════════════════════════════════════════════════════════════════
       LOCATING PHASE — Getting GPS coordinates
       ══════════════════════════════════════════════════════════════════════════ */}
+  {phase === "transparency" && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md bg-card border border-border shadow-2xl rounded-3xl p-6 md:p-8 flex flex-col items-center text-center relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary via-blue-500 to-emerald-500" />
+        
+        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary relative">
+          <Navigation className="w-8 h-8" />
+          <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-1 border-2 border-card">
+            <Check className="w-3 h-3" />
+          </div>
+        </div>
+        
+        <h2 className="text-2xl font-bold text-foreground mb-3 font-serif">Location Required</h2>
+        
+        <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+          To ensure the integrity of the attendance process, we need to verify that you are inside the KRMU campus. 
+          <br/><br/>
+          <span className="font-semibold text-foreground">Your location is only accessed at the exact moment of scanning the QR code and is not tracked continuously.</span>
+        </p>
+
+        <div className="w-full space-y-3">
+          <Button 
+            className="w-full rounded-xl h-12 shadow-md shadow-primary/20 text-md font-semibold"
+            onClick={() => acquireGPSAndSubmit("strict")}
+          >
+            Allow Location & Submit
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full rounded-xl text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              setPendingQrData(null);
+              setPhase("dashboard");
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  )}
+
   {phase === "locating" && (
       <div className="min-h-screen bg-background">
         <SiteHeader />
@@ -1028,7 +1115,7 @@ function AttendancePage() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-primary">Marking Attendance</h2>
-              <p className="text-sm text-muted-foreground mt-1">Verifying your QR code and location...</p>
+              <p className="text-sm text-muted-foreground mt-1">Verifying your QR code...</p>
             </div>
           </motion.div>
         </main>
@@ -1247,13 +1334,30 @@ export function ErrorPhase({
     return `${(dist / 1000).toFixed(1)} km`;
   };
 
-  const getStatusText = (step: string) => {
-    if (step === 'location') {
-      if (isGeofence) return 'Failed';
-      return 'Unknown';
-    }
-    // For Identity, QR, Session, if we are in this flow, they were verified
-    return 'Verified';
+  const getStepStatuses = () => {
+    const isQrError = errorMsg.toLowerCase().includes('qr code');
+    const isSessionError = errorMsg.toLowerCase().includes('session not found') || errorMsg.toLowerCase().includes('session is closed') || errorMsg.toLowerCase().includes('different programme');
+    const isLocationError = isGeofence || errorMsg.toLowerCase().includes('location') || errorMsg.toLowerCase().includes('gps') || errorMsg.toLowerCase().includes('radius');
+    const isIdentityError = !isQrError && !isSessionError && !isLocationError;
+
+    if (isIdentityError) return { identity: 'failed', qr: 'unverified', session: 'unverified', location: 'unverified' };
+    if (isQrError) return { identity: 'verified', qr: 'failed', session: 'unverified', location: 'unverified' };
+    if (isSessionError) return { identity: 'verified', qr: 'verified', session: 'failed', location: 'unverified' };
+    return { identity: 'verified', qr: 'verified', session: 'verified', location: 'failed' };
+  };
+
+  const statuses = getStepStatuses();
+
+  const renderStatusIcon = (status: string) => {
+    if (status === 'verified') return <CheckCircle2 className="w-4 h-4" />;
+    if (status === 'failed') return <XCircle className="w-4 h-4" />;
+    return <XCircle className="w-4 h-4 opacity-50" />;
+  };
+
+  const renderStatusColor = (status: string) => {
+    if (status === 'verified') return "text-[#18B87A]";
+    if (status === 'failed') return "text-[#C05A67]";
+    return "text-muted-foreground";
   };
 
   const CampusRadius = typeof CAMPUS_RADIUS_METERS !== 'undefined' ? CAMPUS_RADIUS_METERS : 300;
@@ -1273,9 +1377,9 @@ export function ErrorPhase({
             Attendance Not Recorded
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl">
-            {isGeofence 
+            {errorMsg || (isGeofence 
               ? "Your location could not be verified for this attendance session." 
-              : "We couldn't verify your attendance due to a technical issue."}
+              : "We couldn't verify your attendance due to a technical issue.")}
           </p>
           {errorCode && (
             <p className="text-xs text-muted-foreground mt-2 opacity-60 font-mono">
@@ -1289,17 +1393,21 @@ export function ErrorPhase({
           <div className="flex items-center justify-between relative">
             <div className="absolute left-0 top-1/2 w-full h-0.5 bg-border -translate-y-1/2 z-0"></div>
             {[
-              { id: 'identity', label: 'Identity', valid: true },
-              { id: 'qr', label: 'QR', valid: true },
-              { id: 'session', label: 'Session', valid: true },
-              { id: 'location', label: 'Location', valid: !isGeofence }
-            ].map((step, i) => (
+              { id: 'identity', label: 'Identity', status: statuses.identity },
+              { id: 'qr', label: 'QR', status: statuses.qr },
+              { id: 'session', label: 'Session', status: statuses.session },
+              { id: 'location', label: 'Location', status: statuses.location }
+            ].map((step) => (
               <div key={step.id} className="relative z-10 flex flex-col items-center gap-2 bg-[#FFFDFB] dark:bg-background px-2">
                 <div className={cn(
                   "w-8 h-8 rounded-full flex items-center justify-center border-2",
-                  step.valid ? "bg-[#18B87A]/10 border-[#18B87A] text-[#18B87A]" : "bg-[#C05A67]/10 border-[#C05A67] text-[#C05A67]"
+                  step.status === 'verified' ? "bg-[#18B87A]/10 border-[#18B87A] text-[#18B87A]" : 
+                  step.status === 'failed' ? "bg-[#C05A67]/10 border-[#C05A67] text-[#C05A67]" :
+                  "bg-muted border-muted-foreground/30 text-muted-foreground"
                 )}>
-                  {step.valid ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                  {step.status === 'verified' ? <Check className="w-4 h-4" /> : 
+                   step.status === 'failed' ? <X className="w-4 h-4" /> : 
+                   <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />}
                 </div>
                 <span className="text-xs font-medium">{step.label}</span>
               </div>
@@ -1320,12 +1428,12 @@ export function ErrorPhase({
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-[#C05A67]/10 flex items-center justify-center shrink-0">
-                  <MapPin className="w-8 h-8 text-[#C05A67]" />
+                  {isGeofence ? <MapPin className="w-8 h-8 text-[#C05A67]" /> : <ShieldAlert className="w-8 h-8 text-[#C05A67]" />}
                 </div>
                 <div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C05A67]/10 text-[#C05A67] text-sm font-medium mb-3">
                     <ShieldAlert className="w-4 h-4" />
-                    Campus Verification Failed
+                    {isGeofence ? "Campus Verification Failed" : "Verification Failed"}
                   </div>
                   <h2 className="text-2xl font-bold text-foreground">Security Verification</h2>
                 </div>
@@ -1334,26 +1442,26 @@ export function ErrorPhase({
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-3 border-b border-border/50">
                   <span className="text-muted-foreground">Identity</span>
-                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
-                    <CheckCircle2 className="w-4 h-4" /> Verified
+                  <span className={cn("flex items-center gap-2 font-medium", renderStatusColor(statuses.identity))}>
+                    {renderStatusIcon(statuses.identity)} {statuses.identity === 'verified' ? 'Verified' : statuses.identity === 'failed' ? 'Failed' : 'Unverified'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-border/50">
                   <span className="text-muted-foreground">QR Code</span>
-                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
-                    <CheckCircle2 className="w-4 h-4" /> Verified
+                  <span className={cn("flex items-center gap-2 font-medium", renderStatusColor(statuses.qr))}>
+                    {renderStatusIcon(statuses.qr)} {statuses.qr === 'verified' ? 'Verified' : statuses.qr === 'failed' ? 'Failed' : 'Unverified'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3 border-b border-border/50">
                   <span className="text-muted-foreground">Attendance Session</span>
-                  <span className="flex items-center gap-2 font-medium text-[#18B87A]">
-                    <CheckCircle2 className="w-4 h-4" /> Active
+                  <span className={cn("flex items-center gap-2 font-medium", renderStatusColor(statuses.session))}>
+                    {renderStatusIcon(statuses.session)} {statuses.session === 'verified' ? 'Active' : statuses.session === 'failed' ? 'Failed' : 'Unverified'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-muted-foreground">Campus Location</span>
-                  <span className="flex items-center gap-2 font-medium text-[#C05A67]">
-                    <XCircle className="w-4 h-4" /> Outside Allowed Radius
+                  <span className={cn("flex items-center gap-2 font-medium", renderStatusColor(statuses.location))}>
+                    {renderStatusIcon(statuses.location)} {statuses.location === 'verified' ? 'Verified' : statuses.location === 'failed' ? (isGeofence ? 'Outside Allowed Radius' : 'Failed') : 'Unverified'}
                   </span>
                 </div>
               </div>
@@ -1378,7 +1486,8 @@ export function ErrorPhase({
           </div>
 
           {/* Right Column - Metrics & Tips */}
-          <div className="md:col-span-5 space-y-4">
+          {isGeofence && (
+            <div className="md:col-span-5 space-y-4">
             
             {/* Distance Card */}
             {distance !== undefined && (
@@ -1449,7 +1558,8 @@ export function ErrorPhase({
               </div>
             </motion.div>
 
-          </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

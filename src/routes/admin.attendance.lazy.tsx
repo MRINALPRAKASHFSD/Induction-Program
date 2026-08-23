@@ -5,14 +5,14 @@ import QRCode from "qrcode";
 import {
   Play, Pause, Square, Lock, RefreshCw, Download, Plus, Timer,
   MapPin, Users, CheckCircle2, Wifi, AlertTriangle, Maximize, 
-  Minimize, Clock, Activity, Search, Filter, SlidersHorizontal, ArrowRight
+  Minimize, Clock, Activity, Search, Filter, SlidersHorizontal, ArrowRight, StopCircle, Trash2
 } from "lucide-react";
 import { m, AnimatePresence } from "framer-motion";
 import { AdminShell } from "@/components/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SCHOOLS } from "@/lib/constants";
@@ -43,6 +43,10 @@ interface AttendanceSession {
   attendance_window_minutes: number;
   qr_rotation_interval_seconds: number;
   geofence_radius_meters: number;
+  geoFencingMode?: "disabled" | "log_only" | "strict";
+  campusLatitude?: number;
+  campusLongitude?: number;
+  allowedRadius?: number;
   status: "pending" | "active" | "paused" | "ended" | "locked";
   total_present: number;
   created_at: string;
@@ -53,7 +57,7 @@ interface AttendanceRecord {
   student_id: string;
   student_name: string;
   programme_id: string;
-  scanned_at: any;
+  scan_time: any;
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -119,9 +123,12 @@ function AdminAttendance() {
   const [confirmAction, setConfirmAction] = useState<{
     label: string;
     description: string;
-    status: string;
+    type: "status_change" | "delete";
+    status?: string;
     sessionId: string;
+    sessionTitle?: string;
   } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Form state
   const [formEventId, setFormEventId] = useState("");
@@ -132,7 +139,18 @@ function AdminAttendance() {
   const [formEndsAt, setFormEndsAt] = useState("10:00");
   const [formWindow, setFormWindow] = useState(60);
   const [formRotation, setFormRotation] = useState(30);
+  const [formGeoMode, setFormGeoMode] = useState("disabled");
+  const [formLat, setFormLat] = useState("28.272428");
+  const [formLng, setFormLng] = useState("77.0675693");
   const [formRadius, setFormRadius] = useState(300);
+
+  // Manual Attendance State
+  const [showManualAttendance, setShowManualAttendance] = useState(false);
+  const [manualEnrollmentNo, setManualEnrollmentNo] = useState("");
+  const [manualReason, setManualReason] = useState("");
+  const [manualStudentDetails, setManualStudentDetails] = useState<any>(null);
+  const [isVerifyingStudent, setIsVerifyingStudent] = useState(false);
+  const [isMarkingManual, setIsMarkingManual] = useState(false);
 
   const qrIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -150,7 +168,12 @@ function AdminAttendance() {
     }
   }, []);
 
-  useEffect(() => { loadSessions(); }, [loadSessions]);
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      if (user) loadSessions();
+    });
+    return () => unsub();
+  }, [loadSessions]);
 
   // ── Derived Data & Statistics ─────────────────────────────────────────────
   const sessionStats = useMemo(() => {
@@ -210,13 +233,19 @@ function AdminAttendance() {
 
     const q = query(
       collection(db, "attendance_logs"),
-      where("session_id", "==", activeSession.id),
-      orderBy("scanned_at", "desc"),
-      limit(100),
+      where("session_id", "==", activeSession.id)
     );
 
     const unsub = onSnapshot(q, (snap) => {
-      const records = snap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+      let records = snap.docs.map(d => ({ id: d.id, ...d.data() } as AttendanceRecord));
+      // Sort in-memory to avoid Firestore composite index requirement
+      records.sort((a, b) => {
+        const aTime = a.scan_time?.toMillis?.() || 0;
+        const bTime = b.scan_time?.toMillis?.() || 0;
+        return bTime - aTime;
+      });
+      // Limit to 100 recent
+      records = records.slice(0, 100);
       setLiveRecords(records);
     });
 
@@ -318,7 +347,10 @@ function AdminAttendance() {
         ends_at: `${formDate}T${formEndsAt}:00`,
         attendance_window_minutes: formWindow,
         qr_rotation_interval_seconds: formRotation,
-        geofence_radius_meters: formRadius,
+        geoFencingMode: formGeoMode,
+        campusLatitude: formGeoMode !== 'disabled' ? Number(formLat) : undefined,
+        campusLongitude: formGeoMode !== 'disabled' ? Number(formLng) : undefined,
+        allowedRadius: formGeoMode !== 'disabled' ? formRadius : undefined,
       });
       toast.success("Session created!");
       setShowCreate(false);
@@ -326,10 +358,63 @@ function AdminAttendance() {
       // Reset form
       setFormEventId("");
       setFormVenue("");
+      setFormGeoMode("disabled");
+      setFormRadius(300);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // ── Manual Attendance ─────────────────────────────────────────────────────
+  const verifyManualStudent = async () => {
+    if (!manualEnrollmentNo.trim()) return;
+    setIsVerifyingStudent(true);
+    setManualStudentDetails(null);
+    try {
+      const data = await apiCall("attendance-session", {
+        action: "verify_student",
+        enrollment_no: manualEnrollmentNo.trim()
+      });
+      if (data.student) {
+        setManualStudentDetails(data.student);
+      } else {
+        toast.error("Student not found");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to verify student");
+    } finally {
+      setIsVerifyingStudent(false);
+    }
+  };
+
+  const submitManualAttendance = async () => {
+    if (!activeSession) return;
+    if (!manualStudentDetails) return;
+    if (!manualReason.trim()) {
+      toast.error("Please provide a reason for manual attendance");
+      return;
+    }
+
+    setIsMarkingManual(true);
+    try {
+      await apiCall("attendance-session", {
+        action: "force_mark",
+        sessionId: activeSession.id,
+        enrollment_no: manualStudentDetails.enrollment_no,
+        reason: manualReason.trim()
+      });
+      toast.success("Attendance marked manually");
+      setShowManualAttendance(false);
+      setManualEnrollmentNo("");
+      setManualReason("");
+      setManualStudentDetails(null);
+      // Fetch live records will auto-update because of the snapshot listener
+    } catch (e: any) {
+      toast.error(e.message || "Failed to mark attendance");
+    } finally {
+      setIsMarkingManual(false);
     }
   };
 
@@ -348,11 +433,8 @@ function AdminAttendance() {
 
       // If activating, start QR rotation
       if (status === "active" && activeSession) {
-        startQrRotation(activeSession.qr_rotation_interval_seconds || 30);
-      }
-
-      // If pausing/ending, stop rotation
-      if (status === "paused" || status === "ended" || status === "locked") {
+        generateQr(sessionId);
+      } else {
         if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
         if (countdownRef.current) clearInterval(countdownRef.current);
         setQrDataUrl(null);
@@ -364,6 +446,28 @@ function AdminAttendance() {
       toast.error(e.message);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  // ── Delete session ─────────────────────────────────────────────────────────
+  const deleteSession = async (sessionId: string) => {
+    setDeleteLoading(true);
+    try {
+      await apiCall("attendance-session", { action: "delete", sessionId });
+      toast.success("Session deleted successfully");
+
+      // Remove from local state
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      if (activeSession?.id === sessionId) {
+        setActiveSession(null);
+        setQrDataUrl(null);
+        if (qrIntervalRef.current) clearInterval(qrIntervalRef.current);
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete session");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -603,14 +707,40 @@ function AdminAttendance() {
                     onChange={e => setFormWindow(Number(e.target.value))}
                   />
                 </div>
-                <div>
-                  <Label>Geofence (m)</Label>
-                  <Input
-                    type="number" min={100} max={1000}
-                    value={formRadius}
-                    onChange={e => setFormRadius(Number(e.target.value))}
-                  />
-                </div>
+              </div>
+
+              {/* Geo-fencing Config */}
+              <div className="pt-2 border-t border-border/50">
+                <Label className="text-base font-semibold mb-2 block">Geo-fencing Mode</Label>
+                <Select value={formGeoMode} onValueChange={setFormGeoMode}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disabled">Disabled (Default)</SelectItem>
+                    <SelectItem value="log_only">Log Only</SelectItem>
+                    <SelectItem value="strict">Strict</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {formGeoMode !== 'disabled' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <Label>Latitude</Label>
+                      <Input value={formLat} onChange={e => setFormLat(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Longitude</Label>
+                      <Input value={formLng} onChange={e => setFormLng(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Radius (m)</Label>
+                      <Input
+                        type="number" min={25} max={1000}
+                        value={formRadius}
+                        onChange={e => setFormRadius(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -707,6 +837,17 @@ function AdminAttendance() {
                   <div className="flex items-center gap-2.5 bg-muted/30 p-3 rounded-xl border border-border/50">
                     <Clock className="w-4 h-4 text-primary" /> <span className="font-medium truncate">{activeSession.programme_name}</span>
                   </div>
+                  {activeSession.geoFencingMode && activeSession.geoFencingMode !== 'disabled' && (
+                    <div className="col-span-full flex flex-col gap-1 bg-muted/30 p-3 rounded-xl border border-border/50">
+                      <div className="flex items-center gap-2.5">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="font-medium">Geo-fencing: <span className="capitalize">{activeSession.geoFencingMode.replace('_', ' ')}</span></span>
+                      </div>
+                      <div className="pl-6 text-xs text-muted-foreground">
+                        Radius: {activeSession.allowedRadius}m • Center: {activeSession.campusLatitude}, {activeSession.campusLongitude}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Control buttons */}
@@ -718,41 +859,29 @@ function AdminAttendance() {
                   )}
                   {activeSession.status === "active" && (
                     <>
-                      <Button variant="outline" className="shadow-sm rounded-xl border-primary/20 hover:bg-primary/5" onClick={() => generateQr(activeSession.id)} disabled={actionLoading}>
-                        <RefreshCw className="w-4 h-4 mr-2" /> Force Rotate
+                      <Button variant="outline" className="rounded-xl border-orange-200 text-orange-600 hover:bg-orange-50" onClick={() => updateStatus(activeSession.id, "paused")} disabled={actionLoading}>
+                        <Pause className="w-4 h-4 mr-2" /> Pause Session
                       </Button>
-                      <Button variant="outline" className="shadow-sm rounded-xl" onClick={() => updateStatus(activeSession.id, "paused")} disabled={actionLoading}>
-                        <Pause className="w-4 h-4 mr-2" /> Pause
-                      </Button>
-                      <Button variant="destructive" className="shadow-lg shadow-red-500/20 rounded-xl" disabled={actionLoading} onClick={() => setConfirmAction({
-                        label: "End Attendance",
-                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
-                        status: "ended",
-                        sessionId: activeSession.id,
-                      })}>
-                        <Square className="w-4 h-4 mr-2" /> End
+                      <Button variant="outline" className="rounded-xl border-primary text-primary hover:bg-primary/5" onClick={() => setShowManualAttendance(true)} disabled={actionLoading}>
+                        <CheckCircle2 className="w-4 h-4 mr-2" /> Force Mark
                       </Button>
                     </>
                   )}
                   {activeSession.status === "paused" && (
-                    <>
-                      <Button className="admin-btn-success shadow-lg shadow-emerald-500/20 rounded-xl" onClick={() => updateStatus(activeSession.id, "active")} disabled={actionLoading}>
-                        <Play className="w-4 h-4 mr-2" /> Resume
-                      </Button>
-                      <Button variant="destructive" className="shadow-lg shadow-red-500/20 rounded-xl" disabled={actionLoading} onClick={() => setConfirmAction({
-                        label: "End Attendance",
-                        description: "Students will no longer be able to mark attendance. This cannot be undone without admin action.",
-                        status: "ended",
-                        sessionId: activeSession.id,
-                      })}>
-                        <Square className="w-4 h-4 mr-2" /> End
-                      </Button>
-                    </>
+                    <Button variant="outline" className="rounded-xl border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => updateStatus(activeSession.id, "active")} disabled={actionLoading}>
+                      <Play className="w-4 h-4 mr-2" /> Resume
+                    </Button>
+                  )}
+                  {activeSession.status !== "ended" && activeSession.status !== "locked" && (
+                    <Button variant="destructive" className="rounded-xl shadow-lg shadow-red-500/20" onClick={() => confirm("Are you sure you want to end this session? QR code will be invalidated permanently.") && updateStatus(activeSession.id, "ended")} disabled={actionLoading}>
+                      <StopCircle className="w-4 h-4 mr-2" /> End Session
+                    </Button>
                   )}
                   {activeSession.status === "ended" && (
                     <Button variant="destructive" className="shadow-lg shadow-red-500/20 rounded-xl" disabled={actionLoading} onClick={() => setConfirmAction({
                       label: "Lock Attendance",
                       description: "This will permanently lock attendance for this session. Admins will not be able to make further changes without unlocking.",
+                      type: "status_change",
                       status: "locked",
                       sessionId: activeSession.id,
                     })}>
@@ -813,9 +942,9 @@ function AdminAttendance() {
                             <div className="flex flex-col items-end justify-center gap-1 text-xs text-muted-foreground shrink-0 pl-2">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                               <span className="tabular-nums font-medium">
-                                {rec.scanned_at?.toDate?.()
-                                  ? rec.scanned_at.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-                                  : "—"}
+                                {rec.scan_time?.toDate?.()
+                                  ? rec.scan_time.toDate().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+                                  : "Just now"}
                               </span>
                             </div>
                           </m.div>
@@ -829,6 +958,74 @@ function AdminAttendance() {
             </div>
           </div>
         )}
+
+        {/* ── Manual Attendance Dialog ──────────────────────────────────────── */}
+        <Dialog open={showManualAttendance} onOpenChange={(open) => {
+          setShowManualAttendance(open);
+          if (!open) {
+            setManualEnrollmentNo("");
+            setManualReason("");
+            setManualStudentDetails(null);
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Manual Attendance (Force Mark)</DialogTitle>
+              <DialogDescription>Mark attendance manually for a student in the active session. This bypasses GPS, QR, and normal validation.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Label>Enrollment Number</Label>
+                  <Input 
+                    placeholder="e.g. 22CSU..." 
+                    value={manualEnrollmentNo} 
+                    onChange={e => setManualEnrollmentNo(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && verifyManualStudent()}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={verifyManualStudent} disabled={isVerifyingStudent || !manualEnrollmentNo.trim()}>
+                    Verify
+                  </Button>
+                </div>
+              </div>
+
+              {manualStudentDetails && (
+                <div className="bg-muted/30 p-4 rounded-xl border border-border/50">
+                  <p className="font-semibold text-lg text-foreground">{manualStudentDetails.name}</p>
+                  <p className="text-sm text-muted-foreground">{manualStudentDetails.enrollment_no}</p>
+                  <p className="text-sm text-muted-foreground mt-1">Course: {manualStudentDetails.course} - {manualStudentDetails.section}</p>
+                  
+                  <div className="mt-4">
+                    <Label>Reason for Manual Override</Label>
+                    <Select value={manualReason} onValueChange={setManualReason}>
+                      <SelectTrigger><SelectValue placeholder="Select a reason" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Medical">Medical / Emergency</SelectItem>
+                        <SelectItem value="GPS Issues">GPS Issues</SelectItem>
+                        <SelectItem value="QR Scanner Failure">QR Scanner Failure</SelectItem>
+                        <SelectItem value="Device Battery Dead">Device Battery Dead</SelectItem>
+                        <SelectItem value="Late Approved">Late Approved</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowManualAttendance(false)}>Cancel</Button>
+              <Button 
+                onClick={submitManualAttendance} 
+                disabled={isMarkingManual || !manualStudentDetails || !manualReason}
+                className="bg-primary text-primary-foreground"
+              >
+                {isMarkingManual ? "Marking..." : "Confirm Attendance"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ── Sessions List ───────────────────────────────────────────────── */}
         {loading ? (
@@ -907,7 +1104,25 @@ function AdminAttendance() {
 
                   <div className="mt-8 pt-4 border-t border-border/30 flex items-center justify-between text-sm font-semibold text-primary group">
                     <span>View Live</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Delete Session"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmAction({
+                            label: "Delete Attendance Session",
+                            description: `This will permanently delete this attendance session and all its associated attendance records. This action cannot be undone.`,
+                            type: "delete",
+                            sessionId: session.id,
+                            sessionTitle: session.event_id,
+                          });
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </div>
                   </div>
                 </m.div>
               ))}
@@ -925,6 +1140,12 @@ function AdminAttendance() {
               {confirmAction?.label}
             </DialogTitle>
           </DialogHeader>
+          {confirmAction?.sessionTitle && (
+            <div className="bg-muted/50 border border-border/50 rounded-xl px-4 py-3">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Session</div>
+              <div className="font-semibold text-foreground text-sm">{confirmAction.sessionTitle}</div>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground py-2 leading-relaxed">
             {confirmAction?.description}
           </p>
@@ -935,14 +1156,19 @@ function AdminAttendance() {
             <Button
               variant="destructive"
               className="rounded-xl shadow-lg shadow-red-500/20"
-              disabled={actionLoading}
+              disabled={actionLoading || deleteLoading}
               onClick={async () => {
                 if (!confirmAction) return;
+                const { type, sessionId, status } = confirmAction;
                 setConfirmAction(null);
-                await updateStatus(confirmAction.sessionId, confirmAction.status);
+                if (type === "delete") {
+                  await deleteSession(sessionId);
+                } else if (type === "status_change" && status) {
+                  await updateStatus(sessionId, status);
+                }
               }}
             >
-              {actionLoading ? "Processing..." : "Confirm Action"}
+              {(actionLoading || deleteLoading) ? "Processing..." : confirmAction?.type === "delete" ? "Delete Session" : "Confirm Action"}
             </Button>
           </DialogFooter>
         </DialogContent>
