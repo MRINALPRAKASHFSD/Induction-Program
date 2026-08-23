@@ -293,42 +293,68 @@ export default async function handler(req: any, res: any) {
     // ════════════════════════════════════════════════════════════════════════
     // VALIDATION 8: Programme match
     // ════════════════════════════════════════════════════════════════════════
-    const studentDeptId = (studentData.department_id || '').toLowerCase();
-    const studentBranchId = (studentData.branch_id || '').toLowerCase();
-    const studentProgram = (studentData.program || studentData.programme || '').toLowerCase();
-    const sessionProgrammeId = (session.programme_id || '').toLowerCase();
-    const sessionProgrammeName = (session.programme_name || '').toLowerCase();
+    const studentDeptId = (studentData.department_id || '').toLowerCase().trim();
+    const studentBranchId = (studentData.branch_id || '').toLowerCase().trim();
+    const studentProgram = (studentData.program || studentData.programme || '').toLowerCase().trim();
+    const sessionProgrammeId = (session.programme_id || '').toLowerCase().trim();
+    const sessionProgrammeName = (session.programme_name || '').toLowerCase().trim();
 
-    if (sessionProgrammeId) {
+    // "all" = General Session — open to every registered student, skip identity check
+    if (sessionProgrammeId && sessionProgrammeId !== 'all') {
       const normalize = (s: string) => s.replace(/&/g, 'and').replace(/[^a-z0-9 ]/gi, ' ').replace(/\s+/g, ' ').trim();
+
+      // Canonical short-code → full name map (mirrors src/lib/constants.ts SCHOOLS)
+      const SCHOOL_ID_TO_NAME: Record<string, string> = {
+        soet: 'school of engineering and technology',
+        somc: 'school of management and commerce',
+        sols: 'school of legal studies',
+        smas: 'school of medical and allied sciences',
+        sola: 'school of liberal arts',
+        sbas: 'school of basic and applied sciences',
+        soad: 'school of architecture and design',
+        sprs: 'school of physiotherapy and rehabilitation sciences',
+        semc: 'school of emerging media and creator economy',
+        sas:  'school of agricultural sciences',
+        phd:  'phd all disciplines',
+      };
       
       const normDeptId = normalize(studentDeptId);
       const normBranchId = normalize(studentBranchId);
       const normStudentProgram = normalize(studentProgram);
       const normSessionId = normalize(sessionProgrammeId);
       const normSessionName = normalize(sessionProgrammeName);
+      // Also resolve the session's short-code to a canonical full name for comparison
+      const resolvedSessionName = SCHOOL_ID_TO_NAME[normSessionId] || normSessionName;
 
       console.log(JSON.stringify({
         requestId, layer: 'validation8_programme',
         normDeptId, normBranchId, normStudentProgram,
-        normSessionId, normSessionName,
+        normSessionId, normSessionName, resolvedSessionName,
       }));
 
       const isMatch = 
+        // short-code match: student's dept_id matches session's programme_id
         normDeptId === normSessionId ||
+        // full name match: student's branch_id matches session's programme_name
         normBranchId === normSessionName ||
+        normBranchId === resolvedSessionName ||
+        // full name match: student's programme field matches session name
         normStudentProgram === normSessionName ||
+        normStudentProgram === resolvedSessionName ||
+        // partial/contains matches
         (normDeptId && normSessionId.includes(normDeptId)) ||
         (normBranchId && normSessionName.includes(normBranchId)) ||
+        (normBranchId && resolvedSessionName.includes(normBranchId)) ||
         (normStudentProgram && normSessionName.includes(normStudentProgram)) ||
-        (normSessionName && normBranchId && normBranchId.includes(normSessionName)) ||
-        (normSessionName && normStudentProgram && normStudentProgram.includes(normSessionName));
+        (normStudentProgram && resolvedSessionName.includes(normStudentProgram)) ||
+        (resolvedSessionName && normBranchId && normBranchId.includes(resolvedSessionName)) ||
+        (resolvedSessionName && normStudentProgram && normStudentProgram.includes(resolvedSessionName));
 
       if (!isMatch) {
         console.warn(JSON.stringify({
           requestId, layer: 'validation8_programme', status: 'mismatch',
           student: enrollmentClean, normDeptId, normBranchId, normStudentProgram,
-          normSessionId, normSessionName,
+          normSessionId, normSessionName, resolvedSessionName,
         }));
         return res.status(403).json({
           ok: false,

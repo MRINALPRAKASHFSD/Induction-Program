@@ -5,6 +5,7 @@ export function isClubRegistrationOpen(): boolean {
 }
 
 export const SCHOOLS = [
+  { id: "all",   code: "ALL",   name: "All Schools (General Session)" },
   { id: "soet",  code: "SOET",  name: "School of Engineering & Technology" },
   { id: "somc",  code: "SOMC",  name: "School of Management & Commerce" },
   { id: "sols",  code: "SOLS",  name: "School of Legal Studies" },
@@ -15,6 +16,7 @@ export const SCHOOLS = [
   { id: "sprs",  code: "SPRS",  name: "School of Physiotherapy & Rehabilitation Sciences" },
   { id: "semc",  code: "SEMC",  name: "School of Emerging Media & Creator Economy" },
   { id: "sas",   code: "SAS",   name: "School of Agricultural Sciences" },
+  { id: "phd",   code: "PHD",   name: "PhD (All Disciplines)" },
 ];
 
 export const PROGRAM_LEVELS = [
