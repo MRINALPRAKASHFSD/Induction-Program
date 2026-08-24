@@ -90,7 +90,7 @@ export default async function handler(req: any, res: any) {
   }
   const parsed = parsedResult.data;
 
-  const enrollmentKey = parsed.enrollment_no.toUpperCase().trim();
+  const enrollmentKey = parsed.enrollment_no.toUpperCase().trim().replace(/\//g, '-');
   const emailKey      = parsed.email.toLowerCase().trim();
   const phoneKey      = parsed.phone.trim();
 
