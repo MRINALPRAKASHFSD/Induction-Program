@@ -111,8 +111,8 @@ export default async function handler(req: any, res: any) {
   const nowMs = Date.now();
 
   const limits = [
-    { key: `ireg:ip:${ipHash}`,       max: 10 },
-    { key: `ireg:email:${emailKey}`, max: 5 },
+    { key: `ireg:ip:${ipHash}`,       max: 10000 },
+    { key: `ireg:email:${emailKey}`, max: 1000 },
   ];
 
   for (const { key, max } of limits) {

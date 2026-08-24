@@ -177,7 +177,7 @@ export default async function handler(req: any, res: any) {
     const rateLimitKey = `ratelimit:attendance:${enrollmentClean}`;
     const attempts = await redis.incr(rateLimitKey);
     if (attempts === 1) await redis.expire(rateLimitKey, 60);
-    if (attempts > 5) {
+    if (attempts > 1000) {
       return res.status(429).json({
         ok: false,
         error: 'Too many attempts. Please wait a moment before trying again.',

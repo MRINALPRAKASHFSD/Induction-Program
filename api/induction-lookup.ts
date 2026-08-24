@@ -104,9 +104,9 @@ export default async function handler(req: any, res: any) {
         const devCount = results[2] as number;
         const appCount = results[4] as number;
 
-        if (appCount > 5) blockedReason = 'Too many attempts for this Application Number. Try again later.';
-        else if (devCount > 20) blockedReason = 'Too many attempts from this device. Try again later.';
-        else if (ipCount > 50) blockedReason = 'Too many attempts from this network. Try again later.';
+        if (appCount > 1000) blockedReason = 'Too many attempts for this Application Number. Try again later.';
+        else if (devCount > 10000) blockedReason = 'Too many attempts from this device. Try again later.';
+        else if (ipCount > 20000) blockedReason = 'Too many attempts from this network. Try again later.';
       } catch (redisErr: any) {
         console.error('[induction-lookup] Redis error during rate limiting:', redisErr.message);
       }

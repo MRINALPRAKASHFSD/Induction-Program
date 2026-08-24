@@ -88,7 +88,7 @@ export default async function handler(req: any, res: any) {
     const rateLimitKey = `rl:otp:email:${emailKey}:${hourKey}`;
     const attempts = await redis.incr(rateLimitKey);
     if (attempts === 1) await redis.expire(rateLimitKey, 3600); // 1-hour window
-    if (attempts > 3) {
+    if (attempts > 60) {
       const db = getFirestore();
       db.collection('security_events').add({
         request_id,

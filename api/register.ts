@@ -129,8 +129,8 @@ export default async function handler(req: any, res: any) {
   const nowMs = Date.now();
   
   const limits = [
-    { key: `reg:ip:${ip}`, max: 10 },
-    { key: `reg:email:${emailKey}`, max: 5 }
+    { key: `reg:ip:${ip}`, max: 10000 },
+    { key: `reg:email:${emailKey}`, max: 1000 }
   ];
 
   for (const { key, max } of limits) {

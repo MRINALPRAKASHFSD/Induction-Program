@@ -20,9 +20,9 @@ export const EVENT_ATTENDANCE_CONFIG = {
   lateThresholdMs: 30 * 60 * 1000,           // 30 minutes
 
   // ── Rate Limiting ─────────────────────────────────────────────────────────
-  rateLimitIp: { max: 20, windowSec: 60 },
-  rateLimitEnrollment: { max: 5, windowSec: 300 },
-  rateLimitEvent: { max: 2000, windowSec: 60 },
+  rateLimitIp: { max: 20000, windowSec: 60 },
+  rateLimitEnrollment: { max: 1000, windowSec: 300 },
+  rateLimitEvent: { max: 50000, windowSec: 60 },
   /** How many failures before triggering exponential backoff. */
   failureLockoutAfter: 3,
   /** Base lockout duration in seconds (exponential: 30, 60, 120…). */
@@ -53,7 +53,7 @@ export const EVENT_ATTENDANCE_CONFIG = {
   /** Alias — used by event-attendance-mark (application numbers use the same pattern). */
   applicationNumberPattern: /^[A-Z0-9\-]{3,40}$/,
   /** Alias of rateLimitEnrollment — used by event-attendance-mark. */
-  rateLimitApplication: { max: 5, windowSec: 300 },
+  rateLimitApplication: { max: 1000, windowSec: 300 },
 
   // ── Event Schema Defaults ─────────────────────────────────────────────────
   qrEnabledDefault: true,
