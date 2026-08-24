@@ -20,7 +20,6 @@ import {
   listEvents, createEvent, updateEventWithOCC, deleteEvent,
   getEventAttendanceUrl, listEventAttendance, exportEventAttendanceCsv,
 } from "@/lib/admin.functions";
-import { getDepartments } from "@/lib/students.functions";
 import { useVisibilityPolling } from "@/hooks/use-visibility-polling";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -65,24 +64,26 @@ export const Route = createLazyFileRoute("/admin/events")({
   component: AdminEvents,
 });
 
-const LOCAL_DEPARTMENTS = [
-  { id: "soet", code: "SOET", name: "School of Engineering & Technology" },
-  { id: "soms", code: "SOMS", name: "School of Management Studies" },
-  { id: "sols", code: "SOLS", name: "School of Legal Studies" },
-  { id: "soa",  code: "SOA",  name: "School of Architecture" },
-  { id: "soah", code: "SOAH", name: "School of Allied Health Sciences" },
-  { id: "soe",  code: "SOE",  name: "School of Education" },
-  { id: "somc", code: "SOMC", name: "School of Media & Communication" },
-  { id: "sosc", code: "SOSC", name: "School of Science" },
-  { id: "sohs", code: "SOHS", name: "School of Hospitality Studies" },
-  { id: "sofa", code: "SOFA", name: "School of Fine Arts & Design" },
+const TARGET_SCHOOLS = [
+  { id: "School of Engineering & Technology", name: "School of Engineering & Technology" },
+  { id: "School of Management and Commerce", name: "School of Management and Commerce" },
+  { id: "School of Legal Studies", name: "School of Legal Studies" },
+  { id: "School of Medical & Allied Sciences", name: "School of Medical & Allied Sciences" },
+  { id: "School of Liberal Arts", name: "School of Liberal Arts" },
+  { id: "School of Basic & Applied Sciences", name: "School of Basic & Applied Sciences" },
+  { id: "School of Architecture & Design", name: "School of Architecture & Design" },
+  { id: "School of Physiotherapy and Rehabilitation Sciences", name: "School of Physiotherapy and Rehabilitation Sciences" },
+  { id: "School of Emerging Media and Creator Economy", name: "School of Emerging Media and Creator Economy" },
+  { id: "School of Education", name: "School of Education" },
+  { id: "School of Agricultural Sciences", name: "School of Agricultural Sciences" },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 function AdminEvents() {
   const [rows,        setRows]        = useState<EventRow[] | null>(null);
   const [qrEvent,     setQrEvent]     = useState<EventRow | null>(null);
-  const [departments, setDepartments] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [departments] = useState<{ id: string; name: string }[]>(TARGET_SCHOOLS);
+  const [selectedSchool, setSelectedSchool] = useState<string>("All Schools");
 
   const load = useCallback(async () => {
     try {
@@ -94,40 +95,42 @@ function AdminEvents() {
     }
   }, []);
 
-  const loadDepartments = async () => {
-    try {
-      const { departments } = (await Promise.race([
-        getDepartments(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000))
-      ])) as any;
-      if (departments && departments.length > 0) setDepartments(departments);
-      else setDepartments(LOCAL_DEPARTMENTS);
-    } catch {
-      setDepartments(LOCAL_DEPARTMENTS);
-    }
-  };
+  useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { load(); loadDepartments(); }, [load]);
+  const filteredRows = rows ? rows.filter(r => 
+    selectedSchool === "All Schools" || r.department_id === selectedSchool
+  ) : null;
 
   return (
     <AdminShell title="Events" subtitle="Create induction sessions, toggle live status, print QR posters.">
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+          <SelectTrigger className="w-full sm:w-[320px]">
+            <SelectValue placeholder="Filter by School" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All Schools">All Schools</SelectItem>
+            {departments.map(d => (
+              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <EventDialog onSaved={load} departments={departments} />
       </div>
 
-      {!rows ? (
+      {!filteredRows ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
           {[1,2,3].map(i => <div key={i} className="h-48 admin-skeleton rounded-2xl" />)}
         </div>
-      ) : rows.length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No events yet</p>
-          <p className="text-sm mt-1">Create one to get started.</p>
+          <p className="font-medium">No events found</p>
+          <p className="text-sm mt-1">Try adjusting your filters or create a new event.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-          {rows.map((r) => (
+          {filteredRows.map((r) => (
             <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />
           ))}
         </div>
@@ -565,10 +568,7 @@ function EventDialog({
     }
   };
 
-  const allDepts = [
-    { id: "all", name: "All Schools" },
-    ...departments,
-  ];
+  const allDepts = departments;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
