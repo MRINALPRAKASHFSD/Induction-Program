@@ -95,7 +95,7 @@ function AdminVerification() {
   };
 
   return (
-    <AdminShell>
+    <AdminShell title="Identity Verification">
       <div className="max-w-5xl mx-auto space-y-6 pb-12">
 
         {/* Header */}

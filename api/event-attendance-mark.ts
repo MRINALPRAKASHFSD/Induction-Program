@@ -1,45 +1,3 @@
-/**
- * api/event-attendance-mark.ts
- *
- * Public endpoint — marks attendance for a student at an event by scanning
- * the event's QR code (which encodes a plain HTTPS URL).
- *
- * NO authentication required (students scan without logging in).
- *
- * ─────────────────────────────────────────────────────────────────────────────
- * ISOLATION GUARANTEE: This file is completely isolated from the induction
- * attendance system. It does NOT touch attendance_logs, attendance_sessions,
- * attendance_stats, QR rotation, geofencing, HMAC signing, or QStash workers.
- * ─────────────────────────────────────────────────────────────────────────────
- *
- * Validation Pipeline (15 checks — all server-side, never trust client):
- *   1.  HTTP method guard (POST only)
- *   2.  Firebase Admin initialized
- *   3.  Input validation (event_id, application_number shape)
- *   4.  Three-layer rate limit check (IP + Application + Event) — fail open on Redis error
- *   5.  Event fetch (events/{event_id}) — O(1) document ID lookup
- *   6.  Event must exist
- *   7.  event.is_active === true
- *   8.  event.qr_enabled !== false
- *   9.  Attendance window: now within [starts_at - windowBefore, ends_at + windowAfter]
- *  10.  Status derivation: 'present' or 'late'
- *  11.  Student fetch (students/{application_number}) — O(1) document ID lookup
- *  12.  Student must exist (application number not found → NOT_FOUND)
- *  13.  Student not suspended
- *  14.  Capacity pre-check (before entering transaction)
- *  15.  Firestore Transaction:
- *         a. Re-read event (fresh capacity)
- *         b. Re-check capacity inside tx (no race condition)
- *         c. Read event_attendance/{docId} (dedup check)
- *         d. If duplicate → return idempotent success
- *         e. Write event_attendance document
- *         f. Increment events.attendance_count
- *
- * Post-response (non-blocking, after 200 sent):
- *  - Redis analytics (timeline, first/last attendee, counters)
- *  - Audit log write to event_attendance_logs
- */
-
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getRedis } from '../server/redis.js';
@@ -108,128 +66,43 @@ function getClientIp(req: any): string {
   );
 }
 
-// ── Rate Limit (3-layer) ──────────────────────────────────────────────────────
-/**
- * Returns { allowed: true } or { allowed: false, retryAfter: number }.
- * Uses Redis pipeline to batch all checks in a single round trip.
- * Always fails open on Redis error (attendance must never be blocked by infra).
- */
+// ── Rate Limit ──────────────────────────────────────────────────────
 async function checkRateLimit(
   ip: string,
   applicationNumber: string,
   eventId: string,
 ): Promise<{ allowed: boolean; retryAfter?: number }> {
-  const cfg = EVENT_ATTENDANCE_CONFIG;
-  const now  = Math.floor(Date.now() / 1000);
-
-  let redis;
-  try {
-    redis = getRedis();
-  } catch {
-    logRateLimitSkip('event-attendance-mark', eventId, 'Redis not configured');
-    return { allowed: true };
-  }
-
-  try {
-    const ipKey  = `ea:ip:${hashIp(ip)}`;
-    const enrKey = `ea:app:${eventId}:${applicationNumber}`;
-    const evtKey = `ea:evt:${eventId}`;
-    const failKey = `ea:fail:${eventId}:${applicationNumber}`;
-
-    // Pipeline: INCR + EXPIRE for all three layers + GET failure count
-    const pipeline = redis.pipeline();
-    pipeline.incr(ipKey);
-    pipeline.expire(ipKey, cfg.rateLimitIp.windowSec, 'NX');
-    pipeline.incr(enrKey);
-    pipeline.expire(enrKey, cfg.rateLimitApplication.windowSec, 'NX');
-    pipeline.incr(evtKey);
-    pipeline.expire(evtKey, cfg.rateLimitEvent.windowSec, 'NX');
-    pipeline.get(failKey);
-    const results = await pipeline.exec();
-
-    const ipCount  = results[0] as number;
-    const enrCount = results[2] as number;
-    const evtCount = results[4] as number;
-    const failCount = parseInt((results[6] as string | null) ?? '0', 10);
-
-    // Failure backoff: lockout after repeated failures
-    if (failCount >= cfg.failureLockoutAfter) {
-      const backoffSec = cfg.failureLockoutBaseSec * Math.pow(2, failCount - cfg.failureLockoutAfter);
-      const retryAfter = Math.min(backoffSec, 300); // cap at 5 min
-      return { allowed: false, retryAfter };
-    }
-
-    if (ipCount > cfg.rateLimitIp.max) {
-      return { allowed: false, retryAfter: cfg.rateLimitIp.windowSec };
-    }
-    if (enrCount > cfg.rateLimitApplication.max) {
-      return { allowed: false, retryAfter: cfg.rateLimitApplication.windowSec };
-    }
-    if (evtCount > cfg.rateLimitEvent.max) {
-      return { allowed: false, retryAfter: cfg.rateLimitEvent.windowSec };
-    }
-
-    return { allowed: true };
-  } catch (err: any) {
-    logRedisFailure({
-      endpoint:  'event-attendance-mark',
-      event_id:  eventId,
-      operation: 'rate_limit_pipeline',
-      reason:    err.message,
-    });
-    return { allowed: true }; // fail open
-  }
+  // RATE LIMITING REMOVED FOR EVENT ATTENDANCE
+  // To support 5,000-10,000 simultaneous students, we do not apply IP, Event, or AppNum rate limits.
+  return { allowed: true };
 }
 
-/** Increment the failure counter for exponential backoff. */
 async function recordFailure(eventId: string, applicationNumber: string): Promise<void> {
   try {
     const redis = getRedis();
     const failKey = `ea:fail:${eventId}:${applicationNumber}`;
-    const pipeline = redis.pipeline();
-    pipeline.incr(failKey);
-    pipeline.expire(failKey, 300); // 5 min TTL
-    await pipeline.exec();
-  } catch {
-    // ignore — fail open
-  }
+    await redis.pipeline().incr(failKey).expire(failKey, 300).exec();
+  } catch { }
 }
 
-/** Post-response analytics: sorted set timeline, first/last attendee, counters. Non-blocking. */
-async function recordAnalytics(
-  eventId: string,
-  applicationNumber: string,
-  studentName: string,
-  nowMs: number,
-): Promise<void> {
+async function recordAnalytics(eventId: string, applicationNumber: string, studentName: string, nowMs: number): Promise<void> {
   try {
     const redis = getRedis();
     const timelineKey  = `ea:timeline:${eventId}`;
     const firstKey     = `ea:first:${eventId}`;
     const lastKey      = `ea:last:${eventId}`;
     const presentKey   = `ea:present:${eventId}`;
-
     const memberPayload = JSON.stringify({ applicationNumber, name: studentName, at: nowMs });
-
     const pipeline = redis.pipeline();
-    // Sorted set by timestamp — for velocity and hourly breakdown
     pipeline.zadd(timelineKey, { score: nowMs, member: memberPayload });
     pipeline.expire(timelineKey, EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec, 'NX');
-    // First attendee: only set if key doesn't exist
     pipeline.set(firstKey, memberPayload, { nx: true, ex: EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec });
-    // Last attendee: always overwrite
     pipeline.set(lastKey, memberPayload, { ex: EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec });
-    // Present count (for real-time metric)
     pipeline.incr(presentKey);
     pipeline.expire(presentKey, EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec, 'NX');
     await pipeline.exec();
   } catch (err: any) {
-    logRedisFailure({
-      endpoint:  'event-attendance-mark',
-      event_id:  eventId,
-      operation: 'analytics_pipeline',
-      reason:    err.message,
-    });
+    logRedisFailure({ endpoint: 'event-attendance-mark', event_id: eventId, operation: 'analytics_pipeline', reason: err.message });
   }
 }
 
@@ -238,7 +111,7 @@ async function incrementDuplicateCounter(eventId: string): Promise<void> {
     const redis = getRedis();
     const key = `ea:dup:${eventId}`;
     await redis.pipeline().incr(key).expire(key, EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec, 'NX').exec();
-  } catch { /* ignore */ }
+  } catch { }
 }
 
 async function incrementRejectedCounter(eventId: string): Promise<void> {
@@ -246,73 +119,65 @@ async function incrementRejectedCounter(eventId: string): Promise<void> {
     const redis = getRedis();
     const key = `ea:rej:${eventId}`;
     await redis.pipeline().incr(key).expire(key, EVENT_ATTENDANCE_CONFIG.timelineRedisTtlSec, 'NX').exec();
-  } catch { /* ignore */ }
+  } catch { }
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  // 1. Method guard
-  if (req.method !== 'POST') {
-    return apiResponse(res, 405, false, RESPONSE_CODES.INVALID_INPUT, 'Method Not Allowed');
-  }
-
-  // 2. Firebase guard
-  if (!firebaseInitialized) {
-    return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, `Backend configuration error: ${firebaseInitError}`);
-  }
+  if (req.method !== 'POST') return apiResponse(res, 405, false, RESPONSE_CODES.INVALID_INPUT, 'Method Not Allowed');
+  if (!firebaseInitialized) return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, `Backend configuration error: ${firebaseInitError}`);
 
   const reqId = requestId();
   const ip = getClientIp(req);
   const ua = (req.headers['user-agent'] as string) || '';
   const parsedUA = parseUA(ua);
 
-  // 3. Input validation
-  const rawEventId    = req.body?.event_id;
-  const rawApplicationNumber = req.body?.application_number;
-  const clientTs      = req.body?.client_timestamp ?? null;
+  const { event_id: rawEventId, application_number: rawAppNum, student_name, school, programme, client_timestamp } = req.body;
 
-  if (!rawEventId || typeof rawEventId !== 'string' || rawEventId.length > 128) {
-    return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT, 'Invalid or missing event_id.', null, { requestId: reqId });
+  if (!rawEventId || typeof rawEventId !== 'string') {
+    return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT, 'Missing event_id', null, { requestId: reqId });
   }
-
-  const applicationNumber = typeof rawApplicationNumber === 'string' ? rawApplicationNumber.trim().toUpperCase() : '';
-  if (!EVENT_ATTENDANCE_CONFIG.applicationNumberPattern.test(applicationNumber)) {
-    return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT,
-      'Invalid application number format. Must be 3–40 alphanumeric characters.', null, { requestId: reqId });
+  if (!rawAppNum || typeof rawAppNum !== 'string') {
+    return apiResponse(res, 400, false, RESPONSE_CODES.INVALID_INPUT, 'Missing application_number', null, { requestId: reqId });
   }
 
   const eventId = rawEventId.trim();
-
-  // 4. Rate limit check
-  const rateLimitResult = await checkRateLimit(ip, applicationNumber, eventId);
-  if (!rateLimitResult.allowed) {
-    void incrementRejectedCounter(eventId);
-    return apiResponse(res, 429, false, RESPONSE_CODES.RATE_LIMITED,
-      `Too many attempts. Retry in ${rateLimitResult.retryAfter} seconds.`,
-      null, { requestId: reqId, retryAfter: rateLimitResult.retryAfter });
-  }
+  const applicationNumber = rawAppNum.trim().toUpperCase();
 
   const db = getFirestore();
   const cfg = EVENT_ATTENDANCE_CONFIG;
   const now = Date.now();
 
-  // 5–8. Event validation
+  const rateLimitResult = await checkRateLimit(ip, applicationNumber, eventId);
+  if (!rateLimitResult.allowed) {
+    void incrementRejectedCounter(eventId);
+    return apiResponse(res, 429, false, RESPONSE_CODES.RATE_LIMITED, `Too many attempts. Retry in ${rateLimitResult.retryAfter} seconds.`, null, { requestId: reqId, retryAfter: rateLimitResult.retryAfter });
+  }
+
+  // 🚀 HIGH PERFORMANCE: Fetch ALL required documents concurrently in one network round trip
   const eventRef = db.collection('events').doc(eventId);
-  let eventDoc;
+  const studentRef = db.collection('students').doc(applicationNumber);
+  const eventParticipantRef = db.collection('event_participants').doc(`${eventId}_${applicationNumber}`);
+  const inductionParticipantRef = db.collection('induction_participants').doc(applicationNumber);
+
+  let eventDoc, studentSnap, eventParticipantSnap, inductionParticipantSnap;
+
   try {
-    eventDoc = await eventRef.get();
+    [eventDoc, studentSnap, eventParticipantSnap, inductionParticipantSnap] = await Promise.all([
+      eventRef.get(),
+      studentRef.get(),
+      eventParticipantRef.get(),
+      inductionParticipantRef.get()
+    ]);
   } catch (err: any) {
-    console.error('[event-attendance-mark] Firestore event fetch error:', err.message);
     return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, 'Database error. Try again.', null, { requestId: reqId });
   }
 
-  // 6. Event must exist
   if (!eventDoc.exists) {
     void incrementRejectedCounter(eventId);
     return apiResponse(res, 404, false, RESPONSE_CODES.NOT_FOUND, 'Event not found.', null, { requestId: reqId });
@@ -320,22 +185,42 @@ export default async function handler(req: any, res: any) {
 
   const event = eventDoc.data()!;
 
-  // 7. Event must be active
-  if (event.is_active !== true) {
+  if (event.is_active !== true || event.qr_enabled === false) {
     void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
-    return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED,
-      'This event is not currently active.', null, { requestId: reqId });
+    return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED, 'Attendance for this event is not active.', null, { requestId: reqId });
   }
 
-  // 8. QR enabled check
-  if (event.qr_enabled === false) {
-    void incrementRejectedCounter(eventId);
-    return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED,
-      'Attendance for this event has been disabled by the organizer.', null, { requestId: reqId });
+  // Resolve Student Identity
+  let studentDocData: any = null;
+  let isNewStudent = false;
+
+  if (studentSnap.exists) {
+    studentDocData = studentSnap.data();
+  } else if (eventParticipantSnap.exists) {
+    studentDocData = eventParticipantSnap.data();
+  } else if (inductionParticipantSnap.exists) {
+    studentDocData = inductionParticipantSnap.data();
+  } else {
+    isNewStudent = true;
+    if (!student_name || !school || !programme) {
+      return apiResponse(res, 400, false, 'NEW_STUDENT_DATA_REQUIRED', 'Application number not found. Please provide name, school, and programme to register.', null, { requestId: reqId });
+    }
   }
 
-  // 9. Attendance window validation
+  const finalStudentName = isNewStudent ? student_name.trim() : (studentDocData.student_name || studentDocData.full_name || applicationNumber);
+  const finalStudentSchool = isNewStudent ? school.trim() : (studentDocData.school || studentDocData.department_id || '');
+  const finalStudentProgramme = isNewStudent ? programme.trim() : (studentDocData.program || studentDocData.course || studentDocData.branch_id || '');
+
+  // School Validation
+  if (event.school && event.school.trim() !== '' && event.school.trim().toLowerCase() !== 'all') {
+    if (event.school.trim().toLowerCase() !== finalStudentSchool.toLowerCase()) {
+      void incrementRejectedCounter(eventId);
+      return apiResponse(res, 403, false, 'SCHOOL_MISMATCH', 'This event is not available for your school.', null, { requestId: reqId });
+    }
+  }
+
+  // Window & Capacity Validation
   const startsAt = new Date(event.starts_at).getTime();
   const endsAt   = new Date(event.ends_at).getTime();
   const windowOpen  = startsAt - cfg.windowBeforeStartMs;
@@ -344,226 +229,130 @@ export default async function handler(req: any, res: any) {
   if (now < windowOpen) {
     void recordFailure(eventId, applicationNumber);
     void incrementRejectedCounter(eventId);
-    const openAt = new Date(windowOpen).toISOString();
-    return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW,
-      `Attendance opens at ${new Date(windowOpen).toLocaleTimeString('en-IN')}.`,
-      null, { requestId: reqId, opensAt: openAt });
+    return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW, `Attendance opens at ${new Date(windowOpen).toLocaleTimeString('en-IN')}.`, null, { requestId: reqId, opensAt: new Date(windowOpen).toISOString() });
   }
 
   if (now > windowClose) {
     void incrementRejectedCounter(eventId);
-    return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW,
-      'Attendance window for this event is closed.', null, { requestId: reqId });
+    return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW, 'Attendance window for this event is closed.', null, { requestId: reqId });
   }
 
-  // 10. Derive status
   const status = (now > startsAt + cfg.lateThresholdMs) ? 'late' : 'present';
-
-  // 11–13. Participant validation (O(1) — eventId_appNumber IS the document ID)
-  const participantDocId = `${eventId}_${applicationNumber}`;
-  const participantRef = db.collection('event_participants').doc(participantDocId);
-  const guestRef = db.collection('event_guest_counts').doc(participantDocId);
-  
-  let participantDoc;
-  let guestCount = 0;
-  
-  try {
-    const [pDoc, gDoc] = await Promise.all([
-      participantRef.get(),
-      guestRef.get()
-    ]);
-    participantDoc = pDoc;
-    if (gDoc.exists) {
-      guestCount = gDoc.data()?.headcount || 0;
-    }
-  } catch (err: any) {
-    console.error('[event-attendance-mark] Firestore participant fetch error:', err.message);
-    return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, 'Database error. Try again.', null, { requestId: reqId });
-  }
-
-  // 12. Participant must exist
-  if (!participantDoc.exists) {
-    void recordFailure(eventId, applicationNumber);
-    void incrementRejectedCounter(eventId);
-    return apiResponse(res, 404, false, RESPONSE_CODES.NOT_FOUND,
-      'Application Number not found in the official dataset for this event.', null, { requestId: reqId });
-  }
-
-  const participant = participantDoc.data()!;
-
-  // Must belong to the ACTIVE dataset
-  if (event.active_dataset_id && participant.dataset_id !== event.active_dataset_id) {
-    void recordFailure(eventId, applicationNumber);
-    void incrementRejectedCounter(eventId);
-    return apiResponse(res, 404, false, RESPONSE_CODES.NOT_FOUND,
-      'Application Number not found in the currently active dataset.', null, { requestId: reqId });
-  }
-
-  // 14. Capacity pre-check (fast path — avoids tx if obviously full)
   const currentCount = readCount(eventDoc);
-  const capacity: number | undefined = event.capacity;
-  const allowOverflow: boolean = event.allow_overflow ?? false;
+  const capacity = event.capacity;
+  const allowOverflow = event.allow_overflow ?? false;
 
   if (capacity !== undefined && !allowOverflow && currentCount >= capacity) {
     void incrementRejectedCounter(eventId);
-    return apiResponse(res, 409, false, RESPONSE_CODES.CAPACITY_FULL,
-      'This event has reached its maximum capacity.', null, { requestId: reqId });
+    return apiResponse(res, 409, false, RESPONSE_CODES.CAPACITY_FULL, 'This event has reached its maximum capacity.', null, { requestId: reqId });
   }
 
-  // 15. Firestore Transaction — atomic dedup + counter + write
+  // Transaction
   const attendanceDocId = `${eventId}_${applicationNumber}`;
   const attendanceRef   = db.collection('event_attendance').doc(attendanceDocId);
   const auditLogRef     = db.collection('event_attendance_logs').doc();
 
   let isDuplicate = false;
-  let studentName = participant.student_name as string || applicationNumber;
-
   try {
     isDuplicate = await db.runTransaction(async (tx) => {
-      // Re-read event inside tx (fresh capacity, prevents race)
-      const freshEventDoc = await tx.get(eventRef);
+      // 🚀 HIGH PERFORMANCE: Fetch transaction reads concurrently
+      const [freshEventDoc, dupeDoc] = await tx.getAll(eventRef, attendanceRef);
+      
       if (!freshEventDoc.exists) throw new Error('event_disappeared');
 
       const freshEvent  = freshEventDoc.data()!;
       const freshCount  = readCount(freshEventDoc);
-      const freshCap    = freshEvent.capacity as number | undefined;
-      const freshOflow  = freshEvent.allow_overflow as boolean ?? false;
+      const freshCap    = freshEvent.capacity;
+      const freshOflow  = freshEvent.allow_overflow ?? false;
 
-      // Re-validate QR enabled inside tx
       if (freshEvent.qr_enabled === false) throw new Error('qr_disabled_in_tx');
+      if (freshCap !== undefined && !freshOflow && freshCount >= freshCap) throw new Error('capacity_full_in_tx');
 
-      // Re-validate capacity inside tx (no race condition)
-      if (freshCap !== undefined && !freshOflow && freshCount >= freshCap) {
-        throw new Error('capacity_full_in_tx');
-      }
+      if (dupeDoc.exists) return true;
 
-      // Dedup check (O(1) by document ID)
-      const dupeDoc = await tx.get(attendanceRef);
-      if (dupeDoc.exists) return true; // duplicate — don't write
-
-      // Update participant record (attendance status)
-      tx.update(participantRef, {
-        attendance_status: status,
-        attendance_time: FieldValue.serverTimestamp(),
-        last_updated_at: FieldValue.serverTimestamp()
-      });
-
-      // Write attendance record
+      // Write attendance
       tx.set(attendanceRef, {
         event_id:            eventId,
-        dataset_id:          participant.dataset_id,
         application_number:  applicationNumber,
-        student_name:        studentName,
-        department:          participant.program || participant.course || '',
-        school:              participant.school || '',
-
-        // Status & verification
+        student_name:        finalStudentName,
+        department:          finalStudentProgramme,
+        school:              finalStudentSchool,
+        event_title:         event.title || '',
+        planner_id:          event.planner_id || '',
+        day_number:          event.day_number || 1,
         status,
         verification_method: 'QR' as const,
-
-        // Metadata
         marked_by:           'student',
         created_by:          'system',
-        client_timestamp:    clientTs,
+        client_timestamp:    client_timestamp || null,
         server_timestamp:    FieldValue.serverTimestamp(),
-
-        // Audit / security (no raw PII)
         ip_hash:             hashIp(ip),
         browser:             parsedUA.browser,
         browser_version:     parsedUA.browser_version,
         os:                  parsedUA.os,
         device_type:         parsedUA.device_type,
-
         created_at:          FieldValue.serverTimestamp(),
       });
 
-      // Atomically increment counter (via abstraction layer)
-      buildCounterIncrement(tx, eventRef, freshCount);
+      // Write student record if new
+      if (isNewStudent) {
+        tx.set(studentRef, {
+          id: applicationNumber,
+          enrollment_no: applicationNumber,
+          student_name: finalStudentName,
+          school: finalStudentSchool,
+          program: finalStudentProgramme,
+          created_at: FieldValue.serverTimestamp(),
+          created_via: 'event_attendance'
+        }, { merge: true });
+      }
 
-      return false; // not a duplicate
+      buildCounterIncrement(tx, eventRef, freshCount);
+      return false;
     });
   } catch (txErr: any) {
-    // Handle specific transaction abort reasons
     if (txErr.message === 'capacity_full_in_tx') {
       void incrementRejectedCounter(eventId);
-      return apiResponse(res, 409, false, RESPONSE_CODES.CAPACITY_FULL,
-        'This event has reached its maximum capacity.', null, { requestId: reqId });
+      return apiResponse(res, 409, false, RESPONSE_CODES.CAPACITY_FULL, 'This event has reached its maximum capacity.', null, { requestId: reqId });
     }
     if (txErr.message === 'qr_disabled_in_tx') {
       void incrementRejectedCounter(eventId);
-      return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED,
-        'Attendance for this event has been disabled by the organizer.', null, { requestId: reqId });
+      return apiResponse(res, 403, false, RESPONSE_CODES.QR_DISABLED, 'Attendance for this event has been disabled.', null, { requestId: reqId });
     }
-    console.error('[event-attendance-mark] Transaction error:', txErr.message);
-    return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR,
-      'Failed to record attendance. Please try again.', null, { requestId: reqId });
+    console.error('[event-attendance-mark] Tx error:', txErr.message);
+    return apiResponse(res, 500, false, RESPONSE_CODES.SERVER_ERROR, 'Failed to record attendance.', null, { requestId: reqId });
   }
 
   if (isDuplicate) {
     void incrementDuplicateCounter(eventId);
-    return apiResponse(res, 200, true, RESPONSE_CODES.DUPLICATE,
-      'Attendance already marked for this event.',
-      { 
-        duplicate: true, 
-        studentName, 
-        eventTitle: event.title, 
-        guests: guestCount,
-        programme: participant.program || participant.course || '',
-        school: participant.school || '',
-        batch: participant.batch || '',
-        section: participant.section || null
-      },
-      { requestId: reqId });
+    return apiResponse(res, 200, true, RESPONSE_CODES.DUPLICATE, 'Attendance already marked for this event.', { 
+      duplicate: true, studentName: finalStudentName, eventTitle: event.title, programme: finalStudentProgramme, school: finalStudentSchool
+    }, { requestId: reqId });
   }
 
-  // 200 — Send response immediately
   const responsePayload = {
-    duplicate:    false,
-    studentName,
-    eventTitle:   event.title,
+    duplicate: false,
+    studentName: finalStudentName,
+    eventTitle: event.title,
     status,
     applicationNumber,
-    guests:       guestCount,
-    programme:    participant.program || participant.course || '',
-    school:       participant.school || '',
-    batch:        participant.batch || '',
-    section:      participant.section || null,
+    programme: finalStudentProgramme,
+    school: finalStudentSchool
   };
 
-  // Must set response before async post-processing
   res.status(200).json({
-    ok:        true,
-    code:      RESPONSE_CODES.SUCCESS,
-    message:   status === 'late' ? 'Attendance marked (late).' : 'Attendance marked successfully.',
-    data:      responsePayload,
-    meta:      { requestId: reqId, timestamp: new Date().toISOString() },
+    ok: true,
+    code: RESPONSE_CODES.SUCCESS,
+    message: status === 'late' ? 'Attendance marked (late).' : 'Attendance marked successfully.',
+    data: responsePayload,
+    meta: { requestId: reqId, timestamp: new Date().toISOString() },
     timestamp: new Date().toISOString(),
   });
 
-  // Non-blocking post-response work — analytics + audit log
   void Promise.allSettled([
-    recordAnalytics(eventId, applicationNumber, studentName, now),
-    db.collection('event_attendance_logs').doc().create?.({
-      event_id:   eventId,
-      action:     'marked',
-      applicationNumber,
-      status,
-      reason:     `QR attendance marked as ${status}`,
-      ip_hash:    hashIp(ip),
-      device:     parsedUA.device_type,
-      timestamp:  FieldValue.serverTimestamp(),
-    }).catch(() => {
-      // Fallback if .create() not available
-      return auditLogRef.set({
-        event_id:   eventId,
-        action:     'marked',
-        applicationNumber,
-        status,
-        reason:     `QR attendance marked as ${status}`,
-        ip_hash:    hashIp(ip),
-        device:     parsedUA.device_type,
-        timestamp:  FieldValue.serverTimestamp(),
-      });
-    }),
+    recordAnalytics(eventId, applicationNumber, finalStudentName, now),
+    auditLogRef.set({
+      event_id: eventId, action: 'marked', applicationNumber, status, reason: `QR attendance marked as ${status}`, ip_hash: hashIp(ip), device: parsedUA.device_type, timestamp: FieldValue.serverTimestamp()
+    })
   ]);
 }

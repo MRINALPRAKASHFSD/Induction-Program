@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { auth } from '@/lib/firebase/config';
+
+
 import { Link } from '@tanstack/react-router';
+import { Search } from 'lucide-react';
 
 export const Route = createFileRoute('/event-attend/$eventId')({
   head: () => ({
@@ -27,7 +29,7 @@ export const Route = createFileRoute('/event-attend/$eventId')({
   component: EventAttendPage,
 });
 
-type PageState = 'loading' | 'event_loaded' | 'submitting' | 'success' | 'duplicate' | 'error' | 'event_not_found' | 'qr_disabled' | 'outside_window';
+type PageState = 'loading' | 'event_loaded' | 'new_student' | 'submitting' | 'success' | 'duplicate' | 'error' | 'event_not_found' | 'qr_disabled' | 'outside_window';
 
 interface EventData {
   id:          string;
@@ -76,12 +78,16 @@ function EventAttendPage() {
 
   const [pageState,  setPageState]  = useState<PageState>('loading');
   const [event,      setEvent]      = useState<EventData | null>(null);
-  const [applicationNumber, setApplicationNumber] = useState('');
   const [errorMsg,          setErrorMsg]          = useState('');
   const [resultData,        setResultData]        = useState<any | null>(null);
   const [downloadType,      setDownloadType]      = useState<'pdf' | 'png' | null>(null);
   const [hasPlanner,        setHasPlanner]        = useState(false);
   const [scheduleSessions,  setScheduleSessions]  = useState<any[] | null>(null);
+  const [applicationNumber, setApplicationNumber] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [school, setSchool] = useState('');
+  const [programme, setProgramme] = useState('');
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -125,14 +131,14 @@ function EventAttendPage() {
     load();
   }, [eventId]);
 
+
+
   useEffect(() => {
     if (pageState === 'success') {
       const checkPlanner = async () => {
         try {
-          const user = auth.currentUser;
-          const token = user ? await user.getIdToken() : undefined;
           const res = await fetch('/api/event-schedule?type=orientation', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: {},
           });
           const data = await res.json();
           if (data.plannerActive) {
@@ -151,8 +157,7 @@ function EventAttendPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanApplicationNumber = applicationNumber.trim().toUpperCase();
-    if (!cleanApplicationNumber || cleanApplicationNumber.length < 3) {
+    if (!applicationNumber.trim()) {
       setErrorMsg('Please enter your application number.');
       return;
     }
@@ -163,30 +168,38 @@ function EventAttendPage() {
     try {
       const res = await fetch('/api/event-attendance-mark', {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json'
+        },
         body:    JSON.stringify({
           event_id:          eventId,
-          application_number: cleanApplicationNumber,
+          application_number: applicationNumber.trim(),
+
+          student_name:      studentName.trim(),
+          school:            school.trim(),
+          programme:         programme.trim(),
           client_timestamp:  new Date().toISOString(),
         }),
       });
 
       const json = await res.json();
 
+      if (json.code === 'NEW_STUDENT_DATA_REQUIRED') {
+        setPageState('new_student');
+        return;
+      }
+
       if (json.ok && json.code === 'SUCCESS') {
-        setResultData({
-          ...json.data,
-          applicationNumber: cleanApplicationNumber
-        });
+        setResultData(json.data);
         setPageState('success');
         return;
       }
 
       if (json.code === 'DUPLICATE') {
         setResultData({
-          studentName: json.data?.studentName || cleanApplicationNumber,
+          studentName: json.data?.studentName || '',
           status: 'present',
-          applicationNumber: cleanApplicationNumber,
+          applicationNumber: json.data?.applicationNumber || '',
           guests: json.data?.guests || 0,
           programme: json.data?.programme,
           school: json.data?.school,
@@ -335,21 +348,27 @@ function EventAttendPage() {
           <motion.div initial="hidden" animate="show" variants={popIn}>
             <WarmCard>
               <EventHeader event={event} />
+              
               <form onSubmit={handleSubmit} className="mt-6">
-                <label className="block text-label text-secondary mb-2">
-                  Application Number
-                </label>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={applicationNumber}
-                  onChange={e => { setApplicationNumber(e.target.value); setErrorMsg(''); }}
-                  placeholder="e.g. KRMU2643057"
-                  autoComplete="off"
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-border bg-white/60 backdrop-blur-sm text-primary font-semibold text-base outline-none transition-all placeholder:text-muted-foreground focus:border-[#8a4a22]/40 focus:bg-white/80 focus:ring-2 focus:ring-[#8a4a22]/10 tracking-wide box-border"
-                />
+                <div className="mb-4">
+                  <label htmlFor="applicationNumber" className="block text-sm font-semibold text-primary mb-2">Application Number</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Hash className="h-5 w-5 text-secondary" />
+                    </div>
+                    <input
+                      type="text"
+                      id="applicationNumber"
+                      ref={inputRef}
+                      value={applicationNumber}
+                      onChange={(e) => setApplicationNumber(e.target.value.toUpperCase())}
+                      placeholder="e.g. 25012345"
+                      className="block w-full pl-10 pr-3 py-3 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm"
+                      required
+                    />
+                  </div>
+                </div>
+                
                 <AnimatePresence>
                   {errorMsg && (
                     <motion.div
@@ -370,6 +389,92 @@ function EventAttendPage() {
                 >
                   Mark Attendance
                 </button>
+              </form>
+            </WarmCard>
+          </motion.div>
+        )}
+
+                {/* ── NEW STUDENT DATA REQUIRED ──────────────────────────────── */}
+        {pageState === 'new_student' && event && (
+          <motion.div initial="hidden" animate="show" variants={popIn}>
+            <WarmCard>
+              <EventHeader event={event} />
+              
+              <div className="mt-6 mb-2">
+                <h3 className="text-lg font-bold text-primary mb-1">Welcome!</h3>
+                <p className="text-sm text-secondary">It looks like this is your first time checking in. Please confirm your details below to register and mark attendance.</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+                <div>
+                  <label htmlFor="studentName" className="block text-sm font-semibold text-primary mb-1.5">Full Name</label>
+                  <input
+                    type="text"
+                    id="studentName"
+                    value={studentName}
+                    onChange={(e) => setStudentName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="block w-full px-3 py-2.5 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="school" className="block text-sm font-semibold text-primary mb-1.5">School</label>
+                  <input
+                    type="text"
+                    id="school"
+                    value={school}
+                    onChange={(e) => setSchool(e.target.value)}
+                    placeholder="e.g. SOET"
+                    className="block w-full px-3 py-2.5 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="programme" className="block text-sm font-semibold text-primary mb-1.5">Programme</label>
+                  <input
+                    type="text"
+                    id="programme"
+                    value={programme}
+                    onChange={(e) => setProgramme(e.target.value)}
+                    placeholder="e.g. B.Tech CSE"
+                    className="block w-full px-3 py-2.5 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm bg-white"
+                    required
+                  />
+                </div>
+
+                <AnimatePresence>
+                  {errorMsg && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 10 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200/70 text-red-700 text-sm leading-relaxed">
+                        {errorMsg}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setPageState('event_loaded'); setErrorMsg(''); }}
+                    className="w-1/3 py-3.5 rounded-2xl text-[15px] font-semibold text-secondary border border-border hover:bg-gray-50 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-liquid-glass-maroon w-2/3 py-3.5 rounded-2xl text-[15px] font-semibold cursor-pointer tracking-tight"
+                  >
+                    Register & Check In
+                  </button>
+                </div>
               </form>
             </WarmCard>
           </motion.div>
@@ -894,9 +999,6 @@ function GuestDrawerTrigger({
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Not authenticated");
-      const token = await user.getIdToken();
       const payload = {
         event_id:             event.id,
         student_id:           resultData.applicationNumber,
@@ -912,7 +1014,7 @@ function GuestDrawerTrigger({
       };
       const res = await fetch("/api/event-guest-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const data = await res.json();

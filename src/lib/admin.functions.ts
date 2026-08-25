@@ -297,9 +297,9 @@ export const listAttendance = async ({ data }: { data: any }) => {
  * Format: /event-attend/{eventId}?v=1
  * The ?v=1 is a URL schema version — allows future changes without reprinting QRs.
  */
-export function getEventAttendanceUrl(eventId: string, version = 1): string {
+export function getEventAttendanceUrl(eventId: string, _accessToken?: string, _version = 1): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return `${origin}/event-attend/${eventId}?v=${version}`;
+  return `${origin}/event-attend/${eventId}`;
 }
 
 /**

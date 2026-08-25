@@ -78,7 +78,7 @@ export default async function handler(req: any, res: any) {
     console.error("Firestore email check error:", err);
   }
 
-  // ── Rate limiting: 3 OTP requests per email per hour ───────────────
+  // ── Rate limiting: 60 OTP requests per email per hour ───────────────
   // Prevents email flooding attacks. Fails OPEN if Redis is unavailable so
   // legitimate users are never blocked due to a Redis outage.
   try {
@@ -101,7 +101,7 @@ export default async function handler(req: any, res: any) {
         metadata: {
           endpoint: '/api/send-otp',
           email: emailKey,
-          reason: 'Too many OTP requests for this email. Max 3 per hour.'
+          reason: 'Too many OTP requests for this email. Max 60 per hour.'
         }
       }).catch(e => console.error('[send-otp] security_events log error:', e));
 

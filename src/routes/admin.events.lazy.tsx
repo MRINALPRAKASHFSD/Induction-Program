@@ -84,6 +84,7 @@ function AdminEvents() {
   const [qrEvent,     setQrEvent]     = useState<EventRow | null>(null);
   const [departments] = useState<{ id: string; name: string }[]>(TARGET_SCHOOLS);
   const [selectedSchool, setSelectedSchool] = useState<string>("All Schools");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const load = useCallback(async () => {
     try {
@@ -97,24 +98,37 @@ function AdminEvents() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filteredRows = rows ? rows.filter(r => 
-    selectedSchool === "All Schools" || r.department_id === selectedSchool
-  ) : null;
+  const filteredRows = rows ? rows.filter(r => {
+    const matchesSchool = selectedSchool === "All Schools" || r.department_id === selectedSchool;
+    const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.id.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSchool && matchesSearch;
+  }) : null;
 
   return (
     <AdminShell title="Events" subtitle="Create induction sessions, toggle live status, print QR posters.">
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <Select value={selectedSchool} onValueChange={setSelectedSchool}>
-          <SelectTrigger className="w-full sm:w-[320px]">
-            <SelectValue placeholder="Filter by School" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All Schools">All Schools</SelectItem>
-            {departments.map(d => (
-              <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <Select value={selectedSchool} onValueChange={setSelectedSchool}>
+            <SelectTrigger className="w-full sm:w-[240px]">
+              <SelectValue placeholder="Filter by School" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All Schools">All Schools</SelectItem>
+              {departments.map(d => (
+                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="relative w-full sm:w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search events..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
         <EventDialog onSaved={load} departments={departments} />
       </div>
 
@@ -680,7 +694,7 @@ function QrDialog({ event, onClose }: { event: EventRow | null; onClose: () => v
   useEffect(() => {
     if (!event) return;
     // Use the new versioned event attendance URL (isolated from induction)
-    const url = getEventAttendanceUrl(event.id, 1);
+    const url = getEventAttendanceUrl(event.id, event.qr_token, 1);
     setScanUrl(url);
     QRCode.toDataURL(url, { width: 512, margin: 1 }).then(setDataUrl);
   }, [event]);

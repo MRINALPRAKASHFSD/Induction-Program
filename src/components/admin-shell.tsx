@@ -13,7 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertCircle, Clock, Bell, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertCircle, Clock, Bell, Search, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -166,11 +166,24 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
       {/* Sticky Premium Header */}
       <header className="sticky top-0 z-50 bg-background/70 backdrop-blur-2xl border-b border-border/80 shadow-sm transition-all duration-200">
         <div className="admin-content-grid py-0 flex items-center justify-between h-16">
-          <div className="flex items-center gap-4">
-            <button className="lg:hidden text-foreground hover:text-primary transition-colors" onClick={() => setOpen((o) => !o)} aria-label="Toggle nav">
-              {open ? <CloseSquare variant="TwoTone" className="h-6 w-6" /> : <HambergerMenu variant="TwoTone" className="h-6 w-6" />}
+          <div className="flex items-center gap-1 lg:gap-2">
+            {/* Mobile Toggle */}
+            <button 
+              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-md text-foreground hover:bg-muted/60 transition-colors" 
+              onClick={() => setOpen((o) => !o)} 
+              aria-label="Toggle navigation"
+            >
+              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
-            <Link to="/admin/dashboard" className="font-bold text-xl text-foreground tracking-tight flex items-center gap-2">
+            {/* Desktop Toggle */}
+            <button 
+              className="hidden lg:flex items-center justify-center w-10 h-10 rounded-md text-foreground hover:bg-muted/60 transition-colors cursor-pointer" 
+              onClick={() => setIsCollapsed((c) => !c)} 
+              aria-label="Toggle navigation"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <Link to="/admin/dashboard" className="font-bold text-xl text-foreground tracking-tight flex items-center gap-2 px-2">
               <ShieldTick variant="TwoTone" className="h-6 w-6 text-primary" />
               <span className="hidden sm:inline-block">KRMU Admin</span>
             </Link>
@@ -303,20 +316,16 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
         } shrink-0 bg-[#FDFBF7] dark:bg-muted/30 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none shadow-2xl lg:shadow-none p-4 lg:p-0 border-r border-border/40`}>
           
           <div className="flex flex-col gap-4 h-full overflow-y-auto hide-scrollbar admin-scroll-area">
-             <div className="flex items-center justify-between lg:mb-2 px-1">
-                <h3 className={`text-xs font-bold text-muted-foreground uppercase tracking-wider ${isCollapsed ? 'hidden' : 'block'}`}>Main Menu</h3>
-                <button 
-                  onClick={() => setIsCollapsed(!isCollapsed)} 
-                  className="hidden lg:flex items-center justify-center w-6 h-6 rounded-md hover:bg-muted text-muted-foreground transition-colors"
-                  title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                >
-                  {isCollapsed ? <ChevronRight className="w-4 h-4"/> : <ChevronLeft className="w-4 h-4"/>}
-                </button>
-             </div>
+             {/* Main Menu Label (only when expanded) */}
+             {!isCollapsed && (
+               <div className="flex items-center mb-2 px-1">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Main Menu</h3>
+               </div>
+             )}
              
              <nav className="flex flex-col gap-3">
                {NAV_SECTIONS.map((section) => (
-                 <div key={section.label} className="admin-card p-3">
+                 <div key={section.label} className={`transition-all duration-300 ${isCollapsed ? "py-1" : "admin-card p-3"}`}>
                    {!isCollapsed && (
                      <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground/35 px-1 mb-2">
                        {section.label}
@@ -329,13 +338,13 @@ export function AdminShell({ title, subtitle, children }: { title: string; subti
                          <Link
                            key={to} to={to} onClick={() => setOpen(false)}
                            title={isCollapsed ? label : undefined}
-                           className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all group relative overflow-hidden ${
+                           className={`flex items-center gap-3 rounded-xl py-2.5 text-sm font-semibold transition-all group relative overflow-hidden ${
                              active
                                ? "bg-gradient-to-r from-primary to-primary/90 text-primary-foreground shadow-md shadow-primary/20"
                                : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                           } ${isCollapsed ? "justify-center px-0" : ""}`}
+                           } ${isCollapsed ? "justify-center w-12 h-12 mx-auto px-0" : "px-3"}`}
                          >
-                           {active && (
+                           {active && !isCollapsed && (
                              <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-white/90 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
                            )}
                            <Icon
