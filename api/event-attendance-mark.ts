@@ -147,7 +147,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const eventId = rawEventId.trim();
-  const applicationNumber = rawAppNum.trim().toUpperCase();
+  const applicationNumber = rawAppNum.trim().toUpperCase().replace(/\//g, '-');
 
   const db = getFirestore();
   const cfg = EVENT_ATTENDANCE_CONFIG;
