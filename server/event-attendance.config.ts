@@ -16,8 +16,10 @@ export const EVENT_ATTENDANCE_CONFIG = {
   windowBeforeStartMs: 15 * 60 * 1000,       // 15 minutes
   /** How many ms AFTER ends_at the window stays open. */
   windowAfterEndMs: 15 * 60 * 1000,          // 15 minutes
-  /** How many ms after starts_at a student is considered 'late' vs 'present'. */
+  /** (DEPRECATED) How many ms after starts_at a student is considered 'late' vs 'present'. */
   lateThresholdMs: 30 * 60 * 1000,           // 30 minutes
+  /** The final X minutes of the event are considered 'late'. */
+  lateWindowMinutes: 10,
 
   // ── Rate Limiting ─────────────────────────────────────────────────────────
   rateLimitIp: { max: 20000, windowSec: 60 },

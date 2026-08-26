@@ -237,7 +237,8 @@ export default async function handler(req: any, res: any) {
     return apiResponse(res, 403, false, RESPONSE_CODES.OUTSIDE_WINDOW, 'Attendance window for this event is closed.', null, { requestId: reqId });
   }
 
-  const status = (now > startsAt + cfg.lateThresholdMs) ? 'late' : 'present';
+  const lateWindowStart = endsAt - ((cfg.lateWindowMinutes ?? 10) * 60 * 1000);
+  const status = (now >= lateWindowStart) ? 'late' : 'present';
   const currentCount = readCount(eventDoc);
   const capacity = event.capacity;
   const allowOverflow = event.allow_overflow ?? false;

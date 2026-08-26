@@ -84,30 +84,61 @@ function AdminEvents() {
   const [qrEvent,     setQrEvent]     = useState<EventRow | null>(null);
   const [departments] = useState<{ id: string; name: string }[]>(TARGET_SCHOOLS);
   const [selectedSchool, setSelectedSchool] = useState<string>("All Schools");
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const load = useCallback(async () => {
     try {
-      const fbData = await listEvents() as any;
-      setRows(fbData as unknown as EventRow[]);
+      const fbData = (await listEvents()) as unknown as EventRow[];
+      setRows(fbData);
+      
+      setSelectedDay(prev => {
+        if (prev !== null) return prev;
+        if (!fbData || fbData.length === 0) return "All Days";
+        const maxDay = Math.max(...fbData.map(r => r.day_number));
+        return String(maxDay);
+      });
     } catch (e: any) {
       console.warn("Firebase listEvents failed", e);
       setRows([]);
+      setSelectedDay(prev => prev === null ? "All Days" : prev);
     }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  const uniqueDays = rows ? Array.from(new Set(rows.map(r => r.day_number))).sort((a,b) => a-b) : [];
+
   const filteredRows = rows ? rows.filter(r => {
     const matchesSchool = selectedSchool === "All Schools" || r.department_id === selectedSchool;
+    const matchesDay = (selectedDay === "All Days" || selectedDay === null) || String(r.day_number) === selectedDay;
     const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSchool && matchesSearch;
+    return matchesSchool && matchesDay && matchesSearch;
   }) : null;
+
+  // Grouping by day_number
+  const groupedEvents = filteredRows?.reduce((acc, row) => {
+    if (!acc[row.day_number]) acc[row.day_number] = [];
+    acc[row.day_number].push(row);
+    return acc;
+  }, {} as Record<number, EventRow[]>) || {};
+  const sortedDays = Object.keys(groupedEvents).map(Number).sort((a, b) => a - b);
 
   return (
     <AdminShell title="Events" subtitle="Create induction sessions, toggle live status, print QR posters.">
       <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <Select value={selectedDay || "All Days"} onValueChange={setSelectedDay}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Day" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All Days">All Days</SelectItem>
+              {uniqueDays.map(d => (
+                <SelectItem key={d} value={String(d)}>Day {d}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={selectedSchool} onValueChange={setSelectedSchool}>
             <SelectTrigger className="w-full sm:w-[240px]">
               <SelectValue placeholder="Filter by School" />
@@ -143,10 +174,32 @@ function AdminEvents() {
           <p className="text-sm mt-1">Try adjusting your filters or create a new event.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-          {filteredRows.map((r) => (
-            <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />
-          ))}
+        <div className="flex flex-col gap-10">
+          {sortedDays.map(dayNum => {
+            const dayEvents = groupedEvents[dayNum];
+            // Sort day events by start time
+            dayEvents.sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+            
+            // Get date from first event
+            const dayDate = dayEvents.length > 0 ? new Date(dayEvents[0].starts_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : "";
+
+            return (
+              <div key={dayNum} className="flex flex-col gap-5">
+                <div className="border-b border-border/50 pb-2 mb-2">
+                  <h2 className="text-xl font-black text-foreground tracking-tight flex items-center gap-2">
+                    <span className="text-primary">DAY {dayNum}</span>
+                    <span className="text-muted-foreground/50 font-medium">|</span>
+                    <span className="text-muted-foreground font-semibold text-lg">{dayDate}</span>
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+                  {dayEvents.map((r) => (
+                    <EventCard key={r.id} row={r} onChanged={load} onOpenQr={() => setQrEvent(r)} departments={departments} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -160,6 +213,22 @@ function EventCard({
   row, onChanged, onOpenQr, departments,
 }: { row: EventRow; onChanged: () => void; onOpenQr: () => void; departments: { id: string; name: string }[] }) {
   const [showAttendance, setShowAttendance] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const user = getAuth().currentUser;
+      if (!user) throw new Error("Not authenticated");
+      const token = await user.getIdToken();
+      await exportEventAttendanceCsv({ token, event_id: row.id, filter: {}, eventTitle: row.title });
+      toast.success("CSV exported successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const toggle = async () => {
     try {
@@ -277,6 +346,10 @@ function EventCard({
           </Button>
 
           <EventDialog row={row} onSaved={onChanged} departments={departments} />
+
+          <Button size="sm" variant="outline" className="rounded-lg h-8 text-xs font-semibold" onClick={handleExport} disabled={exporting}>
+            <Download className="mr-1.5 h-3.5 w-3.5" /> {exporting ? "Wait..." : "CSV"}
+          </Button>
 
           <Button size="sm" variant="destructive" className="rounded-lg h-8 text-xs font-semibold ml-auto" onClick={remove}>
             <Trash2 className="mr-1 h-3.5 w-3.5" />

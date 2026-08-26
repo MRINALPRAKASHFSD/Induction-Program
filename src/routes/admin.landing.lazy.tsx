@@ -63,7 +63,7 @@ import {
   Setting2,
   Image as ImageIcon,
 } from "iconsax-react";
-import { AlertCircle, GripVertical, Play, Pause, ArchiveRestore } from "lucide-react";
+import { AlertCircle, GripVertical, Play, Pause, ArchiveRestore, Lock, Unlock } from "lucide-react";
 
 export const Route = createLazyFileRoute("/admin/landing")({
   component: AdminLanding,
@@ -301,6 +301,75 @@ function AdminLanding() {
   const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
+  // Auth Lock
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [unlockDialogOpen, setUnlockDialogOpen] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+
+  useEffect(() => {
+    async function checkAuth() {
+      const user = auth.currentUser;
+      if (user) {
+        const idTokenResult = await user.getIdTokenResult();
+        setIsUnlocked(!!idTokenResult.claims.landing_super_admin);
+      }
+    }
+    checkAuth();
+  }, []);
+
+  const handleUnlock = async () => {
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not logged in");
+      const token = await user.getIdToken();
+      const res = await fetch("/api/landing-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "unlock", password: unlockPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to unlock");
+      
+      await user.getIdToken(true);
+      setIsUnlocked(true);
+      setUnlockDialogOpen(false);
+      setUnlockPassword("");
+      showToast("Edit mode unlocked");
+    } catch (e: any) {
+      setUnlockError(e.message);
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  const handleLock = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const token = await user.getIdToken();
+      await fetch("/api/landing-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ action: "lock" })
+      });
+      await user.getIdToken(true);
+      setIsUnlocked(false);
+      showToast("Edit mode locked");
+    } catch (e: any) {
+      showToast("Failed to lock: " + e.message, "error");
+    }
+  };
+
   // Collections
   const [collections, setCollections] = useState<LandingCollection[]>([]);
   const [selectedCol, setSelectedCol] = useState<LandingCollection | null>(null);
@@ -393,6 +462,7 @@ function AdminLanding() {
 
   // ── Save: global settings ───────────────────────────────────────────────────
   const saveSettings = async () => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to save settings.", "error"); return; }
     setSettingsSaving(true);
     try {
       await setDoc(doc(db, "landing_settings", "global"), {
@@ -411,6 +481,7 @@ function AdminLanding() {
 
   // ── Create new collection ────────────────────────────────────────────────────
   const createCollection = async () => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to create collections.", "error"); return; }
     if (!newColName.trim()) return;
     setCreatingCol(true);
     try {
@@ -439,6 +510,7 @@ function AdminLanding() {
 
   // ── Save: collection general/animation/schedule ──────────────────────────────
   const saveCollection = async () => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to save collections.", "error"); return; }
     if (!selectedCol) return;
     setColSaving(true);
     try {
@@ -458,6 +530,7 @@ function AdminLanding() {
 
   // ── Duplicate collection ──────────────────────────────────────────────────────
   const duplicateCollection = async (source: LandingCollection) => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to duplicate collections.", "error"); return; }
     try {
       const newSlug = `${source.slug}-copy-${Date.now()}`;
       const now = new Date().toISOString();
@@ -499,6 +572,7 @@ function AdminLanding() {
 
   // ── Archive / Delete collection ──────────────────────────────────────────────
   const archiveCollection = async (col: LandingCollection) => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to archive collections.", "error"); return; }
     try {
       await updateDoc(doc(db, "landing_collections", col.id), {
         status: "ARCHIVED",
@@ -512,6 +586,7 @@ function AdminLanding() {
   };
 
   const unarchiveCollection = async (col: LandingCollection) => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to unarchive collections.", "error"); return; }
     try {
       await updateDoc(doc(db, "landing_collections", col.id), {
         status: "DRAFT",
@@ -604,6 +679,7 @@ function AdminLanding() {
 
   // ── Save slide ────────────────────────────────────────────────────────────
   const saveSlide = async () => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to save slides.", "error"); return; }
     if (!selectedCol || !editingSlide) return;
     setSlideSaving(true);
     try {
@@ -747,6 +823,7 @@ function AdminLanding() {
   };
 
   const deleteSlide = async (slide: LandingSlide) => {
+    if (!isUnlocked) { showToast("Unlock Edit Mode to delete slides.", "error"); return; }
     if (!window.confirm(`Delete "${slide.title || "this slide"}"? This cannot be undone.`)) return;
     try {
       await deleteDoc(doc(db, "landing_slides", slide.id));
@@ -784,6 +861,54 @@ function AdminLanding() {
           {toast.msg}
         </div>
       )}
+
+      {/* Lock/Unlock Header Area */}
+      <div className="flex justify-end mb-6">
+        {isUnlocked ? (
+          <Button variant="outline" size="sm" onClick={handleLock} className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+            <Lock className="w-4 h-4 mr-2" />
+            Lock Edit Mode
+          </Button>
+        ) : (
+          <Button variant="default" size="sm" onClick={() => setUnlockDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+            <Unlock className="w-4 h-4 mr-2" />
+            Unlock Edit Mode
+          </Button>
+        )}
+      </div>
+
+      {/* Unlock Dialog */}
+      <Dialog open={unlockDialogOpen} onOpenChange={setUnlockDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unlock Edit Mode</DialogTitle>
+            <DialogDescription>
+              Enter the super-password to enable editing for the Landing Experience.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="super-password">Password</Label>
+            <Input
+              id="super-password"
+              type="password"
+              value={unlockPassword}
+              onChange={(e) => setUnlockPassword(e.target.value)}
+              placeholder="Enter password..."
+              className="mt-2"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && unlockPassword) handleUnlock();
+              }}
+            />
+            {unlockError && <p className="text-sm text-red-500 mt-2 font-medium">{unlockError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnlockDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleUnlock} disabled={!unlockPassword || unlocking}>
+              {unlocking ? "Unlocking..." : "Unlock"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Global Settings Strip ─────────────────────────────────────────── */}
       <div className={`admin-card p-5 mb-6 ${settings.maintenance_mode ? "border-l-4 border-red-500" : ""}`}>
@@ -875,7 +1000,7 @@ function AdminLanding() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={saveSettings} disabled={settingsSaving} size="sm" className="rounded-full px-5">
+          <Button onClick={saveSettings} disabled={settingsSaving || !isUnlocked} size="sm" className="rounded-full px-5">
             {settingsSaving ? "Saving…" : "Save Settings"}
           </Button>
         </div>
@@ -923,7 +1048,7 @@ function AdminLanding() {
         <div className="admin-card p-4 flex flex-col gap-3 min-h-[400px]">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Collections</h2>
-            <Button size="sm" variant="default" onClick={() => setNewColOpen(true)} className="h-7 px-3 rounded-md shadow-sm">
+            <Button size="sm" variant="default" onClick={() => setNewColOpen(true)} disabled={!isUnlocked} className="h-7 px-3 rounded-md shadow-sm">
               <Add variant="Bold" className="h-4 w-4 mr-1" />
               <span className="text-xs font-semibold">New</span>
             </Button>
@@ -1140,7 +1265,7 @@ function AdminLanding() {
                 </Section>
 
                 <div className="flex justify-end pt-2">
-                  <Button onClick={saveCollection} disabled={colSaving} className="rounded-full px-6">
+                  <Button onClick={saveCollection} disabled={colSaving || !isUnlocked} className="rounded-full px-6">
                     {colSaving ? "Saving…" : "Save Changes"}
                   </Button>
                 </div>
@@ -1196,7 +1321,7 @@ function AdminLanding() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewColOpen(false)}>Cancel</Button>
-            <Button onClick={createCollection} disabled={creatingCol || !newColName.trim()} className="rounded-full">
+            <Button onClick={createCollection} disabled={creatingCol || !newColName.trim() || !isUnlocked} className="rounded-full">
               {creatingCol ? "Creating…" : "Create Collection"}
             </Button>
           </DialogFooter>
@@ -1330,7 +1455,7 @@ function AdminLanding() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSlideOpen(false)}>Cancel</Button>
-            <Button onClick={saveSlide} disabled={slideSaving} className="rounded-full">
+            <Button onClick={saveSlide} disabled={slideSaving || !isUnlocked} className="rounded-full">
               {slideSaving ? "Uploading…" : editingSlide?.id ? "Save Slide" : "Upload & Save"}
             </Button>
           </DialogFooter>

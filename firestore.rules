@@ -313,15 +313,15 @@ service cloud.firestore {
     // ── 32. LANDING EXPERIENCE (CMS) ──────────────────────────────────────────
     match /landing_settings/{settingId} {
       allow read: if true;
-      allow write: if isAdminOrCoordinator();
+      allow write: if isAdminOrCoordinator() && request.auth.token.landing_super_admin == true;
     }
     match /landing_collections/{collectionId} {
       allow read: if true;
-      allow write: if isAdminOrCoordinator();
+      allow write: if isAdminOrCoordinator() && request.auth.token.landing_super_admin == true;
     }
     match /landing_slides/{slideId} {
       allow read: if true;
-      allow write: if isAdminOrCoordinator();
+      allow write: if isAdminOrCoordinator() && request.auth.token.landing_super_admin == true;
     }
 
     // ── 33. EMAIL INDEX ───────────────────────────────────────────────────────
