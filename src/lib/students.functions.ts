@@ -83,8 +83,9 @@ export const registerStudent = async ({ data, regToken }: { data: any; regToken:
 
 export const lookupStudent = async ({ data }: { data: any }): Promise<{ student: any | null }> => {
   if (!data.enrollment_no) return { student: null };
+  const safeEnrollmentNo = data.enrollment_no.toUpperCase().trim().replace(/\//g, '-');
   // Direct O(1) doc lookup — enrollment_no is the document ID
-  const studentRef = doc(db, "students", data.enrollment_no);
+  const studentRef = doc(db, "students", safeEnrollmentNo);
   const snap = await getDoc(studentRef);
 
   if (!snap.exists()) {
