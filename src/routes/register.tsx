@@ -1122,7 +1122,7 @@ function RegisterPage() {
                            <Select value={form.department_id} onValueChange={(v) => updateForm("department_id", v)}>
                              <SelectTrigger className="pl-10 h-12 text-[15px] bg-background/50 border-border/50 focus:ring-primary/20 [&>span]:truncate"><SelectValue placeholder="Select school" /></SelectTrigger>
                              <SelectContent>
-                               {SCHOOLS.map((s) => (
+                               {SCHOOLS.filter(s => s.id !== 'all').map((s) => (
                                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                ))}
                              </SelectContent>

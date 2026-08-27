@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { SCHOOLS } from '@/lib/constants';
 
 
 import { Link } from '@tanstack/react-router';
@@ -421,15 +422,18 @@ function EventAttendPage() {
 
                 <div>
                   <label htmlFor="school" className="block text-sm font-semibold text-primary mb-1.5">School</label>
-                  <input
-                    type="text"
+                  <select
                     id="school"
                     value={school}
                     onChange={(e) => setSchool(e.target.value)}
-                    placeholder="e.g. SOET"
-                    className="block w-full px-3 py-2.5 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm"
+                    className="block w-full px-3 py-2.5 border border-border rounded-xl focus:ring-[#8a4a22] focus:border-[#8a4a22] text-primary sm:text-sm shadow-sm bg-white"
                     required
-                  />
+                  >
+                    <option value="" disabled>Select your school</option>
+                    {SCHOOLS.filter(s => s.id !== 'all').map(s => (
+                      <option key={s.id} value={s.code}>{s.code} - {s.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
