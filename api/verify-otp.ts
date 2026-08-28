@@ -1,6 +1,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
 let firebaseInitialized = false;
 let firebaseInitError = "";
@@ -79,9 +80,23 @@ export default async function handler(req: any, res: any) {
     }
 
     // ── Generate Firebase Custom Token (for client-side signInWithCustomToken) ──
-    const { getAuth } = await import('firebase-admin/auth');
     const uid = `email:${emailKey}`;
-    const customToken = await getAuth().createCustomToken(uid);
+    
+    // We generate the custom token manually using jsonwebtoken to avoid the firebase-admin/auth 
+    // ESM conflict on Vercel Node 18+ environments which causes HTTP 500 errors.
+    const now = Math.floor(Date.now() / 1000);
+    const customToken = jwt.sign(
+      {
+        iss: process.env.FIREBASE_CLIENT_EMAIL,
+        sub: process.env.FIREBASE_CLIENT_EMAIL,
+        aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+        iat: now,
+        exp: now + 3600,
+        uid: uid,
+      },
+      process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+      { algorithm: 'RS256' }
+    );
 
     // ── Generate a short-lived Firestore-backed registration session token ──────
     // This token is sent in the Authorization header during /api/register

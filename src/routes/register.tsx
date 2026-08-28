@@ -298,7 +298,13 @@ function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inductionRecord.email, otp: otpValue }),
       });
-      const verifyData = await verifyRes.json();
+      const contentType = verifyRes.headers.get("content-type");
+      let verifyData;
+      if (contentType && contentType.includes("application/json")) {
+        verifyData = await verifyRes.json();
+      } else {
+        throw new Error("API returned an invalid response. Ensure the backend is running.");
+      }
       if (!verifyRes.ok) throw new Error(verifyData.error || "Invalid OTP");
 
       const { customToken, regToken, userExists, enrollmentNo } = verifyData;
